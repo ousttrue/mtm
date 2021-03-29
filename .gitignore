@@ -1,7 +1,9 @@
-config.h
+# config.h
 
 *~
 *.swp
 
 *.o
 mtm
+
+build
