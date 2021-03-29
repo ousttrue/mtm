@@ -1,3 +1,5 @@
+#pragma once
+
 /* Old versions of ncurses don't support A_ITALIC.
  * Define this to disable it if the situation isn't automatically detected.
 #define NO_ITALICS

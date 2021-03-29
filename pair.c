@@ -1,6 +1,7 @@
 #include <stdbool.h>
 
 #include "config.h"
+#include "pair.h"
 
 #define COLOR_MAX 256
 typedef struct PAIR PAIR;

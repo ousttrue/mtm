@@ -2,10 +2,12 @@ project(mtm)
 cmake_minimum_required(VERSION 3.10)
 
 add_executable(${PROJECT_NAME}
-    mtm.c
+    mtm.cpp
     pair.c
     vtparser.c
 )
+
+set_property(TARGET ${PROJECT_NAME} PROPERTY CXX_STANDARD 20)
 
 target_compile_definitions(${PROJECT_NAME} PRIVATE
     _POSIX_C_SOURCE=200809L
