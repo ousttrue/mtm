@@ -29,36 +29,7 @@
 #include <wchar.h>
 #include <wctype.h>
 
-class Selector
-{
-    fd_set g_fds;
-
-public:
-    Selector()
-    {
-        FD_SET(STDIN_FILENO, &g_fds);
-    }
-
-    void Set(int fd)
-    {
-        FD_SET(fd, &g_fds);
-    }
-
-    void Close(int fd)
-    {
-        close(fd);
-        FD_CLR(fd, &g_fds);
-    }
-
-    fd_set Select(int nfds)
-    {
-        fd_set sfds = g_fds;
-        if (select(nfds + 1, &sfds, NULL, NULL, NULL) < 0)
-            FD_ZERO(&sfds);
-        return sfds;
-    }
-};
-static Selector g_state;
+#include "selector.h"
 
 #include "mtm.h"
 #ifdef __cplusplus
@@ -1021,7 +992,7 @@ static void freenode(NODE *n, bool recurse) /* Free a node. */
             freenode(n->c2, true);
         if (n->pt >= 0)
         {
-            g_state.Close(n->pt);
+            selector::close(n->pt);
         }
         free(n->tabs);
         free(n);
@@ -1095,7 +1066,7 @@ static NODE *newview(NODE *p, int y, int x, int h, int w) /* Open a new view. */
         return NULL;
     }
 
-    g_state.Set(n->pt);
+    selector::set(n->pt);
     fcntl(n->pt, F_SETFL, O_NONBLOCK);
     nfds = n->pt > nfds ? n->pt : nfds;
     return n;
@@ -1292,16 +1263,15 @@ static void split(NODE *n, Node t) /* Split a node. */
     draw(p ? p : root);
 }
 
-static bool getinput(NODE *n,
-                     fd_set *f) /* Recursively check all ptty's for input. */
+static bool getinput(NODE *n) /* Recursively check all ptty's for input. */
 {
-    if (n && n->c1 && !getinput(n->c1, f))
+    if (n && n->c1 && !getinput(n->c1))
         return false;
 
-    if (n && n->c2 && !getinput(n->c2, f))
+    if (n && n->c2 && !getinput(n->c2))
         return false;
 
-    if (n && n->t == VIEW && n->pt > 0 && FD_ISSET(n->pt, f))
+    if (n && n->t == VIEW && n->pt > 0 && selector::isSet(n->pt))
     {
         ssize_t r = read(n->pt, g_iobuf, sizeof(g_iobuf));
         if (r > 0)
@@ -1414,12 +1384,14 @@ static void run(void) /* Run MTM. */
     while (root)
     {
         wint_t w = 0;
-        auto sfds = g_state.Select(nfds);
+        selector::select(nfds);
 
         int r = wget_wch(focused->s->win, &w);
         while (handlechar(r, w))
+        {
             r = wget_wch(focused->s->win, &w);
-        getinput(root, &sfds);
+        }
+        getinput(root);
 
         draw(root);
         doupdate();
