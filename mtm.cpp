@@ -16,15 +16,12 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <limits.h>
-#include <locale.h>
 #include <pwd.h>
 #include <signal.h>
 #include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/ioctl.h>
-#include <sys/select.h>
-#include <sys/types.h>
 #include <unistd.h>
 #include <wchar.h>
 #include <wctype.h>
@@ -48,8 +45,6 @@ extern "C"
 
 #define MIN(x, y) ((x) < (y) ? (x) : (y))
 #define MAX(x, y) ((x) > (y) ? (x) : (y))
-#define CTL(x) ((x)&0x1f)
-#define USAGE "usage: mtm [-T NAME] [-t NAME] [-c KEY]\n"
 
 /*** DATA TYPES */
 typedef enum
@@ -84,18 +79,19 @@ struct NODE
 
 /*** GLOBALS AND PROTOTYPES */
 static NODE *root, *focused, *lastfocused = NULL;
-static int g_commandkey = CTL(COMMAND_KEY), nfds = 1; /* stdin */
+static int g_commandkey = CTL(COMMAND_KEY);
+static int g_nfds = 1; /* stdin */
 static char g_iobuf[BUFSIZ];
 
 static void setupevents(NODE *n);
 static void reshape(NODE *n, int y, int x, int h, int w);
 static void draw(NODE *n);
 static void reshapechildren(NODE *n);
-static const char *term = NULL;
+static const char *g_term = NULL;
 static void freenode(NODE *n, bool recursive);
 
 /*** UTILITY FUNCTIONS */
-static void quit(int rc, const char *m) /* Shut down MTM. */
+void quit(int rc, const char *m) /* Shut down MTM. */
 {
     if (m)
         fprintf(stderr, "%s\n", m);
@@ -1014,8 +1010,8 @@ static void fixcursor(void) /* Move the terminal cursor to the active view. */
 static const char *getterm(void)
 {
     const char *envterm = getenv("TERM");
-    if (term)
-        return term;
+    if (g_term)
+        return g_term;
     if (envterm && COLORS >= 256 && !strstr(DEFAULT_TERMINAL, "-256color"))
         return DEFAULT_256_COLOR_TERMINAL;
     return DEFAULT_TERMINAL;
@@ -1068,7 +1064,7 @@ static NODE *newview(NODE *p, int y, int x, int h, int w) /* Open a new view. */
 
     selector::set(n->pt);
     fcntl(n->pt, F_SETFL, O_NONBLOCK);
-    nfds = n->pt > nfds ? n->pt : nfds;
+    g_nfds = n->pt > g_nfds ? n->pt : g_nfds;
     return n;
 }
 
@@ -1384,7 +1380,7 @@ static void run(void) /* Run MTM. */
     while (root)
     {
         wint_t w = 0;
-        selector::select(nfds);
+        selector::select(g_nfds);
 
         int r = wget_wch(focused->s->win, &w);
         while (handlechar(r, w))
@@ -1401,29 +1397,10 @@ static void run(void) /* Run MTM. */
     }
 }
 
-int mtm(int argc, char **argv)
+int mtm(const char *term, int commandKey)
 {
-    setlocale(LC_ALL, "");
-    signal(SIGCHLD, SIG_IGN); /* automatically reap children */
-
-    int c = 0;
-    while ((c = getopt(argc, argv, "c:T:t:")) != -1)
-        switch (c)
-        {
-        case 'c':
-            g_commandkey = CTL(optarg[0]);
-            break;
-        case 'T':
-            setenv("TERM", optarg, 1);
-            break;
-        case 't':
-            term = optarg;
-            break;
-        default:
-            quit(EXIT_FAILURE, USAGE);
-            break;
-        }
-
+    g_term = term;
+    g_commandkey = commandKey;
     if (!initscr())
         quit(EXIT_FAILURE, "could not initialize terminal");
     raw();

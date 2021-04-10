@@ -2,8 +2,6 @@
 #include <sys/select.h>
 #include <unistd.h>
 
-#pragma once
-
 class SelectorImpl
 {
     fd_set m_fds;
