@@ -70,108 +70,98 @@ static bool *newtabs(int w, int ow,
     return tabs;
 }
 
-struct NODE
+#include "node.h"
+
+void NODE::reshape(int y, int x, int h, int w) /* Reshape a node. */
 {
-    Node t;
-    int y, x, h, w, pt, ntabs;
-    bool *tabs, pnm, decom, am, lnm;
-    wchar_t repc;
-    NODE *p, *c1, *c2;
-    SCRN pri, alt, *s;
-    wchar_t *g0, *g1, *g2, *g3, *gc, *gs, *sgc, *sgs;
-    VTPARSER vp;
+    auto n = this;
+    if (n->y == y && n->x == x && n->h == h && n->w == w && n->t == VIEW)
+        return;
 
-    void reshape(int y, int x, int h, int w) /* Reshape a node. */
+    int d = n->h - h;
+    int ow = n->w;
+    n->y = y;
+    n->x = x;
+    n->h = MAX(h, 1);
+    n->w = MAX(w, 1);
+
+    if (n->t == VIEW)
+        reshapeview(d, ow);
+    else
+        reshapechildren();
+    n->draw();
+}
+
+void NODE::reshapechildren() /* Reshape all children of a view. */
+{
+    auto n = this;
+    if (n->t == HORIZONTAL)
     {
-        auto n = this;
-        if (n->y == y && n->x == x && n->h == h && n->w == w && n->t == VIEW)
-            return;
+        int i = n->w % 2 ? 0 : 1;
+        n->c1->reshape(n->y, n->x, n->h, n->w / 2);
+        n->c2->reshape(n->y, n->x + n->w / 2 + 1, n->h, n->w / 2 - i);
+    }
+    else if (n->t == VERTICAL)
+    {
+        int i = n->h % 2 ? 0 : 1;
+        n->c1->reshape(n->y, n->x, n->h / 2, n->w);
+        n->c2->reshape(n->y + n->h / 2 + 1, n->x, n->h / 2 - i, n->w);
+    }
+}
 
-        int d = n->h - h;
-        int ow = n->w;
-        n->y = y;
-        n->x = x;
-        n->h = MAX(h, 1);
-        n->w = MAX(w, 1);
+void NODE::reshapeview(int d, int ow) /* Reshape a view. */
+{
+    auto n = this;
+    int oy, ox;
+    bool *tabs = newtabs(n->w, ow, n->tabs);
+    struct winsize ws = {.ws_row = (unsigned short)n->h,
+                         .ws_col = (unsigned short)n->w};
 
-        if (n->t == VIEW)
-            reshapeview(d, ow);
-        else
-            reshapechildren();
-        n->draw();
+    if (tabs)
+    {
+        free(n->tabs);
+        n->tabs = tabs;
+        n->ntabs = n->w;
     }
 
-    void reshapechildren() /* Reshape all children of a view. */
-    {
-        auto n = this;
-        if (n->t == HORIZONTAL)
-        {
-            int i = n->w % 2 ? 0 : 1;
-            n->c1->reshape(n->y, n->x, n->h, n->w / 2);
-            n->c2->reshape(n->y, n->x + n->w / 2 + 1, n->h, n->w / 2 - i);
-        }
-        else if (n->t == VERTICAL)
-        {
-            int i = n->h % 2 ? 0 : 1;
-            n->c1->reshape(n->y, n->x, n->h / 2, n->w);
-            n->c2->reshape(n->y + n->h / 2 + 1, n->x, n->h / 2 - i, n->w);
-        }
+    getyx(n->s->win, oy, ox);
+    wresize(n->pri.win, MAX(n->h, SCROLLBACK), MAX(n->w, 2));
+    wresize(n->alt.win, MAX(n->h, 2), MAX(n->w, 2));
+    n->pri.tos = n->pri.off = MAX(0, SCROLLBACK - n->h);
+    n->alt.tos = n->alt.off = 0;
+    wsetscrreg(n->pri.win, 0, MAX(SCROLLBACK, n->h) - 1);
+    wsetscrreg(n->alt.win, 0, n->h - 1);
+    if (d > 0)
+    { /* make sure the new top line syncs up after reshape */
+        wmove(n->s->win, oy + d, ox);
+        wscrl(n->s->win, -d);
     }
+    doupdate();
+    refresh();
+    ioctl(n->pt, TIOCSWINSZ, &ws);
+}
 
-    void reshapeview(int d, int ow) /* Reshape a view. */
-    {
-        auto n = this;
-        int oy, ox;
-        bool *tabs = newtabs(n->w, ow, n->tabs);
-        struct winsize ws = {.ws_row = (unsigned short)n->h,
-                             .ws_col = (unsigned short)n->w};
+void NODE::draw() const /* Draw a node. */
+{
+    auto n = this;
+    if (n->t == VIEW)
+        pnoutrefresh(n->s->win, n->s->off, 0, n->y, n->x, n->y + n->h - 1,
+                     n->x + n->w - 1);
+    else
+        drawchildren();
+}
 
-        if (tabs)
-        {
-            free(n->tabs);
-            n->tabs = tabs;
-            n->ntabs = n->w;
-        }
-
-        getyx(n->s->win, oy, ox);
-        wresize(n->pri.win, MAX(n->h, SCROLLBACK), MAX(n->w, 2));
-        wresize(n->alt.win, MAX(n->h, 2), MAX(n->w, 2));
-        n->pri.tos = n->pri.off = MAX(0, SCROLLBACK - n->h);
-        n->alt.tos = n->alt.off = 0;
-        wsetscrreg(n->pri.win, 0, MAX(SCROLLBACK, n->h) - 1);
-        wsetscrreg(n->alt.win, 0, n->h - 1);
-        if (d > 0)
-        { /* make sure the new top line syncs up after reshape */
-            wmove(n->s->win, oy + d, ox);
-            wscrl(n->s->win, -d);
-        }
-        doupdate();
-        refresh();
-        ioctl(n->pt, TIOCSWINSZ, &ws);
-    }
-
-    void draw() const /* Draw a node. */
-    {
-        auto n = this;
-        if (n->t == VIEW)
-            pnoutrefresh(n->s->win, n->s->off, 0, n->y, n->x, n->y + n->h - 1,
-                         n->x + n->w - 1);
-        else
-            drawchildren();
-    }
-
-    void drawchildren() const /* Draw all children of n. */
-    {
-        auto n = this;
-        n->c1->draw();
-        if (n->t == HORIZONTAL)
-            mvvline(n->y, n->x + n->w / 2, ACS_VLINE, n->h);
-        else
-            mvhline(n->y + n->h / 2, n->x, ACS_HLINE, n->w);
-        wnoutrefresh(stdscr);
-        n->c2->draw();
-    }
-};
+void NODE::drawchildren() const /* Draw all children of n. */
+{
+    auto n = this;
+    n->c1->draw();
+    if (n->t == HORIZONTAL)
+        mvvline(n->y, n->x + n->w / 2, ACS_VLINE, n->h);
+    else
+        mvhline(n->y + n->h / 2, n->x, ACS_HLINE, n->w);
+    wnoutrefresh(stdscr);
+    n->c2->draw();
+}
 
 /*** GLOBALS AND PROTOTYPES */
 static NODE *root, *focused, *lastfocused = NULL;
