@@ -59,6 +59,17 @@ struct SCRN
     WINDOW *win;
 };
 
+static bool *newtabs(int w, int ow,
+                     bool *oldtabs) /* Initialize default tabstops. */
+{
+    bool *tabs = (bool *)calloc(w, sizeof(bool));
+    if (!tabs)
+        return NULL;
+    for (int i = 0; i < w; i++) /* keep old overlapping tabs */
+        tabs[i] = i < ow ? oldtabs[i] : (i % 8 == 0);
+    return tabs;
+}
+
 struct NODE
 {
     Node t;
@@ -69,6 +80,97 @@ struct NODE
     SCRN pri, alt, *s;
     wchar_t *g0, *g1, *g2, *g3, *gc, *gs, *sgc, *sgs;
     VTPARSER vp;
+
+    void reshape(int y, int x, int h, int w) /* Reshape a node. */
+    {
+        auto n = this;
+        if (n->y == y && n->x == x && n->h == h && n->w == w && n->t == VIEW)
+            return;
+
+        int d = n->h - h;
+        int ow = n->w;
+        n->y = y;
+        n->x = x;
+        n->h = MAX(h, 1);
+        n->w = MAX(w, 1);
+
+        if (n->t == VIEW)
+            reshapeview(d, ow);
+        else
+            reshapechildren();
+        n->draw();
+    }
+
+    void reshapechildren() /* Reshape all children of a view. */
+    {
+        auto n = this;
+        if (n->t == HORIZONTAL)
+        {
+            int i = n->w % 2 ? 0 : 1;
+            n->c1->reshape(n->y, n->x, n->h, n->w / 2);
+            n->c2->reshape(n->y, n->x + n->w / 2 + 1, n->h, n->w / 2 - i);
+        }
+        else if (n->t == VERTICAL)
+        {
+            int i = n->h % 2 ? 0 : 1;
+            n->c1->reshape(n->y, n->x, n->h / 2, n->w);
+            n->c2->reshape(n->y + n->h / 2 + 1, n->x, n->h / 2 - i, n->w);
+        }
+    }
+
+    void reshapeview(int d, int ow) /* Reshape a view. */
+    {
+        auto n = this;
+        int oy, ox;
+        bool *tabs = newtabs(n->w, ow, n->tabs);
+        struct winsize ws = {.ws_row = (unsigned short)n->h,
+                             .ws_col = (unsigned short)n->w};
+
+        if (tabs)
+        {
+            free(n->tabs);
+            n->tabs = tabs;
+            n->ntabs = n->w;
+        }
+
+        getyx(n->s->win, oy, ox);
+        wresize(n->pri.win, MAX(n->h, SCROLLBACK), MAX(n->w, 2));
+        wresize(n->alt.win, MAX(n->h, 2), MAX(n->w, 2));
+        n->pri.tos = n->pri.off = MAX(0, SCROLLBACK - n->h);
+        n->alt.tos = n->alt.off = 0;
+        wsetscrreg(n->pri.win, 0, MAX(SCROLLBACK, n->h) - 1);
+        wsetscrreg(n->alt.win, 0, n->h - 1);
+        if (d > 0)
+        { /* make sure the new top line syncs up after reshape */
+            wmove(n->s->win, oy + d, ox);
+            wscrl(n->s->win, -d);
+        }
+        doupdate();
+        refresh();
+        ioctl(n->pt, TIOCSWINSZ, &ws);
+    }
+
+    void draw() const /* Draw a node. */
+    {
+        auto n = this;
+        if (n->t == VIEW)
+            pnoutrefresh(n->s->win, n->s->off, 0, n->y, n->x, n->y + n->h - 1,
+                         n->x + n->w - 1);
+        else
+            drawchildren();
+    }
+
+    void drawchildren() const /* Draw all children of n. */
+    {
+        auto n = this;
+        n->c1->draw();
+        if (n->t == HORIZONTAL)
+            mvvline(n->y, n->x + n->w / 2, ACS_VLINE, n->h);
+        else
+            mvhline(n->y + n->h / 2, n->x, ACS_HLINE, n->w);
+        wnoutrefresh(stdscr);
+        n->c2->draw();
+    }
 };
 
 /*** GLOBALS AND PROTOTYPES */
@@ -78,9 +180,7 @@ static int g_nfds = 1; /* stdin */
 static char g_iobuf[BUFSIZ];
 
 static void setupevents(NODE *n);
-static void reshape(NODE *n, int y, int x, int h, int w);
-static void draw(NODE *n);
-static void reshapechildren(NODE *n);
+
 static const char *g_term = NULL;
 static void freenode(NODE *n, bool recursive);
 
@@ -934,16 +1034,6 @@ static void setupevents(NODE *n)
  * These functions do the user-visible work of MTM: creating nodes in the
  * tree, updating the display, and so on.
  */
-static bool *newtabs(int w, int ow,
-                     bool *oldtabs) /* Initialize default tabstops. */
-{
-    bool *tabs = (bool *)calloc(w, sizeof(bool));
-    if (!tabs)
-        return NULL;
-    for (int i = 0; i < w; i++) /* keep old overlapping tabs */
-        tabs[i] = i < ow ? oldtabs[i] : (i % 8 == 0);
-    return tabs;
-}
 
 static NODE *newnode(Node t, NODE *p, int y, int x, int h,
                      int w) /* Create a new node. */
@@ -1073,7 +1163,7 @@ static NODE *newcontainer(Node t, NODE *p, int y, int x, int h, int w, NODE *c1,
     n->c2 = c2;
     c1->p = c2->p = n;
 
-    reshapechildren(n);
+    n->reshapechildren();
     return n;
 }
 
@@ -1117,7 +1207,7 @@ static void replacechild(NODE *n, NODE *c1,
     if (!n)
     {
         root = c2;
-        reshape(c2, 0, 0, LINES, COLS);
+        c2->reshape(0, 0, LINES, COLS);
     }
     else if (n->c1 == c1)
         n->c1 = c2;
@@ -1125,8 +1215,8 @@ static void replacechild(NODE *n, NODE *c1,
         n->c2 = c2;
 
     n = n ? n : root;
-    reshape(n, n->y, n->x, n->h, n->w);
-    draw(n);
+    n->reshape(n->y, n->x, n->h, n->w);
+    n->draw();
 }
 
 static void removechild(NODE *p,
@@ -1144,92 +1234,6 @@ static void deletenode(NODE *n) /* Delete a node. */
         focus(n->p->c1 == n ? n->p->c2 : n->p->c1);
     removechild(n->p, n);
     freenode(n, true);
-}
-
-static void reshapeview(NODE *n, int d, int ow) /* Reshape a view. */
-{
-    int oy, ox;
-    bool *tabs = newtabs(n->w, ow, n->tabs);
-    struct winsize ws = {.ws_row = (unsigned short)n->h,
-                         .ws_col = (unsigned short)n->w};
-
-    if (tabs)
-    {
-        free(n->tabs);
-        n->tabs = tabs;
-        n->ntabs = n->w;
-    }
-
-    getyx(n->s->win, oy, ox);
-    wresize(n->pri.win, MAX(n->h, SCROLLBACK), MAX(n->w, 2));
-    wresize(n->alt.win, MAX(n->h, 2), MAX(n->w, 2));
-    n->pri.tos = n->pri.off = MAX(0, SCROLLBACK - n->h);
-    n->alt.tos = n->alt.off = 0;
-    wsetscrreg(n->pri.win, 0, MAX(SCROLLBACK, n->h) - 1);
-    wsetscrreg(n->alt.win, 0, n->h - 1);
-    if (d > 0)
-    { /* make sure the new top line syncs up after reshape */
-        wmove(n->s->win, oy + d, ox);
-        wscrl(n->s->win, -d);
-    }
-    doupdate();
-    refresh();
-    ioctl(n->pt, TIOCSWINSZ, &ws);
-}
-
-static void reshapechildren(NODE *n) /* Reshape all children of a view. */
-{
-    if (n->t == HORIZONTAL)
-    {
-        int i = n->w % 2 ? 0 : 1;
-        reshape(n->c1, n->y, n->x, n->h, n->w / 2);
-        reshape(n->c2, n->y, n->x + n->w / 2 + 1, n->h, n->w / 2 - i);
-    }
-    else if (n->t == VERTICAL)
-    {
-        int i = n->h % 2 ? 0 : 1;
-        reshape(n->c1, n->y, n->x, n->h / 2, n->w);
-        reshape(n->c2, n->y + n->h / 2 + 1, n->x, n->h / 2 - i, n->w);
-    }
-}
-
-static void reshape(NODE *n, int y, int x, int h, int w) /* Reshape a node. */
-{
-    if (n->y == y && n->x == x && n->h == h && n->w == w && n->t == VIEW)
-        return;
-
-    int d = n->h - h;
-    int ow = n->w;
-    n->y = y;
-    n->x = x;
-    n->h = MAX(h, 1);
-    n->w = MAX(w, 1);
-
-    if (n->t == VIEW)
-        reshapeview(n, d, ow);
-    else
-        reshapechildren(n);
-    draw(n);
-}
-
-static void drawchildren(const NODE *n) /* Draw all children of n. */
-{
-    draw(n->c1);
-    if (n->t == HORIZONTAL)
-        mvvline(n->y, n->x + n->w / 2, ACS_VLINE, n->h);
-    else
-        mvhline(n->y + n->h / 2, n->x, ACS_HLINE, n->w);
-    wnoutrefresh(stdscr);
-    draw(n->c2);
-}
-
-static void draw(NODE *n) /* Draw a node. */
-{
-    if (n->t == VIEW)
-        pnoutrefresh(n->s->win, n->s->off, 0, n->y, n->x, n->y + n->h - 1,
-                     n->x + n->w - 1);
-    else
-        drawchildren(n);
 }
 
 static void split(NODE *n, Node t) /* Split a node. */
@@ -1250,7 +1254,7 @@ static void split(NODE *n, Node t) /* Split a node. */
 
     replacechild(p, n, c);
     focus(v);
-    draw(p ? p : root);
+    (p ? p : root)->draw();
 }
 
 static bool getinput(NODE *n) /* Recursively check all ptty's for input. */
@@ -1314,7 +1318,7 @@ static bool handlechar(int r, int k) /* Handle a single input character. */
     }
 
     DO(cmd, KERR(k), return false)
-    DO(cmd, CODE(KEY_RESIZE), reshape(root, 0, 0, LINES, COLS); SB)
+    DO(cmd, CODE(KEY_RESIZE), root->reshape(0, 0, LINES, COLS); SB)
     DO(false, KEY(g_commandkey), return cmd = true)
     DO(false, KEY(0), SENDN(n, "\000", 1); SB)
     DO(false, KEY(L'\n'), SEND(n, "\n"); SB)
@@ -1355,7 +1359,7 @@ static bool handlechar(int r, int k) /* Handle a single input character. */
     DO(true, HSPLIT, split(n, HORIZONTAL))
     DO(true, VSPLIT, split(n, VERTICAL))
     DO(true, DELETE_NODE, deletenode(n))
-    DO(true, REDRAW, touchwin(stdscr); draw(root); redrawwin(stdscr))
+    DO(true, REDRAW, touchwin(stdscr); root->draw(); redrawwin(stdscr))
     DO(true, SCROLLUP, scrollback(n))
     DO(true, SCROLLDOWN, scrollforward(n))
     DO(true, RECENTER, scrollbottom(n))
@@ -1383,10 +1387,10 @@ static void run(void) /* Run MTM. */
         }
         getinput(root);
 
-        draw(root);
+        root->draw();
         doupdate();
         fixcursor();
-        draw(focused);
+        focused->draw();
         doupdate();
     }
 }
@@ -1409,7 +1413,7 @@ int mtm(const char *term, int commandKey)
     if (!root)
         quit(EXIT_FAILURE, "could not open root window");
     focus(root);
-    draw(root);
+    root->draw();
     run();
 
     quit(EXIT_SUCCESS, NULL);
