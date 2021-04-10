@@ -11,4 +11,6 @@ struct SCRN
 
     void scrollbottom();
     void fixcursor(int h);
+    void scrollback(int h);
+    void scrollforward(int h);
 };

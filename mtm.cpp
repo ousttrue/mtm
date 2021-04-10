@@ -1110,16 +1110,6 @@ static bool getinput(NODE *n) /* Recursively check all ptty's for input. */
     return true;
 }
 
-static void scrollback(NODE *n)
-{
-    n->s->off = MAX(0, n->s->off - n->h / 2);
-}
-
-static void scrollforward(NODE *n)
-{
-    n->s->off = MIN(n->s->tos, n->s->off + n->h / 2);
-}
-
 static void sendarrow(const NODE *n, const char *k)
 {
     char buf[100] = {0};
@@ -1151,8 +1141,8 @@ static bool handlechar(int r, int k) /* Handle a single input character. */
     DO(false, KEY(0), SENDN(n, "\000", 1); SB)
     DO(false, KEY(L'\n'), SEND(n, "\n"); SB)
     DO(false, KEY(L'\r'), SEND(n, n->lnm ? "\r\n" : "\r"); SB)
-    DO(false, SCROLLUP && INSCR, scrollback(n))
-    DO(false, SCROLLDOWN && INSCR, scrollforward(n))
+    DO(false, SCROLLUP && INSCR, n->s->scrollback(n->h))
+    DO(false, SCROLLDOWN && INSCR, n->s->scrollforward(n->h))
     DO(false, RECENTER && INSCR, n->s->scrollbottom())
     DO(false, CODE(KEY_ENTER), SEND(n, n->lnm ? "\r\n" : "\r"); SB)
     DO(false, CODE(KEY_UP), sendarrow(n, "A"); SB);
@@ -1188,8 +1178,8 @@ static bool handlechar(int r, int k) /* Handle a single input character. */
     DO(true, VSPLIT, split(n, VERTICAL))
     DO(true, DELETE_NODE, deletenode(n))
     DO(true, REDRAW, touchwin(stdscr); root->draw(); redrawwin(stdscr))
-    DO(true, SCROLLUP, scrollback(n))
-    DO(true, SCROLLDOWN, scrollforward(n))
+    DO(true, SCROLLUP, n->s->scrollback(n->h))
+    DO(true, SCROLLDOWN, n->s->scrollforward(n->h))
     DO(true, RECENTER, n->s->scrollbottom())
     DO(true, KEY(g_commandkey), SENDN(n, cmdstr, 1));
     char c[MB_LEN_MAX + 1] = {0};

@@ -17,3 +17,13 @@ void SCRN::fixcursor(int h) /* Move the terminal cursor to the active view. */
     y = MIN(MAX(y, this->tos), this->tos + h - 1);
     wmove(this->win, y, x);
 }
+
+void SCRN::scrollback(int h)
+{
+    this->off = MAX(0, this->off - h / 2);
+}
+
+void SCRN::scrollforward(int h)
+{
+    this->off = MIN(this->tos, this->off + h / 2);
+}
