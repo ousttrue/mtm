@@ -11,7 +11,7 @@ int main(int argc, char **argv)
     setlocale(LC_ALL, "");
     signal(SIGCHLD, SIG_IGN); /* automatically reap children */
 
-    int commandkey = 'g';
+    int commandkey = CTL('g');
     const char *term = nullptr;
     int c = 0;
     while ((c = getopt(argc, argv, "c:T:t:")) != -1)
