@@ -8,20 +8,23 @@ NODE *root = nullptr;
 NODE *focused = nullptr;
 NODE *lastfocused = nullptr;
 
-static bool *newtabs(int w, int ow,
-                     bool *oldtabs) /* Initialize default tabstops. */
+NODE::NODE(Node t, NODE *p, int y, int x, int h, int w)
 {
-    bool *tabs = (bool *)calloc(w, sizeof(bool));
-    if (!tabs)
-        return NULL;
-    for (int i = 0; i < w; i++) /* keep old overlapping tabs */
-        tabs[i] = i < ow ? oldtabs[i] : (i % 8 == 0);
-    return tabs;
-}
-
-NODE::NODE()
-{
-    
+    this->t = t;
+    this->pt = -1;
+    this->p = p;
+    this->y = y;
+    this->x = x;
+    this->h = h;
+    this->w = w;
+    for (int i = 0; i < w; i++)
+    {
+        /* keep old overlapping tabs */
+        tabs.push_back(i % 8 == 0);
+    }
+    this->ntabs = w;
+    this->pri = std::make_shared<SCRN>();
+    this->alt = std::make_shared<SCRN>();
 }
 
 NODE::~NODE()
@@ -40,31 +43,6 @@ NODE::~NODE()
     {
         selector::close(this->pt);
     }
-    free(this->tabs);
-    // free(n);
-}
-
-NODE *NODE::newnode(Node t, NODE *p, int y, int x, int h,
-                    int w) /* Create a new node. */
-{
-    NODE *n = (NODE *)calloc(1, sizeof(NODE));
-    bool *tabs = newtabs(w, 0, NULL);
-    if (!n || h < 2 || w < 2 || !tabs)
-        return free(n), free(tabs), nullptr;
-
-    n->t = t;
-    n->pt = -1;
-    n->p = p;
-    n->y = y;
-    n->x = x;
-    n->h = h;
-    n->w = w;
-    n->tabs = tabs;
-    n->ntabs = w;
-    n->pri = std::make_shared<SCRN>();
-    n->alt = std::make_shared<SCRN>();
-
-    return n;
 }
 
 void NODE::reshape(int y, int x, int h, int w) /* Reshape a node. */
@@ -108,15 +86,15 @@ void NODE::reshapechildren() /* Reshape all children of a view. */
 void NODE::reshapeview(int d, int ow) /* Reshape a view. */
 {
     int oy, ox;
-    bool *tabs = newtabs(this->w, ow, this->tabs);
     struct winsize ws = {.ws_row = (unsigned short)this->h,
                          .ws_col = (unsigned short)this->w};
 
-    if (tabs)
     {
-        free(this->tabs);
-        this->tabs = tabs;
         this->ntabs = this->w;
+        auto oldtabs = tabs;
+        this->tabs.clear();
+        for (int i = 0; i < w; i++) /* keep old overlapping tabs */
+            tabs.push_back(i < ow ? oldtabs[i] : (i % 8 == 0));
     }
 
     getyx(this->s->win, oy, ox);

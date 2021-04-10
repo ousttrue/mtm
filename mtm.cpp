@@ -43,19 +43,6 @@ extern "C"
 }
 #endif
 
-/*** DATA TYPES */
-
-static bool *newtabs(int w, int ow,
-                     bool *oldtabs) /* Initialize default tabstops. */
-{
-    bool *tabs = (bool *)calloc(w, sizeof(bool));
-    if (!tabs)
-        return NULL;
-    for (int i = 0; i < w; i++) /* keep old overlapping tabs */
-        tabs[i] = i < ow ? oldtabs[i] : (i % 8 == 0);
-    return tabs;
-}
-
 #include "node.h"
 
 /*** GLOBALS AND PROTOTYPES */
@@ -342,7 +329,10 @@ case 0:
     n->tabs[x < n->ntabs ? x : 0] = false;
     break;
 case 3:
-    memset(n->tabs, 0, sizeof(bool) * (n->ntabs));
+    for(int i=0; i<n->tabs.size(); ++i)
+    {
+        n->tabs[i] = false;
+    }
     break;
 }
 ENDHANDLER
@@ -945,7 +935,7 @@ static NODE *newview(NODE *p, int y, int x, int h, int w) /* Open a new view. */
 {
     struct winsize ws = {.ws_row = (unsigned short)h,
                          .ws_col = (unsigned short)w};
-    NODE *n = NODE::newnode(VIEW, p, y, x, h, w);
+    NODE *n = new NODE(VIEW, p, y, x, h, w);
     if (!n)
         return NULL;
 
@@ -1002,7 +992,7 @@ static NODE *newview(NODE *p, int y, int x, int h, int w) /* Open a new view. */
 static NODE *newcontainer(Node t, NODE *p, int y, int x, int h, int w, NODE *c1,
                           NODE *c2) /* Create a new container */
 {
-    NODE *n = NODE::newnode(t, p, y, x, h, w);
+    NODE *n = new NODE(t, p, y, x, h, w);
     if (!n)
         return NULL;
 
@@ -1021,7 +1011,7 @@ static void focus(NODE *n) /* Focus a node. */
         return;
     }
 
-    if (n->t == VIEW)
+    if (n->isView())
     {
         lastfocused = focused;
         focused = n;
@@ -1119,7 +1109,7 @@ static bool getinput(NODE *n) /* Recursively check all ptty's for input. */
     if (n && n->c2 && !getinput(n->c2))
         return false;
 
-    if (n && n->t == VIEW && n->pt > 0 && selector::isSet(n->pt))
+    if (n && n->isView() && n->pt > 0 && selector::isSet(n->pt))
     {
         ssize_t r = read(n->pt, g_iobuf, sizeof(g_iobuf));
         if (r > 0)

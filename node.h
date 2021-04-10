@@ -3,6 +3,7 @@
 #include "vt/vtparser.h"
 #include <curses.h>
 #include <memory>
+#include <vector>
 
 enum Node
 {
@@ -22,22 +23,45 @@ struct SCRN
 
 struct NODE
 {
+private:
     Node t;
-    int y, x, h, w, pt, ntabs;
-    bool *tabs, pnm, decom, am, lnm;
+
+public:
+    bool isView() const
+    {
+        return t == VIEW;
+    }
+    int y = 0;
+    int x = 0;
+    int h = 0;
+    int w = 0;
+    int pt = 0;
+    int ntabs = 0;
+    std::vector<bool> tabs;
+    bool pnm = false;
+    bool decom = false;
+    bool am = false;
+    bool lnm = false;
     wchar_t repc;
-    NODE *p;
-    NODE *c1;
-    NODE *c2;
+    NODE *p = nullptr;
+    NODE *c1 = nullptr;
+    NODE *c2 = nullptr;
     std::shared_ptr<SCRN> pri;
     std::shared_ptr<SCRN> alt;
     std::shared_ptr<SCRN> s;
-    wchar_t *g0, *g1, *g2, *g3, *gc, *gs, *sgc, *sgs;
-    VTPARSER vp;
+    wchar_t *g0 = nullptr;
+    wchar_t *g1 = nullptr;
+    wchar_t *g2 = nullptr;
+    wchar_t *g3 = nullptr;
+    wchar_t *gc = nullptr;
+    wchar_t *gs = nullptr;
+    wchar_t *sgc = nullptr;
+    wchar_t *sgs = nullptr;
+    VTPARSER vp = {};
 
-    NODE();
+public:
+    NODE(Node t, NODE *p, int y, int x, int h, int w);
     ~NODE();
-
     void reshape(int y, int x, int h, int w);
     void reshapechildren();
     void reshapeview(int d, int ow);
@@ -48,7 +72,6 @@ struct NODE
         this->c1 = nullptr;
         this->c2 = nullptr;
     }
-    static NODE *newnode(Node t, NODE *p, int y, int x, int h, int w);
 };
 
 extern NODE *root;
