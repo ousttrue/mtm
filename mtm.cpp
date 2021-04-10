@@ -74,93 +74,88 @@ static bool *newtabs(int w, int ow,
 
 void NODE::reshape(int y, int x, int h, int w) /* Reshape a node. */
 {
-    auto n = this;
-    if (n->y == y && n->x == x && n->h == h && n->w == w && n->t == VIEW)
+    if (this->y == y && this->x == x && this->h == h && this->w == w && this->t == VIEW)
         return;
 
-    int d = n->h - h;
-    int ow = n->w;
-    n->y = y;
-    n->x = x;
-    n->h = MAX(h, 1);
-    n->w = MAX(w, 1);
+    int d = this->h - h;
+    int ow = this->w;
+    this->y = y;
+    this->x = x;
+    this->h = MAX(h, 1);
+    this->w = MAX(w, 1);
 
-    if (n->t == VIEW)
+    if (this->t == VIEW)
         reshapeview(d, ow);
     else
         reshapechildren();
-    n->draw();
+    this->draw();
 }
 
 void NODE::reshapechildren() /* Reshape all children of a view. */
 {
-    auto n = this;
-    if (n->t == HORIZONTAL)
+    if (this->t == HORIZONTAL)
     {
-        int i = n->w % 2 ? 0 : 1;
-        n->c1->reshape(n->y, n->x, n->h, n->w / 2);
-        n->c2->reshape(n->y, n->x + n->w / 2 + 1, n->h, n->w / 2 - i);
+        int i = this->w % 2 ? 0 : 1;
+        this->c1->reshape(this->y, this->x, this->h, this->w / 2);
+        this->c2->reshape(this->y, this->x + this->w / 2 + 1, this->h, this->w / 2 - i);
     }
-    else if (n->t == VERTICAL)
+    else if (this->t == VERTICAL)
     {
-        int i = n->h % 2 ? 0 : 1;
-        n->c1->reshape(n->y, n->x, n->h / 2, n->w);
-        n->c2->reshape(n->y + n->h / 2 + 1, n->x, n->h / 2 - i, n->w);
+        int i = this->h % 2 ? 0 : 1;
+        this->c1->reshape(this->y, this->x, this->h / 2, this->w);
+        this->c2->reshape(this->y + this->h / 2 + 1, this->x, this->h / 2 - i, this->w);
     }
 }
 
 void NODE::reshapeview(int d, int ow) /* Reshape a view. */
 {
-    auto n = this;
     int oy, ox;
-    bool *tabs = newtabs(n->w, ow, n->tabs);
-    struct winsize ws = {.ws_row = (unsigned short)n->h,
-                         .ws_col = (unsigned short)n->w};
+    bool *tabs = newtabs(this->w, ow, this->tabs);
+    struct winsize ws = {.ws_row = (unsigned short)this->h,
+                         .ws_col = (unsigned short)this->w};
 
     if (tabs)
     {
-        free(n->tabs);
-        n->tabs = tabs;
-        n->ntabs = n->w;
+        free(this->tabs);
+        this->tabs = tabs;
+        this->ntabs = this->w;
     }
 
-    getyx(n->s->win, oy, ox);
-    wresize(n->pri.win, MAX(n->h, SCROLLBACK), MAX(n->w, 2));
-    wresize(n->alt.win, MAX(n->h, 2), MAX(n->w, 2));
-    n->pri.tos = n->pri.off = MAX(0, SCROLLBACK - n->h);
-    n->alt.tos = n->alt.off = 0;
-    wsetscrreg(n->pri.win, 0, MAX(SCROLLBACK, n->h) - 1);
-    wsetscrreg(n->alt.win, 0, n->h - 1);
+    getyx(this->s->win, oy, ox);
+    wresize(this->pri.win, MAX(this->h, SCROLLBACK), MAX(this->w, 2));
+    wresize(this->alt.win, MAX(this->h, 2), MAX(this->w, 2));
+    this->pri.tos = this->pri.off = MAX(0, SCROLLBACK - this->h);
+    this->alt.tos = this->alt.off = 0;
+    wsetscrreg(this->pri.win, 0, MAX(SCROLLBACK, this->h) - 1);
+    wsetscrreg(this->alt.win, 0, this->h - 1);
     if (d > 0)
     { /* make sure the new top line syncs up after reshape */
-        wmove(n->s->win, oy + d, ox);
-        wscrl(n->s->win, -d);
+        wmove(this->s->win, oy + d, ox);
+        wscrl(this->s->win, -d);
     }
     doupdate();
     refresh();
-    ioctl(n->pt, TIOCSWINSZ, &ws);
+    ioctl(this->pt, TIOCSWINSZ, &ws);
 }
 
 void NODE::draw() const /* Draw a node. */
 {
-    auto n = this;
-    if (n->t == VIEW)
-        pnoutrefresh(n->s->win, n->s->off, 0, n->y, n->x, n->y + n->h - 1,
-                     n->x + n->w - 1);
+    if (this->t == VIEW)
+        pnoutrefresh(this->s->win, this->s->off, 0, this->y, this->x, this->y + this->h - 1,
+                     this->x + this->w - 1);
     else
         drawchildren();
 }
 
 void NODE::drawchildren() const /* Draw all children of n. */
 {
-    auto n = this;
-    n->c1->draw();
-    if (n->t == HORIZONTAL)
-        mvvline(n->y, n->x + n->w / 2, ACS_VLINE, n->h);
+    this->c1->draw();
+    if (this->t == HORIZONTAL)
+        mvvline(this->y, this->x + this->w / 2, ACS_VLINE, this->h);
     else
-        mvhline(n->y + n->h / 2, n->x, ACS_HLINE, n->w);
+        mvhline(this->y + this->h / 2, this->x, ACS_HLINE, this->w);
     wnoutrefresh(stdscr);
-    n->c2->draw();
+    this->c2->draw();
 }
 
 /*** GLOBALS AND PROTOTYPES */
