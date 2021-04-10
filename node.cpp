@@ -19,6 +19,31 @@ static bool *newtabs(int w, int ow,
     return tabs;
 }
 
+NODE::NODE()
+{
+    
+}
+
+NODE::~NODE()
+{
+    if (lastfocused == this)
+        lastfocused = NULL;
+    if (this->pri->win)
+        delwin(this->pri->win);
+    if (this->alt->win)
+        delwin(this->alt->win);
+    if (this->c1)
+        delete this->c1;
+    if (this->c2)
+        delete this->c2;
+    if (this->pt >= 0)
+    {
+        selector::close(this->pt);
+    }
+    free(this->tabs);
+    // free(n);
+}
+
 NODE *NODE::newnode(Node t, NODE *p, int y, int x, int h,
                     int w) /* Create a new node. */
 {
@@ -129,24 +154,4 @@ void NODE::drawchildren() const /* Draw all children of n. */
         mvhline(this->y + this->h / 2, this->x, ACS_HLINE, this->w);
     wnoutrefresh(stdscr);
     this->c2->draw();
-}
-
-void NODE::freenode(bool recurse) /* Free a node. */
-{
-    if (lastfocused == this)
-        lastfocused = NULL;
-    if (this->pri->win)
-        delwin(this->pri->win);
-    if (this->alt->win)
-        delwin(this->alt->win);
-    if (recurse && this->c1)
-        this->c1->freenode(true);
-    if (recurse && this->c2)
-        this->c2->freenode(true);
-    if (this->pt >= 0)
-    {
-        selector::close(this->pt);
-    }
-    free(this->tabs);
-    // free(n);
 }

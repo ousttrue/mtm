@@ -26,21 +26,28 @@ struct NODE
     int y, x, h, w, pt, ntabs;
     bool *tabs, pnm, decom, am, lnm;
     wchar_t repc;
-    NODE *p, *c1, *c2;
+    NODE *p;
+    NODE *c1;
+    NODE *c2;
     std::shared_ptr<SCRN> pri;
     std::shared_ptr<SCRN> alt;
     std::shared_ptr<SCRN> s;
     wchar_t *g0, *g1, *g2, *g3, *gc, *gs, *sgc, *sgs;
     VTPARSER vp;
-    
-    void freenode(bool recurse);
+
+    NODE();
+    ~NODE();
 
     void reshape(int y, int x, int h, int w);
     void reshapechildren();
     void reshapeview(int d, int ow);
     void draw() const;
     void drawchildren() const;
-
+    void detachchildren()
+    {
+        this->c1 = nullptr;
+        this->c2 = nullptr;
+    }
     static NODE *newnode(Node t, NODE *p, int y, int x, int h, int w);
 };
 

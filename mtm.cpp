@@ -68,14 +68,13 @@ static void setupevents(NODE *n);
 
 static const char *g_term = NULL;
 
-
 /*** UTILITY FUNCTIONS */
 void quit(int rc, const char *m) /* Shut down MTM. */
 {
     if (m)
         fprintf(stderr, "%s\n", m);
     if (root)
-        root->freenode(true);
+        delete root;
     endwin();
     exit(rc);
 }
@@ -920,7 +919,6 @@ static void setupevents(NODE *n)
  * tree, updating the display, and so on.
  */
 
-
 static void fixcursor(void) /* Move the terminal cursor to the active view. */
 {
     if (focused)
@@ -956,7 +954,11 @@ static NODE *newview(NODE *p, int y, int x, int h, int w) /* Open a new view. */
     pri->win = newpad(MAX(h, SCROLLBACK), w);
     alt->win = newpad(h, w);
     if (!pri->win || !alt->win)
-        return n->freenode(false), nullptr;
+    {
+        n->detachchildren();
+        delete n;
+        return nullptr;
+    }
     pri->tos = pri->off = MAX(0, SCROLLBACK - h);
     n->s = pri;
 
@@ -975,7 +977,9 @@ static NODE *newview(NODE *p, int y, int x, int h, int w) /* Open a new view. */
     {
         if (!p)
             perror("forkpty");
-        return n->freenode(false), nullptr;
+        n->detachchildren();
+        delete n;
+        return nullptr;
     }
     else if (pid == 0)
     {
@@ -1071,7 +1075,8 @@ static void removechild(NODE *p,
                         const NODE *c) /* Replace p with other child. */
 {
     replacechild(p->p, p, c == p->c1 ? p->c2 : p->c1);
-    p->freenode(false);
+    p->detachchildren();
+    delete p;
 }
 
 static void deletenode(NODE *n) /* Delete a node. */
@@ -1081,7 +1086,7 @@ static void deletenode(NODE *n) /* Delete a node. */
     if (n == focused)
         focus(n->p->c1 == n ? n->p->c2 : n->p->c1);
     removechild(n->p, n);
-    n->freenode(true);
+    delete n;
 }
 
 static void split(NODE *n, Node t) /* Split a node. */
@@ -1096,7 +1101,8 @@ static void split(NODE *n, Node t) /* Split a node. */
     NODE *c = newcontainer(t, n->p, n->y, n->x, n->h, n->w, n, v);
     if (!c)
     {
-        v->freenode(false);
+        v->detachchildren();
+        delete v;
         return;
     }
 
