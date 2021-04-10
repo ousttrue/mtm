@@ -8,6 +8,7 @@ add_executable(${PROJECT_NAME}
     main.cpp
     selector.cpp
     node.cpp
+    scrn.cpp
 )
 
 set_property(TARGET ${PROJECT_NAME} PROPERTY CXX_STANDARD 20)

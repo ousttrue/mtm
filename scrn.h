@@ -1,7 +1,6 @@
 #pragma once
 #include <curses.h>
 
-
 struct SCRN
 {
     int sy, sx, vis, tos, off;
@@ -10,3 +9,6 @@ struct SCRN
     attr_t sattr;
     WINDOW *win;
 };
+
+struct NODE;
+void scrollbottom(NODE *n);

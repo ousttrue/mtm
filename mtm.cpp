@@ -1132,11 +1132,6 @@ static void scrollforward(NODE *n)
     n->s->off = MIN(n->s->tos, n->s->off + n->h / 2);
 }
 
-static void scrollbottom(NODE *n)
-{
-    n->s->off = n->s->tos;
-}
-
 static void sendarrow(const NODE *n, const char *k)
 {
     char buf[100] = {0};
