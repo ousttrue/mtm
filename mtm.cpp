@@ -67,7 +67,7 @@ static char g_iobuf[BUFSIZ];
 static void setupevents(NODE *n);
 
 static const char *g_term = NULL;
-static void freenode(NODE *n, bool recursive);
+
 
 /*** UTILITY FUNCTIONS */
 void quit(int rc, const char *m) /* Shut down MTM. */
@@ -75,7 +75,7 @@ void quit(int rc, const char *m) /* Shut down MTM. */
     if (m)
         fprintf(stderr, "%s\n", m);
     if (root)
-        freenode(root, true);
+        root->freenode(true);
     endwin();
     exit(rc);
 }
@@ -920,28 +920,6 @@ static void setupevents(NODE *n)
  * tree, updating the display, and so on.
  */
 
-static void freenode(NODE *n, bool recurse) /* Free a node. */
-{
-    if (n)
-    {
-        if (lastfocused == n)
-            lastfocused = NULL;
-        if (n->pri->win)
-            delwin(n->pri->win);
-        if (n->alt->win)
-            delwin(n->alt->win);
-        if (recurse)
-            freenode(n->c1, true);
-        if (recurse)
-            freenode(n->c2, true);
-        if (n->pt >= 0)
-        {
-            selector::close(n->pt);
-        }
-        free(n->tabs);
-        free(n);
-    }
-}
 
 static void fixcursor(void) /* Move the terminal cursor to the active view. */
 {
@@ -978,7 +956,7 @@ static NODE *newview(NODE *p, int y, int x, int h, int w) /* Open a new view. */
     pri->win = newpad(MAX(h, SCROLLBACK), w);
     alt->win = newpad(h, w);
     if (!pri->win || !alt->win)
-        return freenode(n, false), nullptr;
+        return n->freenode(false), nullptr;
     pri->tos = pri->off = MAX(0, SCROLLBACK - h);
     n->s = pri;
 
@@ -997,7 +975,7 @@ static NODE *newview(NODE *p, int y, int x, int h, int w) /* Open a new view. */
     {
         if (!p)
             perror("forkpty");
-        return freenode(n, false), nullptr;
+        return n->freenode(false), nullptr;
     }
     else if (pid == 0)
     {
@@ -1093,7 +1071,7 @@ static void removechild(NODE *p,
                         const NODE *c) /* Replace p with other child. */
 {
     replacechild(p->p, p, c == p->c1 ? p->c2 : p->c1);
-    freenode(p, false);
+    p->freenode(false);
 }
 
 static void deletenode(NODE *n) /* Delete a node. */
@@ -1103,7 +1081,7 @@ static void deletenode(NODE *n) /* Delete a node. */
     if (n == focused)
         focus(n->p->c1 == n ? n->p->c2 : n->p->c1);
     removechild(n->p, n);
-    freenode(n, true);
+    n->freenode(true);
 }
 
 static void split(NODE *n, Node t) /* Split a node. */
@@ -1118,7 +1096,7 @@ static void split(NODE *n, Node t) /* Split a node. */
     NODE *c = newcontainer(t, n->p, n->y, n->x, n->h, n->w, n, v);
     if (!c)
     {
-        freenode(v, false);
+        v->freenode(false);
         return;
     }
 

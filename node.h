@@ -32,6 +32,8 @@ struct NODE
     std::shared_ptr<SCRN> s;
     wchar_t *g0, *g1, *g2, *g3, *gc, *gs, *sgc, *sgs;
     VTPARSER vp;
+    
+    void freenode(bool recurse);
 
     void reshape(int y, int x, int h, int w);
     void reshapechildren();
