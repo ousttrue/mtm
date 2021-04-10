@@ -29,6 +29,7 @@
 #include <wchar.h>
 #include <wctype.h>
 
+#include "mtm.h"
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -1336,7 +1337,7 @@ static void run(void) /* Run MTM. */
   }
 }
 
-int main(int argc, char **argv) {
+int mtm(int argc, char **argv) {
   FD_SET(STDIN_FILENO, &fds);
   setlocale(LC_ALL, "");
   signal(SIGCHLD, SIG_IGN); /* automatically reap children */
