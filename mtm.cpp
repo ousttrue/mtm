@@ -43,18 +43,13 @@ extern "C"
 }
 #endif
 
-#define MIN(x, y) ((x) < (y) ? (x) : (y))
-#define MAX(x, y) ((x) > (y) ? (x) : (y))
-
 /*** DATA TYPES */
-typedef enum
+enum Node
 {
     HORIZONTAL,
     VERTICAL,
     VIEW
-} Node;
-
-typedef struct SCRN SCRN;
+};
 struct SCRN
 {
     int sy, sx, vis, tos, off;
@@ -64,7 +59,6 @@ struct SCRN
     WINDOW *win;
 };
 
-typedef struct NODE NODE;
 struct NODE
 {
     Node t;
