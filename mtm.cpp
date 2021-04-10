@@ -1016,21 +1016,6 @@ static void focus(NODE *n) /* Focus a node. */
 #define LEFT(n) n->y + n->h / 2, n->x - 2
 #define RIGHT(n) n->y + n->h / 2, n->x + n->w + 2
 
-static NODE *findnode(NODE *n, int y, int x) /* Find the node enclosing y,x. */
-{
-#define IN(n, y, x)                                                            \
-    (y >= n->y && y <= n->y + n->h && x >= n->x && x <= n->x + n->w)
-    if (IN(n, y, x))
-    {
-        if (n->c1 && IN(n->c1, y, x))
-            return findnode(n->c1, y, x);
-        if (n->c2 && IN(n->c2, y, x))
-            return findnode(n->c2, y, x);
-        return n;
-    }
-    return NULL;
-}
-
 static void replacechild(NODE *n, NODE *c1,
                          NODE *c2) /* Replace c1 of n with c2. */
 {
@@ -1169,10 +1154,10 @@ static bool handlechar(int r, int k) /* Handle a single input character. */
     DO(false, CODE(KEY_F(10)), SEND(n, "\033[21~"); SB)
     DO(false, CODE(KEY_F(11)), SEND(n, "\033[23~"); SB)
     DO(false, CODE(KEY_F(12)), SEND(n, "\033[24~"); SB)
-    DO(true, MOVE_UP, focus(findnode(root, ABOVE(n))))
-    DO(true, MOVE_DOWN, focus(findnode(root, BELOW(n))))
-    DO(true, MOVE_LEFT, focus(findnode(root, LEFT(n))))
-    DO(true, MOVE_RIGHT, focus(findnode(root, RIGHT(n))))
+    DO(true, MOVE_UP, focus(root->findnode(ABOVE(n))))
+    DO(true, MOVE_DOWN, focus(root->findnode(BELOW(n))))
+    DO(true, MOVE_LEFT, focus(root->findnode(LEFT(n))))
+    DO(true, MOVE_RIGHT, focus(root->findnode(RIGHT(n))))
     DO(true, MOVE_OTHER, focus(lastfocused))
     DO(true, HSPLIT, split(n, HORIZONTAL))
     DO(true, VSPLIT, split(n, VERTICAL))

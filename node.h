@@ -64,6 +64,8 @@ public:
         this->c1 = nullptr;
         this->c2 = nullptr;
     }
+    NODE *findnode(int y, int x);
+    bool IN(int y, int x) const;
 };
 
 extern NODE *root;

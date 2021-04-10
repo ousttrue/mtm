@@ -134,3 +134,22 @@ void NODE::drawchildren() const /* Draw all children of n. */
     wnoutrefresh(stdscr);
     this->c2->draw();
 }
+
+bool NODE::IN(int y, int x) const
+{
+    return (y >= this->y && y <= this->y + this->h && x >= this->x &&
+            x <= this->x + this->w);
+}
+
+NODE *NODE::findnode(int y, int x) /* Find the node enclosing y,x. */
+{
+    if (IN(y, x))
+    {
+        if (this->c1 && this->c1->IN(y, x))
+            return this->c1->findnode(y, x);
+        if (this->c2 && this->c2->IN(y, x))
+            return this->c2->findnode(y, x);
+        return this;
+    }
+    return NULL;
+}
