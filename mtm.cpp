@@ -60,7 +60,8 @@ static bool *newtabs(int w, int ow,
 
 void NODE::reshape(int y, int x, int h, int w) /* Reshape a node. */
 {
-    if (this->y == y && this->x == x && this->h == h && this->w == w && this->t == VIEW)
+    if (this->y == y && this->x == x && this->h == h && this->w == w &&
+        this->t == VIEW)
         return;
 
     int d = this->h - h;
@@ -83,13 +84,15 @@ void NODE::reshapechildren() /* Reshape all children of a view. */
     {
         int i = this->w % 2 ? 0 : 1;
         this->c1->reshape(this->y, this->x, this->h, this->w / 2);
-        this->c2->reshape(this->y, this->x + this->w / 2 + 1, this->h, this->w / 2 - i);
+        this->c2->reshape(this->y, this->x + this->w / 2 + 1, this->h,
+                          this->w / 2 - i);
     }
     else if (this->t == VERTICAL)
     {
         int i = this->h % 2 ? 0 : 1;
         this->c1->reshape(this->y, this->x, this->h / 2, this->w);
-        this->c2->reshape(this->y + this->h / 2 + 1, this->x, this->h / 2 - i, this->w);
+        this->c2->reshape(this->y + this->h / 2 + 1, this->x, this->h / 2 - i,
+                          this->w);
     }
 }
 
@@ -127,8 +130,8 @@ void NODE::reshapeview(int d, int ow) /* Reshape a view. */
 void NODE::draw() const /* Draw a node. */
 {
     if (this->t == VIEW)
-        pnoutrefresh(this->s->win, this->s->off, 0, this->y, this->x, this->y + this->h - 1,
-                     this->x + this->w - 1);
+        pnoutrefresh(this->s->win, this->s->off, 0, this->y, this->x,
+                     this->y + this->h - 1, this->x + this->w - 1);
     else
         drawchildren();
 }
@@ -222,7 +225,7 @@ static const char *getshell(void) /* Get the user's preferred shell. */
 #define SEND(n, s) SENDN(n, s, strlen(s))
 #define COMMONVARS                                                             \
     NODE *n = (NODE *)p;                                                       \
-    auto s = n->s;                                                            \
+    auto s = n->s;                                                             \
     WINDOW *win = s->win;                                                      \
     int py, px, y, x, my, mx, top = 0, bot = 0, tos = s->tos;                  \
     (void)v;                                                                   \
@@ -1005,7 +1008,6 @@ static void setupevents(NODE *n)
  * These functions do the user-visible work of MTM: creating nodes in the
  * tree, updating the display, and so on.
  */
-
 
 static void freenode(NODE *n, bool recurse) /* Free a node. */
 {
