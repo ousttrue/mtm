@@ -44,6 +44,7 @@ extern "C"
 #endif
 
 #include "node.h"
+#include "scrn.h"
 
 /*** GLOBALS AND PROTOTYPES */
 

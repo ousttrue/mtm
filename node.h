@@ -12,15 +12,7 @@ enum Node
     VIEW
 };
 
-struct SCRN
-{
-    int sy, sx, vis, tos, off;
-    short fg, bg, sfg, sbg, sp;
-    bool insert, oxenl, xenl, saved;
-    attr_t sattr;
-    WINDOW *win;
-};
-
+struct SCRN;
 struct NODE
 {
 private:

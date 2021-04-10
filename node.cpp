@@ -2,6 +2,7 @@
 #include "node.h"
 #include "minmax.h"
 #include "selector.h"
+#include "scrn.h"
 #include <cstdlib>
 
 NODE *root = nullptr;
