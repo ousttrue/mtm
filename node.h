@@ -41,3 +41,7 @@ struct NODE
 
     static NODE *newnode(Node t, NODE *p, int y, int x, int h, int w);
 };
+
+extern NODE *root;
+extern NODE *focused;
+extern NODE *lastfocused;

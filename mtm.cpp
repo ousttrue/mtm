@@ -59,7 +59,7 @@ static bool *newtabs(int w, int ow,
 #include "node.h"
 
 /*** GLOBALS AND PROTOTYPES */
-static NODE *root, *focused, *lastfocused = NULL;
+
 static int g_commandkey = CTL(COMMAND_KEY);
 static int g_nfds = 1; /* stdin */
 static char g_iobuf[BUFSIZ];

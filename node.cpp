@@ -3,6 +3,10 @@
 #include "minmax.h"
 #include <cstdlib>
 
+NODE *root = nullptr;
+NODE *focused = nullptr;
+NODE *lastfocused = nullptr;
+
 static bool *newtabs(int w, int ow,
                      bool *oldtabs) /* Initialize default tabstops. */
 {
