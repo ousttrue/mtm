@@ -27,7 +27,7 @@
 #include <wctype.h>
 
 #include "selector.h"
-
+#include "minmax.h"
 #include "mtm.h"
 #ifdef __cplusplus
 extern "C"
@@ -58,25 +58,6 @@ static bool *newtabs(int w, int ow,
 
 #include "node.h"
 
-void NODE::reshape(int y, int x, int h, int w) /* Reshape a node. */
-{
-    if (this->y == y && this->x == x && this->h == h && this->w == w &&
-        this->t == VIEW)
-        return;
-
-    int d = this->h - h;
-    int ow = this->w;
-    this->y = y;
-    this->x = x;
-    this->h = MAX(h, 1);
-    this->w = MAX(w, 1);
-
-    if (this->t == VIEW)
-        reshapeview(d, ow);
-    else
-        reshapechildren();
-    this->draw();
-}
 
 void NODE::reshapechildren() /* Reshape all children of a view. */
 {
@@ -1124,14 +1105,19 @@ static NODE *newcontainer(Node t, NODE *p, int y, int x, int h, int w, NODE *c1,
 static void focus(NODE *n) /* Focus a node. */
 {
     if (!n)
+    {
         return;
-    else if (n->t == VIEW)
+    }
+
+    if (n->t == VIEW)
     {
         lastfocused = focused;
         focused = n;
     }
     else
+    {
         focus(n->c1 ? n->c1 : n->c2);
+    }
 }
 
 #define ABOVE(n) n->y - 2, n->x + n->w / 2

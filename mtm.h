@@ -7,13 +7,3 @@ inline int CTL(int x)
 {
     return ((x)&0x1f);
 }
-
-inline int MIN(int x, int y)
-{
-    return ((x) < (y) ? (x) : (y));
-}
-
-inline int MAX(int x, int y)
-{
-    return ((x) > (y) ? (x) : (y));
-}
