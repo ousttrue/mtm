@@ -290,7 +290,7 @@ ENDHANDLER
 HANDLER(sc)                              /* SC - Save Cursor */
 s->sx = px;                              /* save X position            */
 s->sy = py;                              /* save Y position            */
-wattr_get(win, &s->sattr, &s->sp, NULL); /* save attrs and color pair  */
+s->getAttr();
 s->sfg = s->fg;                          /* save foreground color      */
 s->sbg = s->bg;                          /* save background color      */
 s->oxenl = s->xenl;                      /* save xenl state            */
@@ -308,7 +308,7 @@ if (iw == L'#')
 if (!s->saved)
     return;
 wmove(win, s->sy, s->sx);              /* get old position          */
-wattr_set(win, s->sattr, s->sp, NULL); /* get attrs and color pair  */
+s->setAttr();
 s->fg = s->sfg;                        /* get foreground color      */
 s->bg = s->sbg;                        /* get background color      */
 s->xenl = s->oxenl;                    /* get xenl state            */

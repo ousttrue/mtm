@@ -27,3 +27,15 @@ void SCRN::scrollforward(int h)
 {
     this->off = MIN(this->tos, this->off + h / 2);
 }
+
+void SCRN::getAttr()
+{
+    /* save attrs and color pair  */
+    wattr_get(win, &this->sattr, &this->sp, NULL);
+}
+
+void SCRN::setAttr()
+{
+    /* get attrs and color pair  */
+    wattr_set(win, this->sattr, this->sp, NULL);
+}
