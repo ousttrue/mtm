@@ -330,7 +330,7 @@ case 0:
     n->tabs[x < n->ntabs ? x : 0] = false;
     break;
 case 3:
-    for(int i=0; i<n->tabs.size(); ++i)
+    for (int i = 0; i < n->tabs.size(); ++i)
     {
         n->tabs[i] = false;
     }
@@ -910,18 +910,6 @@ static void setupevents(NODE *n)
  * tree, updating the display, and so on.
  */
 
-static void fixcursor(void) /* Move the terminal cursor to the active view. */
-{
-    if (focused)
-    {
-        int y, x;
-        curs_set(focused->s->off != focused->s->tos ? 0 : focused->s->vis);
-        getyx(focused->s->win, y, x);
-        y = MIN(MAX(y, focused->s->tos), focused->s->tos + focused->h - 1);
-        wmove(focused->s->win, y, x);
-    }
-}
-
 static const char *getterm(void)
 {
     const char *envterm = getenv("TERM");
@@ -1148,7 +1136,7 @@ static bool handlechar(int r, int k) /* Handle a single input character. */
 #define KEY(i) (r == OK && (i) == k)
 #define CODE(i) (r == KEY_CODE_YES && (i) == k)
 #define INSCR (n->s->tos != n->s->off)
-#define SB scrollbottom(n)
+#define SB n->s->scrollbottom()
 #define DO(s, t, a)                                                            \
     if (s == cmd && (t))                                                       \
     {                                                                          \
@@ -1165,7 +1153,7 @@ static bool handlechar(int r, int k) /* Handle a single input character. */
     DO(false, KEY(L'\r'), SEND(n, n->lnm ? "\r\n" : "\r"); SB)
     DO(false, SCROLLUP && INSCR, scrollback(n))
     DO(false, SCROLLDOWN && INSCR, scrollforward(n))
-    DO(false, RECENTER && INSCR, scrollbottom(n))
+    DO(false, RECENTER && INSCR, n->s->scrollbottom())
     DO(false, CODE(KEY_ENTER), SEND(n, n->lnm ? "\r\n" : "\r"); SB)
     DO(false, CODE(KEY_UP), sendarrow(n, "A"); SB);
     DO(false, CODE(KEY_DOWN), sendarrow(n, "B"); SB);
@@ -1202,12 +1190,12 @@ static bool handlechar(int r, int k) /* Handle a single input character. */
     DO(true, REDRAW, touchwin(stdscr); root->draw(); redrawwin(stdscr))
     DO(true, SCROLLUP, scrollback(n))
     DO(true, SCROLLDOWN, scrollforward(n))
-    DO(true, RECENTER, scrollbottom(n))
+    DO(true, RECENTER, n->s->scrollbottom())
     DO(true, KEY(g_commandkey), SENDN(n, cmdstr, 1));
     char c[MB_LEN_MAX + 1] = {0};
     if (wctomb(c, k) > 0)
     {
-        scrollbottom(n);
+        n->s->scrollbottom();
         SEND(n, c);
     }
     return cmd = false, true;
@@ -1229,7 +1217,10 @@ static void run(void) /* Run MTM. */
 
         root->draw();
         doupdate();
-        fixcursor();
+        if (focused)
+        {
+            focused->s->fixcursor(focused->h);
+        }
         focused->draw();
         doupdate();
     }

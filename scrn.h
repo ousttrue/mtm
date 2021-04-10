@@ -8,7 +8,7 @@ struct SCRN
     bool insert, oxenl, xenl, saved;
     attr_t sattr;
     WINDOW *win;
-};
 
-struct NODE;
-void scrollbottom(NODE *n);
+    void scrollbottom();
+    void fixcursor(int h);
+};
