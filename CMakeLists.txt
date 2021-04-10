@@ -7,6 +7,7 @@ add_executable(${PROJECT_NAME}
     vt/vtparser.c
     main.cpp
     selector.cpp
+    node.cpp
 )
 
 set_property(TARGET ${PROJECT_NAME} PROPERTY CXX_STANDARD 20)

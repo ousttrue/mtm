@@ -1,5 +1,23 @@
 #pragma once
 
+#include "vt/vtparser.h"
+#include <curses.h>
+enum Node
+{
+    HORIZONTAL,
+    VERTICAL,
+    VIEW
+};
+
+struct SCRN
+{
+    int sy, sx, vis, tos, off;
+    short fg, bg, sfg, sbg, sp;
+    bool insert, oxenl, xenl, saved;
+    attr_t sattr;
+    WINDOW *win;
+};
+
 struct NODE
 {
     Node t;
@@ -16,4 +34,6 @@ struct NODE
     void reshapeview(int d, int ow);
     void draw() const;
     void drawchildren() const;
+
+    static NODE *newnode(Node t, NODE *p, int y, int x, int h, int w);
 };

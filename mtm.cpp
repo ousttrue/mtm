@@ -44,20 +44,6 @@ extern "C"
 #endif
 
 /*** DATA TYPES */
-enum Node
-{
-    HORIZONTAL,
-    VERTICAL,
-    VIEW
-};
-struct SCRN
-{
-    int sy, sx, vis, tos, off;
-    short fg, bg, sfg, sbg, sp;
-    bool insert, oxenl, xenl, saved;
-    attr_t sattr;
-    WINDOW *win;
-};
 
 static bool *newtabs(int w, int ow,
                      bool *oldtabs) /* Initialize default tabstops. */
@@ -1020,26 +1006,6 @@ static void setupevents(NODE *n)
  * tree, updating the display, and so on.
  */
 
-static NODE *newnode(Node t, NODE *p, int y, int x, int h,
-                     int w) /* Create a new node. */
-{
-    NODE *n = (NODE *)calloc(1, sizeof(NODE));
-    bool *tabs = newtabs(w, 0, NULL);
-    if (!n || h < 2 || w < 2 || !tabs)
-        return free(n), free(tabs), nullptr;
-
-    n->t = t;
-    n->pt = -1;
-    n->p = p;
-    n->y = y;
-    n->x = x;
-    n->h = h;
-    n->w = w;
-    n->tabs = tabs;
-    n->ntabs = w;
-
-    return n;
-}
 
 static void freenode(NODE *n, bool recurse) /* Free a node. */
 {
@@ -1090,7 +1056,7 @@ static NODE *newview(NODE *p, int y, int x, int h, int w) /* Open a new view. */
 {
     struct winsize ws = {.ws_row = (unsigned short)h,
                          .ws_col = (unsigned short)w};
-    NODE *n = newnode(VIEW, p, y, x, h, w);
+    NODE *n = NODE::newnode(VIEW, p, y, x, h, w);
     if (!n)
         return NULL;
 
@@ -1140,7 +1106,7 @@ static NODE *newview(NODE *p, int y, int x, int h, int w) /* Open a new view. */
 static NODE *newcontainer(Node t, NODE *p, int y, int x, int h, int w, NODE *c1,
                           NODE *c2) /* Create a new container */
 {
-    NODE *n = newnode(t, p, y, x, h, w);
+    NODE *n = NODE::newnode(t, p, y, x, h, w);
     if (!n)
         return NULL;
 
