@@ -108,12 +108,12 @@ void NODE::reshapeview(int d, int ow) /* Reshape a view. */
     }
 
     getyx(this->s->win, oy, ox);
-    wresize(this->pri.win, MAX(this->h, SCROLLBACK), MAX(this->w, 2));
-    wresize(this->alt.win, MAX(this->h, 2), MAX(this->w, 2));
-    this->pri.tos = this->pri.off = MAX(0, SCROLLBACK - this->h);
-    this->alt.tos = this->alt.off = 0;
-    wsetscrreg(this->pri.win, 0, MAX(SCROLLBACK, this->h) - 1);
-    wsetscrreg(this->alt.win, 0, this->h - 1);
+    wresize(this->pri->win, MAX(this->h, SCROLLBACK), MAX(this->w, 2));
+    wresize(this->alt->win, MAX(this->h, 2), MAX(this->w, 2));
+    this->pri->tos = this->pri->off = MAX(0, SCROLLBACK - this->h);
+    this->alt->tos = this->alt->off = 0;
+    wsetscrreg(this->pri->win, 0, MAX(SCROLLBACK, this->h) - 1);
+    wsetscrreg(this->alt->win, 0, this->h - 1);
     if (d > 0)
     { /* make sure the new top line syncs up after reshape */
         wmove(this->s->win, oy + d, ox);
@@ -222,7 +222,7 @@ static const char *getshell(void) /* Get the user's preferred shell. */
 #define SEND(n, s) SENDN(n, s, strlen(s))
 #define COMMONVARS                                                             \
     NODE *n = (NODE *)p;                                                       \
-    SCRN *s = n->s;                                                            \
+    auto s = n->s;                                                            \
     WINDOW *win = s->win;                                                      \
     int py, px, y, x, my, mx, top = 0, bot = 0, tos = s->tos;                  \
     (void)v;                                                                   \
@@ -547,10 +547,10 @@ CALL(cls);
 CALL(sgr0);
 n->am = true;
 n->pnm = false;
-n->pri.vis = n->alt.vis = 1;
-n->s = &n->pri;
-wsetscrreg(n->pri.win, 0, MAX(SCROLLBACK, n->h) - 1);
-wsetscrreg(n->alt.win, 0, n->h - 1);
+n->pri->vis = n->alt->vis = 1;
+n->s = n->pri;
+wsetscrreg(n->pri->win, 0, MAX(SCROLLBACK, n->h) - 1);
+wsetscrreg(n->alt->win, 0, n->h - 1);
 for (int i = 0; i < n->ntabs; i++)
     n->tabs[i] = (i % 8 == 0);
 ENDHANDLER
@@ -592,13 +592,13 @@ for (int i = 0; i < argc; i++)
         CALL((set ? sc : rc)); /* fall-through */
     case 47:
     case 1047:
-        if (set && n->s != &n->alt)
+        if (set && n->s != n->alt)
         {
-            n->s = &n->alt;
+            n->s = n->alt;
             CALL(cls);
         }
-        else if (!set && n->s != &n->pri)
-            n->s = &n->pri;
+        else if (!set && n->s != n->pri)
+            n->s = n->pri;
         break;
     }
 ENDHANDLER
@@ -1013,10 +1013,10 @@ static void freenode(NODE *n, bool recurse) /* Free a node. */
     {
         if (lastfocused == n)
             lastfocused = NULL;
-        if (n->pri.win)
-            delwin(n->pri.win);
-        if (n->alt.win)
-            delwin(n->alt.win);
+        if (n->pri->win)
+            delwin(n->pri->win);
+        if (n->alt->win)
+            delwin(n->alt->win);
         if (recurse)
             freenode(n->c1, true);
         if (recurse)
@@ -1060,7 +1060,8 @@ static NODE *newview(NODE *p, int y, int x, int h, int w) /* Open a new view. */
     if (!n)
         return NULL;
 
-    SCRN *pri = &n->pri, *alt = &n->alt;
+    auto pri = n->pri;
+    auto alt = n->alt;
     pri->win = newpad(MAX(h, SCROLLBACK), w);
     alt->win = newpad(h, w);
     if (!pri->win || !alt->win)

@@ -29,6 +29,8 @@ NODE *NODE::newnode(Node t, NODE *p, int y, int x, int h,
     n->w = w;
     n->tabs = tabs;
     n->ntabs = w;
+    n->pri = std::make_shared<SCRN>();
+    n->alt = std::make_shared<SCRN>();
 
     return n;
 }

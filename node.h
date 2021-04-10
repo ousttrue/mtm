@@ -2,6 +2,8 @@
 
 #include "vt/vtparser.h"
 #include <curses.h>
+#include <memory>
+
 enum Node
 {
     HORIZONTAL,
@@ -25,7 +27,9 @@ struct NODE
     bool *tabs, pnm, decom, am, lnm;
     wchar_t repc;
     NODE *p, *c1, *c2;
-    SCRN pri, alt, *s;
+    std::shared_ptr<SCRN> pri;
+    std::shared_ptr<SCRN> alt;
+    std::shared_ptr<SCRN> s;
     wchar_t *g0, *g1, *g2, *g3, *gc, *gs, *sgc, *sgs;
     VTPARSER vp;
 
