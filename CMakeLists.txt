@@ -4,7 +4,7 @@ cmake_minimum_required(VERSION 3.10)
 add_executable(${PROJECT_NAME}
     mtm.cpp
     pair.c
-    vtparser.c
+    vt/vtparser.c
     main.cpp
     selector.cpp
 )

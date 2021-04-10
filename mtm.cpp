@@ -34,7 +34,7 @@ extern "C"
 {
 #endif
 
-#include "vtparser.h"
+#include "vt/vtparser.h"
 #include "pair.h"
 /*** CONFIGURATION */
 #include "config.h"
