@@ -1,8 +1,6 @@
 #include "mtm.h"
-#include <clocale>
-#include <cstdlib>
+#include "vthandler.h"
 #include <signal.h>
-#include <stdlib.h>
 #include <unistd.h>
 
 auto USAGE = "usage: mtm [-T NAME] [-t NAME] [-c KEY]\n";

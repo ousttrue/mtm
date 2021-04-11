@@ -1,10 +1,6 @@
 #pragma once
 #include <memory>
 
-inline int CTL(int x)
-{
-    return ((x)&0x1f);
-}
 
 class mtm
 {

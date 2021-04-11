@@ -1,6 +1,9 @@
 #include "selector.h"
 #include <sys/select.h>
 #include <unistd.h>
+#include <fcntl.h>
+
+static int g_nfds = 1; /* stdin */
 
 class SelectorImpl
 {
@@ -46,6 +49,11 @@ namespace selector
 void set(int fd)
 {
     g_impl.Set(fd);
+    fcntl(fd, F_SETFL, O_NONBLOCK);
+    if (fd > g_nfds)
+    {
+        g_nfds = fd;
+    }
 }
 
 void close(int fd)
@@ -53,9 +61,9 @@ void close(int fd)
     g_impl.Close(fd);
 }
 
-void select(int nfds)
+void select()
 {
-    g_impl.Select(nfds);
+    g_impl.Select(g_nfds);
 }
 
 bool isSet(int fd)
