@@ -68,6 +68,7 @@ public:
     bool handleUserInput();
     void fixCursor();
     void reset();
+    bool alternate_screen_buffer_mode(bool set);
 };
 
 extern std::shared_ptr<NODE> root;
@@ -79,7 +80,7 @@ std::shared_ptr<NODE> newview(const std::shared_ptr<NODE> &p, int y, int x,
                               int h, int w);
 void split(const std::shared_ptr<NODE> &n, const Node t);
 
-struct View: public NODE
+struct View : public NODE
 {
     using NODE::NODE;
 };

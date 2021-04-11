@@ -439,13 +439,10 @@ for (int i = 0; i < argc; i++)
         CALL((set ? sc : rc)); /* fall-through */
     case 47:
     case 1047:
-        if (set && n->s != n->alt)
+        if (n->alternate_screen_buffer_mode(set))
         {
-            n->s = n->alt;
             CALL(cls);
         }
-        else if (!set && n->s != n->pri)
-            n->s = n->pri;
         break;
     }
 ENDHANDLER

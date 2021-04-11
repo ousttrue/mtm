@@ -353,18 +353,33 @@ void NODE::fixCursor()
 
 void NODE::reset()
 {
+    this->gs = this->gc = this->g0 = CSET_US;
+    this->g1 = CSET_GRAPH;
+    this->g2 = CSET_US;
+    this->g3 = CSET_GRAPH;
+    this->decom = s->insert = s->oxenl = s->xenl = this->lnm = false;
+    this->am = true;
+    this->pnm = false;
+    this->pri->vis = this->alt->vis = 1;
+    this->s = this->pri;
+    wsetscrreg(this->pri->win, 0, MAX(SCROLLBACK, this->h) - 1);
+    wsetscrreg(this->alt->win, 0, this->h - 1);
+    for (int i = 0; i < this->ntabs; i++)
+        this->tabs[i] = (i % 8 == 0);
+}
+
+bool NODE::alternate_screen_buffer_mode(bool set)
+{
     auto n = this;
-    n->gs = n->gc = n->g0 = CSET_US;
-    n->g1 = CSET_GRAPH;
-    n->g2 = CSET_US;
-    n->g3 = CSET_GRAPH;
-    n->decom = s->insert = s->oxenl = s->xenl = n->lnm = false;
-    n->am = true;
-    n->pnm = false;
-    n->pri->vis = n->alt->vis = 1;
-    n->s = n->pri;
-    wsetscrreg(n->pri->win, 0, MAX(SCROLLBACK, n->h) - 1);
-    wsetscrreg(n->alt->win, 0, n->h - 1);
-    for (int i = 0; i < n->ntabs; i++)
-        n->tabs[i] = (i % 8 == 0);
+    if (set && n->s != n->alt)
+    {
+        n->s = n->alt;
+        return true;
+        // CALL(cls);
+    }
+    else if (!set && n->s != n->pri)
+    {
+        n->s = n->pri;
+    }
+    return false;
 }
