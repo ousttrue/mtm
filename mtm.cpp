@@ -909,11 +909,34 @@ static const char *getterm(void)
     return DEFAULT_TERMINAL;
 }
 
+static int fork_setup(VTPARSER *vp, void *p, int *pt, int h, int w)
+{
+    vp->p = p;
+    setupevents(vp);
+    ris(vp, p, L'c', 0, 0, NULL, NULL);
+
+    struct winsize ws = {.ws_row = (unsigned short)h,
+                         .ws_col = (unsigned short)w};
+    pid_t pid = forkpty(pt, NULL, NULL, &ws);
+    if (pid == 0)
+    {
+        //
+        // new process
+        //
+        char buf[100] = {0};
+        snprintf(buf, sizeof(buf) - 1, "%lu", (unsigned long)getppid());
+        setsid();
+        setenv("MTM", buf, 1);
+        setenv("TERM", getterm(), 1);
+        signal(SIGCHLD, SIG_DFL);
+        execl(getshell(), getshell(), NULL);
+    }
+    return pid;
+}
+
 static std::shared_ptr<NODE> newview(const std::shared_ptr<NODE> &p, int y,
                                      int x, int h, int w) /* Open a new view. */
 {
-    struct winsize ws = {.ws_row = (unsigned short)h,
-                         .ws_col = (unsigned short)w};
     auto n = std::make_shared<NODE>(VIEW, p, y, x, h, w);
     auto pri = n->pri;
     auto alt = n->alt;
@@ -934,11 +957,7 @@ static std::shared_ptr<NODE> newview(const std::shared_ptr<NODE> &p, int y,
     keypad(pri->win, TRUE);
     keypad(alt->win, TRUE);
 
-    n->vp.p = n.get();
-    setupevents(&n->vp);
-    ris(&n->vp, n.get(), L'c', 0, 0, NULL, NULL);
-
-    pid_t pid = forkpty(&n->pt, NULL, NULL, &ws);
+    auto pid = fork_setup(&n->vp, n.get(), &n->pt, h, w);
     if (pid < 0)
     {
         // error
@@ -950,25 +969,18 @@ static std::shared_ptr<NODE> newview(const std::shared_ptr<NODE> &p, int y,
     }
     else if (pid == 0)
     {
-        //
-        // new process
-        //
-        char buf[100] = {0};
-        snprintf(buf, sizeof(buf) - 1, "%lu", (unsigned long)getppid());
-        setsid();
-        setenv("MTM", buf, 1);
-        setenv("TERM", getterm(), 1);
-        signal(SIGCHLD, SIG_DFL);
-        execl(getshell(), getshell(), NULL);
+        // child process
         return NULL;
     }
 
-    //
-    // continue
-    //
+    // setup selector
     selector::set(n->pt);
     fcntl(n->pt, F_SETFL, O_NONBLOCK);
-    g_nfds = n->pt > g_nfds ? n->pt : g_nfds;
+    if (n->pt > g_nfds)
+    {
+        g_nfds = n->pt;
+    }
+
     return n;
 }
 
