@@ -13,9 +13,11 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
+#include <cstdlib>
 #include <errno.h>
 #include <fcntl.h>
 #include <limits.h>
+#include <memory>
 #include <pwd.h>
 #include <signal.h>
 #include <stdbool.h>
@@ -57,15 +59,6 @@ static void setupevents(NODE *n);
 static const char *g_term = NULL;
 
 /*** UTILITY FUNCTIONS */
-void quit(int rc, const char *m) /* Shut down MTM. */
-{
-    if (m)
-        fprintf(stderr, "%s\n", m);
-    if (root)
-        delete root;
-    endwin();
-    exit(rc);
-}
 
 static void safewrite(int fd, const char *b,
                       size_t n) /* Write, checking for errors. */
@@ -287,14 +280,14 @@ HANDLER(su) /* SU - Scroll Up/Down */
 wscrl(win, (w == L'T' || w == L'^') ? -P1(0) : P1(0));
 ENDHANDLER
 
-HANDLER(sc)                              /* SC - Save Cursor */
-s->sx = px;                              /* save X position            */
-s->sy = py;                              /* save Y position            */
+HANDLER(sc) /* SC - Save Cursor */
+s->sx = px; /* save X position            */
+s->sy = py; /* save Y position            */
 s->getAttr();
-s->sfg = s->fg;                          /* save foreground color      */
-s->sbg = s->bg;                          /* save background color      */
-s->oxenl = s->xenl;                      /* save xenl state            */
-s->saved = true;                         /* save data is valid         */
+s->sfg = s->fg;     /* save foreground color      */
+s->sbg = s->bg;     /* save background color      */
+s->oxenl = s->xenl; /* save xenl state            */
+s->saved = true;    /* save data is valid         */
 n->sgc = n->gc;
 n->sgs = n->gs; /* save character sets        */
 ENDHANDLER
@@ -307,11 +300,11 @@ if (iw == L'#')
 }
 if (!s->saved)
     return;
-wmove(win, s->sy, s->sx);              /* get old position          */
+wmove(win, s->sy, s->sx); /* get old position          */
 s->setAttr();
-s->fg = s->sfg;                        /* get foreground color      */
-s->bg = s->sbg;                        /* get background color      */
-s->xenl = s->oxenl;                    /* get xenl state            */
+s->fg = s->sfg;     /* get foreground color      */
+s->bg = s->sbg;     /* get background color      */
+s->xenl = s->oxenl; /* get xenl state            */
 n->gc = n->sgc;
 n->gs = n->sgs; /* save character sets        */
 
@@ -1046,7 +1039,14 @@ static void removechild(NODE *p,
 static void deletenode(NODE *n) /* Delete a node. */
 {
     if (!n || !n->p)
-        quit(EXIT_SUCCESS, NULL);
+    {
+        if (root)
+        {
+            delete root;
+            root = nullptr;
+        }
+        return;
+    }
     if (n == focused)
         focus(n->p->c1 == n ? n->p->c2 : n->p->c1);
     removechild(n->p, n);
@@ -1087,9 +1087,14 @@ static bool getinput(NODE *n) /* Recursively check all ptty's for input. */
     {
         ssize_t r = read(n->pt, g_iobuf, sizeof(g_iobuf));
         if (r > 0)
+        {
             vtwrite(&n->vp, g_iobuf, r);
+        }
         if (r <= 0 && errno != EINTR && errno != EWOULDBLOCK)
-            return deletenode(n), false;
+        {
+            deletenode(n);
+            return false;
+        }
     }
 
     return true;
@@ -1176,8 +1181,55 @@ static bool handlechar(int r, int k) /* Handle a single input character. */
     return cmd = false, true;
 }
 
-static void run(void) /* Run MTM. */
+mtm::mtm()
 {
+    raw();
+    noecho();
+    nonl();
+    intrflush(stdscr, FALSE);
+    start_color();
+    use_default_colors();
+    start_pairs();
+
+    run();
+}
+
+std::unique_ptr<mtm> mtm::create(const char *term, int commandKey)
+{
+    g_term = term;
+    g_commandkey = commandKey;
+    if (!initscr())
+    {
+        // quit(EXIT_FAILURE, "could not initialize terminal");
+        return nullptr;
+    }
+
+    return std::unique_ptr<mtm>(new mtm());
+}
+
+mtm::~mtm()
+{
+    // void quit(int rc, const char *m) /* Shut down MTM. */
+    // {
+    //     if (m)
+    //         fprintf(stderr, "%s\n", m);
+    if (root)
+        delete root;
+    endwin();
+    // exit(rc);
+}
+
+int mtm::run()
+{
+    root = newview(NULL, 0, 0, LINES, COLS);
+    if (!root)
+    {
+        return 1;
+        // quit(EXIT_FAILURE, "could not open root window");
+    }
+    focus(root);
+    root->draw();
+
     while (root)
     {
         wint_t w = 0;
@@ -1188,7 +1240,11 @@ static void run(void) /* Run MTM. */
         {
             r = wget_wch(focused->s->win, &w);
         }
-        getinput(root);
+
+        if (!getinput(root))
+        {
+            break;
+        }
 
         root->draw();
         doupdate();
@@ -1199,29 +1255,6 @@ static void run(void) /* Run MTM. */
         focused->draw();
         doupdate();
     }
-}
 
-int mtm(const char *term, int commandKey)
-{
-    g_term = term;
-    g_commandkey = commandKey;
-    if (!initscr())
-        quit(EXIT_FAILURE, "could not initialize terminal");
-    raw();
-    noecho();
-    nonl();
-    intrflush(stdscr, FALSE);
-    start_color();
-    use_default_colors();
-    start_pairs();
-
-    root = newview(NULL, 0, 0, LINES, COLS);
-    if (!root)
-        quit(EXIT_FAILURE, "could not open root window");
-    focus(root);
-    root->draw();
-    run();
-
-    quit(EXIT_SUCCESS, NULL);
-    return EXIT_SUCCESS; /* not reached */
+    return EXIT_SUCCESS;
 }

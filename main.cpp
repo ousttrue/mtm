@@ -1,5 +1,6 @@
 #include "mtm.h"
 #include <clocale>
+#include <cstdlib>
 #include <signal.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -27,9 +28,10 @@ int main(int argc, char **argv)
             term = optarg;
             break;
         default:
-            quit(EXIT_FAILURE, USAGE);
-            break;
+            fprintf(stderr, "%s\n", USAGE);
+            return EXIT_FAILURE;
         }
 
-    return mtm(term, commandkey);
+    auto app = mtm::create(term, commandkey);
+    return app->run();
 }
