@@ -20,7 +20,7 @@
 #include "mtm.h"
 #include "vthandler.h"
 #include "node.h"
-#include "vt.h"
+#include "vtscreen.h"
 
 #ifdef __cplusplus
 extern "C"

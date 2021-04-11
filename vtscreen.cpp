@@ -1,4 +1,4 @@
-#include "vt.h"
+#include "vtscreen.h"
 #include "scrn.h"
 #include "minmax.h"
 #include "selector.h"
@@ -18,7 +18,7 @@ extern "C"
 #endif
 
 
-VT::VT(int h, int w)
+VTScreen::VTScreen(int h, int w)
 {
     for (int i = 0; i < w; i++)
     {
@@ -50,7 +50,7 @@ VT::VT(int h, int w)
     this->vp = std::make_unique<VTPARSER>();
 }
 
-VT::~VT()
+VTScreen::~VTScreen()
 {
     if (this->pri->win)
         delwin(this->pri->win);
@@ -62,7 +62,7 @@ VT::~VT()
     }
 }
 
-void VT::reshapeview(int d, int ow, int lines, int cols) /* Reshape a view. */
+void VTScreen::reshapeview(int d, int ow, int lines, int cols) /* Reshape a view. */
 {
     int oy, ox;
     struct winsize ws = {.ws_row = (unsigned short)lines,
@@ -93,12 +93,12 @@ void VT::reshapeview(int d, int ow, int lines, int cols) /* Reshape a view. */
     ioctl(this->pt, TIOCSWINSZ, &ws);
 }
 
-void VT::draw(int y, int x, int h, int w)
+void VTScreen::draw(int y, int x, int h, int w)
 {
     pnoutrefresh(this->s->win, this->s->off, 0, y, x, y + h - 1, x + w - 1);
 }
 
-bool VT::process()
+bool VTScreen::process()
 {
     if (this->pt > 0 && selector::isSet(this->pt))
     {
@@ -117,19 +117,19 @@ bool VT::process()
     return true;
 }
 
-bool VT::handleUserInput()
+bool VTScreen::handleUserInput()
 {
     wint_t w = 0;
     int r = wget_wch(this->s->win, &w);
     return handlechar(r, w);
 }
 
-void VT::fixCursor(int h)
+void VTScreen::fixCursor(int h)
 {
     this->s->fixcursor(h);
 }
 
-void VT::reset(int h)
+void VTScreen::reset(int h)
 {
     this->gs = this->gc = this->g0 = CSET_US;
     this->g1 = CSET_GRAPH;
@@ -146,7 +146,7 @@ void VT::reset(int h)
         this->tabs[i] = (i % 8 == 0);
 }
 
-bool VT::alternate_screen_buffer_mode(bool set)
+bool VTScreen::alternate_screen_buffer_mode(bool set)
 {
     auto n = this;
     if (set && n->s != n->alt)

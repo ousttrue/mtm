@@ -11,7 +11,7 @@ extern "C"
 
 #include "vthandler.h"
 #include "node.h"
-#include "vt.h"
+#include "vtscreen.h"
 #include "scrn.h"
 #include "minmax.h"
 

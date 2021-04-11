@@ -1,7 +1,7 @@
 #include "node.h"
 #include "minmax.h"
 #include "selector.h"
-#include "vt.h"
+#include "vtscreen.h"
 #include "vthandler.h"
 #include <curses.h>
 
@@ -125,7 +125,7 @@ std::shared_ptr<NODE> newview(const std::shared_ptr<NODE> &p, int y, int x,
                               int h, int w) /* Open a new view. */
 {
     auto n = std::make_shared<NODE>(VIEW, p, y, x, h, w);
-    n->vt = std::make_unique<VT>(h, w);
+    n->vt = std::make_unique<VTScreen>(h, w);
 
     auto pid = fork_setup(n->vt->vp.get(), n.get(), &n->vt->pt, h, w);
     if (pid < 0)

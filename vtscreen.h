@@ -4,7 +4,7 @@
 
 struct SCRN;
 struct VTPARSER;
-struct VT
+struct VTScreen
 {
     int pt = -1;
     int ntabs = 0;
@@ -13,7 +13,7 @@ struct VT
     bool decom = false;
     bool am = false;
     bool lnm = false;
-    wchar_t repc;
+    wchar_t repc = 0;
     std::shared_ptr<SCRN> pri;
     std::shared_ptr<SCRN> alt;
     std::shared_ptr<SCRN> s;
@@ -27,8 +27,8 @@ struct VT
     wchar_t *sgs = nullptr;
     std::unique_ptr<VTPARSER> vp;
 
-    VT(int lines, int cols);
-    ~VT();
+    VTScreen(int lines, int cols);
+    ~VTScreen();
     void reshapeview(int d, int ow, int lines, int cols);
     void draw(int y, int x, int h, int w);
     bool process();
