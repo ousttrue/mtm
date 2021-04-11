@@ -75,8 +75,6 @@ mtm::mtm()
     start_color();
     use_default_colors();
     start_pairs();
-
-    run();
 }
 
 std::unique_ptr<mtm> mtm::create(const char *term, int commandKey)
