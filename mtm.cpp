@@ -13,6 +13,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
+#include <cstdio>
 #include <unistd.h>
 #include "selector.h"
 #include "minmax.h"
@@ -34,11 +35,6 @@ extern "C"
 #include "node.h"
 #include "scrn.h"
 
-
-/*** MTM FUNCTIONS
- * These functions do the user-visible work of MTM: creating nodes in the
- * tree, updating the display, and so on.
- */
 static bool getinput(const std::shared_ptr<NODE>
                          &n) /* Recursively check all ptty's for input. */
 {
@@ -92,13 +88,8 @@ std::unique_ptr<mtm> mtm::create(const char *term, int commandKey)
 
 mtm::~mtm()
 {
-    // void quit(int rc, const char *m) /* Shut down MTM. */
-    // {
-    //     if (m)
-    //         fprintf(stderr, "%s\n", m);
     root = nullptr;
     endwin();
-    // exit(rc);
 }
 
 int mtm::run()
@@ -107,41 +98,52 @@ int mtm::run()
     if (!root)
     {
         return 1;
-        // quit(EXIT_FAILURE, "could not open root window");
     }
     focus(root);
-    root->draw();
 
+    //
+    // main loop
+    //
     while (root)
     {
-        wint_t w = 0;
+        {
+            //
+            // process all user input
+            //
+            auto f = focused.lock();
+            while (true)
+            {
+                wint_t w = 0;
+                int r = wget_wch(f->s->win, &w);
+                if (!handlechar(r, w))
+                {
+                    break;
+                }
+            }
+        }
+
+        //
+        // read pty and process vt
+        //
         selector::select();
+        getinput(root);
 
+        //
+        // update visual
+        //
+        if (root)
         {
-            auto f = focused.lock();
-            int r = wget_wch(f->s->win, &w);
-            while (handlechar(r, w))
+            root->draw();
             {
-                r = wget_wch(f->s->win, &w);
+                auto f = focused.lock();
+                if (f)
+                {
+                    f->s->fixcursor(f->h);
+                    f->draw();
+                }
             }
+            doupdate();
         }
-
-        if (!getinput(root))
-        {
-            break;
-        }
-
-        root->draw();
-        doupdate();
-        {
-            auto f = focused.lock();
-            if (f)
-            {
-                f->s->fixcursor(f->h);
-            }
-            f->draw();
-        }
-        doupdate();
     }
 
     return EXIT_SUCCESS;
