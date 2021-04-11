@@ -80,7 +80,7 @@ int mtm::run()
         //
         {
             auto f = focused.lock();
-            while (f->handleUserInput())
+            while (f->vt->handleUserInput())
                 ;
         }
 
@@ -100,7 +100,7 @@ int mtm::run()
         {
             // cursor for focused
             auto f = focused.lock();
-            f->fixCursor();
+            f->vt->fixCursor(f->h);
             // f->draw();
 
             root->draw();

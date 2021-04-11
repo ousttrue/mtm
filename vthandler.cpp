@@ -74,11 +74,11 @@ static void safewrite(int fd, const char *b,
 #define P0(x) PD(x, 0)
 #define P1(x) (!P0(x) ? 1 : P0(x))
 #define CALL(x) (x)(v, n, 0, 0, 0, NULL, NULL)
-#define SENDN(n, s, c) safewrite(n->pt, s, c)
+#define SENDN(n, s, c) safewrite(n->vt->pt, s, c)
 #define SEND(n, s) SENDN(n, s, strlen(s))
 #define COMMONVARS                                                             \
     NODE *n = (NODE *)p;                                                       \
-    auto s = n->s;                                                             \
+    auto s = n->vt->s;                                                             \
     WINDOW *win = s->win;                                                      \
     int py, px, y, x, my, mx, top = 0, bot = 0, tos = s->tos;                  \
     (void)v;                                                                   \
@@ -110,7 +110,7 @@ static void safewrite(int fd, const char *b,
     {                                                                          \
         COMMONVARS
 #define ENDHANDLER                                                             \
-    n->repc = 0;                                                               \
+    n->vt->repc = 0;                                                               \
     } /* control sequences aren't repeated */
 
 HANDLER(bell) /* Terminal bell. */
@@ -118,7 +118,7 @@ beep();
 ENDHANDLER
 
 HANDLER(numkp) /* Application/Numeric Keypad Mode */
-n->pnm = (w == L'=');
+n->vt->pnm = (w == L'=');
 ENDHANDLER
 
 HANDLER(vis) /* Cursor visibility */
@@ -127,7 +127,7 @@ ENDHANDLER
 
 HANDLER(cup) /* CUP - Cursor Position */
 s->xenl = false;
-wmove(win, tos + (n->decom ? top : 0) + P1(0) - 1, P1(1) - 1);
+wmove(win, tos + (n->vt->decom ? top : 0) + P1(0) - 1, P1(1) - 1);
 ENDHANDLER
 
 HANDLER(dch) /* DCH - Delete Character */
@@ -157,8 +157,8 @@ SEND(n, "\006");
 ENDHANDLER
 
 HANDLER(hts) /* HTS - Horizontal Tab Set */
-if (x < n->ntabs && x > 0)
-    n->tabs[x] = true;
+if (x < n->vt->ntabs && x > 0)
+    n->vt->tabs[x] = true;
 ENDHANDLER
 
 HANDLER(ri) /* RI - Reverse Index */
@@ -193,8 +193,8 @@ wmove(win, MIN(tos + bot - 1, MAX(tos + top, py + P1(0))), x);
 ENDHANDLER
 
 HANDLER(cbt) /* CBT - Cursor Backwards Tab */
-for (int i = x - 1; i < n->ntabs && i >= 0; i--)
-    if (n->tabs[i])
+for (int i = x - 1; i < n->vt->ntabs && i >= 0; i--)
+    if (n->vt->tabs[i])
     {
         wmove(win, py, i);
         return;
@@ -203,8 +203,8 @@ wmove(win, py, 0);
 ENDHANDLER
 
 HANDLER(ht) /* HT - Horizontal Tab */
-for (int i = x + 1; i < n->w && i < n->ntabs; i++)
-    if (n->tabs[i])
+for (int i = x + 1; i < n->w && i < n->vt->ntabs; i++)
+    if (n->vt->tabs[i])
     {
         wmove(win, py, i);
         return;
@@ -250,8 +250,8 @@ s->sfg = s->fg;     /* save foreground color      */
 s->sbg = s->bg;     /* save background color      */
 s->oxenl = s->xenl; /* save xenl state            */
 s->saved = true;    /* save data is valid         */
-n->sgc = n->gc;
-n->sgs = n->gs; /* save character sets        */
+n->vt->sgc = n->vt->gc;
+n->vt->sgs = n->vt->gs; /* save character sets        */
 ENDHANDLER
 
 HANDLER(rc) /* RC - Restore Cursor */
@@ -267,8 +267,8 @@ s->setAttr();
 s->fg = s->sfg;     /* get foreground color      */
 s->bg = s->sbg;     /* get background color      */
 s->xenl = s->oxenl; /* get xenl state            */
-n->gc = n->sgc;
-n->gs = n->sgs; /* save character sets        */
+n->vt->gc = n->vt->sgc;
+n->vt->gs = n->vt->sgs; /* save character sets        */
 
 /* restore colors */
 int cp = mtm_alloc_pair(s->fg, s->bg);
@@ -282,12 +282,12 @@ HANDLER(tbc) /* TBC - Tabulation Clear */
 switch (P0(0))
 {
 case 0:
-    n->tabs[x < n->ntabs ? x : 0] = false;
+    n->vt->tabs[x < n->vt->ntabs ? x : 0] = false;
     break;
 case 3:
-    for (int i = 0; i < n->tabs.size(); ++i)
+    for (int i = 0; i < n->vt->tabs.size(); ++i)
     {
-        n->tabs[i] = false;
+        n->vt->tabs[i] = false;
     }
     break;
 }
@@ -356,7 +356,7 @@ ENDHANDLER
 HANDLER(dsr) /* DSR - Device Status Report */
 char buf[100] = {0};
 if (P0(0) == 6)
-    snprintf(buf, sizeof(buf) - 1, "\033[%d;%dR", (n->decom ? y - top : y) + 1,
+    snprintf(buf, sizeof(buf) - 1, "\033[%d;%dR", (n->vt->decom ? y - top : y) + 1,
              x + 1);
 else
     snprintf(buf, sizeof(buf) - 1, "\033[0n");
@@ -399,7 +399,7 @@ ENDHANDLER
 HANDLER(ris) /* RIS - Reset to Initial State */
 CALL(cls);
 CALL(sgr0);
-n->reset();
+n->vt->reset(n->h);
 ENDHANDLER
 
 HANDLER(mode) /* Set or Reset Mode */
@@ -408,7 +408,7 @@ for (int i = 0; i < argc; i++)
     switch (P0(i))
     {
     case 1:
-        n->pnm = set;
+        n->vt->pnm = set;
         break;
     case 3:
         CALL(cls);
@@ -417,14 +417,14 @@ for (int i = 0; i < argc; i++)
         s->insert = set;
         break;
     case 6:
-        n->decom = set;
+        n->vt->decom = set;
         CALL(cup);
         break;
     case 7:
-        n->am = set;
+        n->vt->am = set;
         break;
     case 20:
-        n->lnm = set;
+        n->vt->lnm = set;
         break;
     case 25:
         s->vis = set ? 1 : 0;
@@ -439,7 +439,7 @@ for (int i = 0; i < argc; i++)
         CALL((set ? sc : rc)); /* fall-through */
     case 47:
     case 1047:
-        if (n->alternate_screen_buffer_mode(set))
+        if (n->vt->alternate_screen_buffer_mode(set))
         {
             CALL(cls);
         }
@@ -670,7 +670,7 @@ CALL(ind);
 ENDHANDLER
 
 HANDLER(pnl) /* NL - Newline */
-CALL((n->lnm ? nel : ind));
+CALL((n->vt->lnm ? nel : ind));
 ENDHANDLER
 
 HANDLER(cpl) /* CPL - Cursor Previous Line */
@@ -691,15 +691,15 @@ if (s->insert)
 if (s->xenl)
 {
     s->xenl = false;
-    if (n->am)
+    if (n->vt->am)
         CALL(nel);
     getyx(win, y, x);
     y -= tos;
 }
 
-if (w < MAXMAP && n->gc[w])
-    w = n->gc[w];
-n->repc = w;
+if (w < MAXMAP && n->vt->gc[w])
+    w = n->vt->gc[w];
+n->vt->repc = w;
 
 if (x == mx - wcwidth(w))
 {
@@ -708,12 +708,12 @@ if (x == mx - wcwidth(w))
 }
 else
     waddnwstr(win, &w, 1);
-n->gc = n->gs;
+n->vt->gc = n->vt->gs;
 } /* no ENDHANDLER because we don't want to reset repc */
 
 HANDLER(rep) /* REP - Repeat Character */
-for (int i = 0; i < P1(0) && n->repc; i++)
-    print(v, p, n->repc, 0, 0, NULL, NULL);
+for (int i = 0; i < P1(0) && n->vt->repc; i++)
+    print(v, p, n->vt->repc, 0, 0, NULL, NULL);
 ENDHANDLER
 
 HANDLER(scs) /* Select Character Set */
@@ -721,16 +721,16 @@ wchar_t **t = NULL;
 switch (iw)
 {
 case L'(':
-    t = &n->g0;
+    t = &n->vt->g0;
     break;
 case L')':
-    t = &n->g1;
+    t = &n->vt->g1;
     break;
 case L'*':
-    t = &n->g2;
+    t = &n->vt->g2;
     break;
 case L'+':
-    t = &n->g3;
+    t = &n->vt->g3;
     break;
 default:
     return;
@@ -758,22 +758,22 @@ ENDHANDLER
 
 HANDLER(so) /* Switch Out/In Character Set */
 if (w == 0x0e)
-    n->gs = n->gc = n->g1; /* locking shift */
+    n->vt->gs = n->vt->gc = n->vt->g1; /* locking shift */
 else if (w == 0xf)
-    n->gs = n->gc = n->g0; /* locking shift */
+    n->vt->gs = n->vt->gc = n->vt->g0; /* locking shift */
 else if (w == L'n')
-    n->gs = n->gc = n->g2; /* locking shift */
+    n->vt->gs = n->vt->gc = n->vt->g2; /* locking shift */
 else if (w == L'o')
-    n->gs = n->gc = n->g3; /* locking shift */
+    n->vt->gs = n->vt->gc = n->vt->g3; /* locking shift */
 else if (w == L'N')
 {
-    n->gs = n->gc; /* non-locking shift */
-    n->gc = n->g2;
+    n->vt->gs = n->vt->gc; /* non-locking shift */
+    n->vt->gc = n->vt->g2;
 }
 else if (w == L'O')
 {
-    n->gs = n->gc; /* non-locking shift */
-    n->gc = n->g3;
+    n->vt->gs = n->vt->gc; /* non-locking shift */
+    n->vt->gc = n->vt->g3;
 }
 ENDHANDLER
 
@@ -902,7 +902,7 @@ int fork_setup(VTPARSER *vp, void *p, int *pt, int h, int w)
 void sendarrow(const std::shared_ptr<NODE> &n, const char *k)
 {
     char buf[100] = {0};
-    snprintf(buf, sizeof(buf) - 1, "\033%s%s", n->pnm ? "O" : "[", k);
+    snprintf(buf, sizeof(buf) - 1, "\033%s%s", n->vt->pnm ? "O" : "[", k);
     SEND(n, buf);
 }
 
@@ -914,8 +914,8 @@ bool handlechar(int r, int k) /* Handle a single input character. */
 #define KERR(i) (r == ERR && (i) == k)
 #define KEY(i) (r == OK && (i) == k)
 #define CODE(i) (r == KEY_CODE_YES && (i) == k)
-#define INSCR (n->s->tos != n->s->off)
-#define SB n->s->scrollbottom()
+#define INSCR (n->vt->s->tos != n->vt->s->off)
+#define SB n->vt->s->scrollbottom()
 #define DO(s, t, a)                                                            \
     if (s == cmd && (t))                                                       \
     {                                                                          \
@@ -929,11 +929,11 @@ bool handlechar(int r, int k) /* Handle a single input character. */
     DO(false, KEY(g_commandkey), return cmd = true)
     DO(false, KEY(0), SENDN(n, "\000", 1); SB)
     DO(false, KEY(L'\n'), SEND(n, "\n"); SB)
-    DO(false, KEY(L'\r'), SEND(n, n->lnm ? "\r\n" : "\r"); SB)
-    DO(false, SCROLLUP && INSCR, n->s->scrollback(n->h))
-    DO(false, SCROLLDOWN && INSCR, n->s->scrollforward(n->h))
-    DO(false, RECENTER && INSCR, n->s->scrollbottom())
-    DO(false, CODE(KEY_ENTER), SEND(n, n->lnm ? "\r\n" : "\r"); SB)
+    DO(false, KEY(L'\r'), SEND(n, n->vt->lnm ? "\r\n" : "\r"); SB)
+    DO(false, SCROLLUP && INSCR, n->vt->s->scrollback(n->h))
+    DO(false, SCROLLDOWN && INSCR, n->vt->s->scrollforward(n->h))
+    DO(false, RECENTER && INSCR, n->vt->s->scrollbottom())
+    DO(false, CODE(KEY_ENTER), SEND(n, n->vt->lnm ? "\r\n" : "\r"); SB)
     DO(false, CODE(KEY_UP), sendarrow(n, "A"); SB);
     DO(false, CODE(KEY_DOWN), sendarrow(n, "B"); SB);
     DO(false, CODE(KEY_RIGHT), sendarrow(n, "C"); SB);
@@ -967,14 +967,14 @@ bool handlechar(int r, int k) /* Handle a single input character. */
     DO(true, VSPLIT, split(n, VERTICAL))
     DO(true, DELETE_NODE, deletenode(n))
     DO(true, REDRAW, touchwin(stdscr); root->draw(); redrawwin(stdscr))
-    DO(true, SCROLLUP, n->s->scrollback(n->h))
-    DO(true, SCROLLDOWN, n->s->scrollforward(n->h))
-    DO(true, RECENTER, n->s->scrollbottom())
+    DO(true, SCROLLUP, n->vt->s->scrollback(n->h))
+    DO(true, SCROLLDOWN, n->vt->s->scrollforward(n->h))
+    DO(true, RECENTER, n->vt->s->scrollbottom())
     DO(true, KEY(g_commandkey), SENDN(n, cmdstr, 1));
     char c[MB_LEN_MAX + 1] = {0};
     if (wctomb(c, k) > 0)
     {
-        n->s->scrollbottom();
+        n->vt->s->scrollbottom();
         SEND(n, c);
     }
     return cmd = false, true;
