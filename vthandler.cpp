@@ -397,21 +397,9 @@ CALL(cup);
 ENDHANDLER
 
 HANDLER(ris) /* RIS - Reset to Initial State */
-n->gs = n->gc = n->g0 = CSET_US;
-n->g1 = CSET_GRAPH;
-n->g2 = CSET_US;
-n->g3 = CSET_GRAPH;
-n->decom = s->insert = s->oxenl = s->xenl = n->lnm = false;
 CALL(cls);
 CALL(sgr0);
-n->am = true;
-n->pnm = false;
-n->pri->vis = n->alt->vis = 1;
-n->s = n->pri;
-wsetscrreg(n->pri->win, 0, MAX(SCROLLBACK, n->h) - 1);
-wsetscrreg(n->alt->win, 0, n->h - 1);
-for (int i = 0; i < n->ntabs; i++)
-    n->tabs[i] = (i % 8 == 0);
+n->reset();
 ENDHANDLER
 
 HANDLER(mode) /* Set or Reset Mode */

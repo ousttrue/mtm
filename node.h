@@ -67,6 +67,7 @@ public:
     void processVT();
     bool handleUserInput();
     void fixCursor();
+    void reset();
 };
 
 extern std::shared_ptr<NODE> root;
