@@ -15,10 +15,12 @@
  */
 #include <cstdio>
 #include <unistd.h>
+#include <curses.h>
 #include "selector.h"
 #include "mtm.h"
 #include "vthandler.h"
 #include "node.h"
+#include "vt.h"
 
 #ifdef __cplusplus
 extern "C"

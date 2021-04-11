@@ -6,6 +6,7 @@ add_executable(${PROJECT_NAME}
     pair.c
     vt/vtparser.c
     vthandler.cpp
+    vt.cpp
     main.cpp
     selector.cpp
     node.cpp
