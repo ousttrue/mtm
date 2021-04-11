@@ -53,9 +53,6 @@ extern "C"
 static int g_commandkey = CTL(COMMAND_KEY);
 static int g_nfds = 1; /* stdin */
 static char g_iobuf[BUFSIZ];
-
-static void setupevents(NODE *n);
-
 static const char *g_term = NULL;
 
 /*** UTILITY FUNCTIONS */
@@ -830,72 +827,71 @@ else if (w == L'O')
 }
 ENDHANDLER
 
-static void setupevents(NODE *n)
+static void setupevents(VTPARSER *vp)
 {
-    n->vp.p = n;
-    vtonevent(&n->vp, VTPARSER_CONTROL, 0x05, ack);
-    vtonevent(&n->vp, VTPARSER_CONTROL, 0x07, bell);
-    vtonevent(&n->vp, VTPARSER_CONTROL, 0x08, cub);
-    vtonevent(&n->vp, VTPARSER_CONTROL, 0x09, tab);
-    vtonevent(&n->vp, VTPARSER_CONTROL, 0x0a, pnl);
-    vtonevent(&n->vp, VTPARSER_CONTROL, 0x0b, pnl);
-    vtonevent(&n->vp, VTPARSER_CONTROL, 0x0c, pnl);
-    vtonevent(&n->vp, VTPARSER_CONTROL, 0x0d, cr);
-    vtonevent(&n->vp, VTPARSER_CONTROL, 0x0e, so);
-    vtonevent(&n->vp, VTPARSER_CONTROL, 0x0f, so);
-    vtonevent(&n->vp, VTPARSER_CSI, L'A', cuu);
-    vtonevent(&n->vp, VTPARSER_CSI, L'B', cud);
-    vtonevent(&n->vp, VTPARSER_CSI, L'C', cuf);
-    vtonevent(&n->vp, VTPARSER_CSI, L'D', cub);
-    vtonevent(&n->vp, VTPARSER_CSI, L'E', cnl);
-    vtonevent(&n->vp, VTPARSER_CSI, L'F', cpl);
-    vtonevent(&n->vp, VTPARSER_CSI, L'G', hpa);
-    vtonevent(&n->vp, VTPARSER_CSI, L'H', cup);
-    vtonevent(&n->vp, VTPARSER_CSI, L'I', tab);
-    vtonevent(&n->vp, VTPARSER_CSI, L'J', ed);
-    vtonevent(&n->vp, VTPARSER_CSI, L'K', el);
-    vtonevent(&n->vp, VTPARSER_CSI, L'L', idl);
-    vtonevent(&n->vp, VTPARSER_CSI, L'M', idl);
-    vtonevent(&n->vp, VTPARSER_CSI, L'P', dch);
-    vtonevent(&n->vp, VTPARSER_CSI, L'S', su);
-    vtonevent(&n->vp, VTPARSER_CSI, L'T', su);
-    vtonevent(&n->vp, VTPARSER_CSI, L'X', ech);
-    vtonevent(&n->vp, VTPARSER_CSI, L'Z', tab);
-    vtonevent(&n->vp, VTPARSER_CSI, L'`', hpa);
-    vtonevent(&n->vp, VTPARSER_CSI, L'^', su);
-    vtonevent(&n->vp, VTPARSER_CSI, L'@', ich);
-    vtonevent(&n->vp, VTPARSER_CSI, L'a', hpr);
-    vtonevent(&n->vp, VTPARSER_CSI, L'b', rep);
-    vtonevent(&n->vp, VTPARSER_CSI, L'c', decid);
-    vtonevent(&n->vp, VTPARSER_CSI, L'd', vpa);
-    vtonevent(&n->vp, VTPARSER_CSI, L'e', vpr);
-    vtonevent(&n->vp, VTPARSER_CSI, L'f', cup);
-    vtonevent(&n->vp, VTPARSER_CSI, L'g', tbc);
-    vtonevent(&n->vp, VTPARSER_CSI, L'h', mode);
-    vtonevent(&n->vp, VTPARSER_CSI, L'l', mode);
-    vtonevent(&n->vp, VTPARSER_CSI, L'm', sgr);
-    vtonevent(&n->vp, VTPARSER_CSI, L'n', dsr);
-    vtonevent(&n->vp, VTPARSER_CSI, L'r', csr);
-    vtonevent(&n->vp, VTPARSER_CSI, L's', sc);
-    vtonevent(&n->vp, VTPARSER_CSI, L'u', rc);
-    vtonevent(&n->vp, VTPARSER_CSI, L'x', decreqtparm);
-    vtonevent(&n->vp, VTPARSER_ESCAPE, L'0', scs);
-    vtonevent(&n->vp, VTPARSER_ESCAPE, L'1', scs);
-    vtonevent(&n->vp, VTPARSER_ESCAPE, L'2', scs);
-    vtonevent(&n->vp, VTPARSER_ESCAPE, L'7', sc);
-    vtonevent(&n->vp, VTPARSER_ESCAPE, L'8', rc);
-    vtonevent(&n->vp, VTPARSER_ESCAPE, L'A', scs);
-    vtonevent(&n->vp, VTPARSER_ESCAPE, L'B', scs);
-    vtonevent(&n->vp, VTPARSER_ESCAPE, L'D', ind);
-    vtonevent(&n->vp, VTPARSER_ESCAPE, L'E', nel);
-    vtonevent(&n->vp, VTPARSER_ESCAPE, L'H', hts);
-    vtonevent(&n->vp, VTPARSER_ESCAPE, L'M', ri);
-    vtonevent(&n->vp, VTPARSER_ESCAPE, L'Z', decid);
-    vtonevent(&n->vp, VTPARSER_ESCAPE, L'c', ris);
-    vtonevent(&n->vp, VTPARSER_ESCAPE, L'p', vis);
-    vtonevent(&n->vp, VTPARSER_ESCAPE, L'=', numkp);
-    vtonevent(&n->vp, VTPARSER_ESCAPE, L'>', numkp);
-    vtonevent(&n->vp, VTPARSER_PRINT, 0, print);
+    vtonevent(vp, VTPARSER_CONTROL, 0x05, ack);
+    vtonevent(vp, VTPARSER_CONTROL, 0x07, bell);
+    vtonevent(vp, VTPARSER_CONTROL, 0x08, cub);
+    vtonevent(vp, VTPARSER_CONTROL, 0x09, tab);
+    vtonevent(vp, VTPARSER_CONTROL, 0x0a, pnl);
+    vtonevent(vp, VTPARSER_CONTROL, 0x0b, pnl);
+    vtonevent(vp, VTPARSER_CONTROL, 0x0c, pnl);
+    vtonevent(vp, VTPARSER_CONTROL, 0x0d, cr);
+    vtonevent(vp, VTPARSER_CONTROL, 0x0e, so);
+    vtonevent(vp, VTPARSER_CONTROL, 0x0f, so);
+    vtonevent(vp, VTPARSER_CSI, L'A', cuu);
+    vtonevent(vp, VTPARSER_CSI, L'B', cud);
+    vtonevent(vp, VTPARSER_CSI, L'C', cuf);
+    vtonevent(vp, VTPARSER_CSI, L'D', cub);
+    vtonevent(vp, VTPARSER_CSI, L'E', cnl);
+    vtonevent(vp, VTPARSER_CSI, L'F', cpl);
+    vtonevent(vp, VTPARSER_CSI, L'G', hpa);
+    vtonevent(vp, VTPARSER_CSI, L'H', cup);
+    vtonevent(vp, VTPARSER_CSI, L'I', tab);
+    vtonevent(vp, VTPARSER_CSI, L'J', ed);
+    vtonevent(vp, VTPARSER_CSI, L'K', el);
+    vtonevent(vp, VTPARSER_CSI, L'L', idl);
+    vtonevent(vp, VTPARSER_CSI, L'M', idl);
+    vtonevent(vp, VTPARSER_CSI, L'P', dch);
+    vtonevent(vp, VTPARSER_CSI, L'S', su);
+    vtonevent(vp, VTPARSER_CSI, L'T', su);
+    vtonevent(vp, VTPARSER_CSI, L'X', ech);
+    vtonevent(vp, VTPARSER_CSI, L'Z', tab);
+    vtonevent(vp, VTPARSER_CSI, L'`', hpa);
+    vtonevent(vp, VTPARSER_CSI, L'^', su);
+    vtonevent(vp, VTPARSER_CSI, L'@', ich);
+    vtonevent(vp, VTPARSER_CSI, L'a', hpr);
+    vtonevent(vp, VTPARSER_CSI, L'b', rep);
+    vtonevent(vp, VTPARSER_CSI, L'c', decid);
+    vtonevent(vp, VTPARSER_CSI, L'd', vpa);
+    vtonevent(vp, VTPARSER_CSI, L'e', vpr);
+    vtonevent(vp, VTPARSER_CSI, L'f', cup);
+    vtonevent(vp, VTPARSER_CSI, L'g', tbc);
+    vtonevent(vp, VTPARSER_CSI, L'h', mode);
+    vtonevent(vp, VTPARSER_CSI, L'l', mode);
+    vtonevent(vp, VTPARSER_CSI, L'm', sgr);
+    vtonevent(vp, VTPARSER_CSI, L'n', dsr);
+    vtonevent(vp, VTPARSER_CSI, L'r', csr);
+    vtonevent(vp, VTPARSER_CSI, L's', sc);
+    vtonevent(vp, VTPARSER_CSI, L'u', rc);
+    vtonevent(vp, VTPARSER_CSI, L'x', decreqtparm);
+    vtonevent(vp, VTPARSER_ESCAPE, L'0', scs);
+    vtonevent(vp, VTPARSER_ESCAPE, L'1', scs);
+    vtonevent(vp, VTPARSER_ESCAPE, L'2', scs);
+    vtonevent(vp, VTPARSER_ESCAPE, L'7', sc);
+    vtonevent(vp, VTPARSER_ESCAPE, L'8', rc);
+    vtonevent(vp, VTPARSER_ESCAPE, L'A', scs);
+    vtonevent(vp, VTPARSER_ESCAPE, L'B', scs);
+    vtonevent(vp, VTPARSER_ESCAPE, L'D', ind);
+    vtonevent(vp, VTPARSER_ESCAPE, L'E', nel);
+    vtonevent(vp, VTPARSER_ESCAPE, L'H', hts);
+    vtonevent(vp, VTPARSER_ESCAPE, L'M', ri);
+    vtonevent(vp, VTPARSER_ESCAPE, L'Z', decid);
+    vtonevent(vp, VTPARSER_ESCAPE, L'c', ris);
+    vtonevent(vp, VTPARSER_ESCAPE, L'p', vis);
+    vtonevent(vp, VTPARSER_ESCAPE, L'=', numkp);
+    vtonevent(vp, VTPARSER_ESCAPE, L'>', numkp);
+    vtonevent(vp, VTPARSER_PRINT, 0, print);
 }
 
 /*** MTM FUNCTIONS
@@ -938,7 +934,8 @@ static std::shared_ptr<NODE> newview(const std::shared_ptr<NODE> &p, int y,
     keypad(pri->win, TRUE);
     keypad(alt->win, TRUE);
 
-    setupevents(n.get());
+    n->vp.p = n.get();
+    setupevents(&n->vp);
     ris(&n->vp, n.get(), L'c', 0, 0, NULL, NULL);
 
     pid_t pid = forkpty(&n->pt, NULL, NULL, &ws);
