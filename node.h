@@ -62,11 +62,6 @@ public:
     void reshapeview(int d, int ow);
     void draw() const;
     void drawchildren() const;
-    void detachchildren()
-    {
-        this->c1 = nullptr;
-        this->c2 = nullptr;
-    }
     std::shared_ptr<NODE> findnode(int y, int x);
     bool IN(int y, int x) const;
 };

@@ -294,7 +294,6 @@ void split(const std::shared_ptr<NODE> &n,
     auto c = newcontainer(t, n->p.lock(), n->y, n->x, n->h, n->w, n, v);
     if (!c)
     {
-        v->detachchildren();
         return;
     }
 
