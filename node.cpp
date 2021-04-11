@@ -186,7 +186,7 @@ void focus(const std::shared_ptr<NODE> &n) /* Focus a node. */
 std::shared_ptr<NODE> newview(const std::shared_ptr<NODE> &p, int y, int x,
                               int h, int w) /* Open a new view. */
 {
-    auto n = std::make_shared<NODE>(VIEW, p, y, x, h, w);
+    auto n = std::make_shared<View>(VIEW, p, y, x, h, w);
     auto pri = n->pri;
     auto alt = n->alt;
     pri->win = newpad(MAX(h, SCROLLBACK), w);

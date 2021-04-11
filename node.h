@@ -75,3 +75,8 @@ void deletenode(const std::shared_ptr<NODE> &n);
 std::shared_ptr<NODE> newview(const std::shared_ptr<NODE> &p, int y, int x,
                               int h, int w);
 void split(const std::shared_ptr<NODE> &n, const Node t);
+
+struct View: public NODE
+{
+    using NODE::NODE;
+};
