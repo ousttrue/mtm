@@ -35,13 +35,13 @@ extern "C"
 #include "node.h"
 #include "scrn.h"
 
-static bool getinput(const std::shared_ptr<NODE>
-                         &n) /* Recursively check all ptty's for input. */
+static bool process(const std::shared_ptr<NODE>
+                        &n) /* Recursively check all ptty's for input. */
 {
-    if (n && n->c1 && !getinput(n->c1))
+    if (n && n->c1 && !process(n->c1))
         return false;
 
-    if (n && n->c2 && !getinput(n->c2))
+    if (n && n->c2 && !process(n->c2))
         return false;
 
     if (n && n->isView() && n->pt > 0 && selector::isSet(n->pt))
@@ -104,12 +104,12 @@ int mtm::run()
     //
     // main loop
     //
-    while (root)
+    for (int i = 0; true; ++i)
     {
+        //
+        // process all user input
+        //
         {
-            //
-            // process all user input
-            //
             auto f = focused.lock();
             while (true)
             {
@@ -126,22 +126,26 @@ int mtm::run()
         // read pty and process vt
         //
         selector::select();
-        getinput(root);
+        process(root);
+        if (!root)
+        {
+            break;
+        }
 
         //
         // update visual
         //
-        if (root)
         {
             root->draw();
+
+            // cursor for focused
+            auto f = focused.lock();
+            if (f)
             {
-                auto f = focused.lock();
-                if (f)
-                {
-                    f->s->fixcursor(f->h);
-                    f->draw();
-                }
+                f->s->fixcursor(f->h);
+                f->draw();
             }
+
             doupdate();
         }
     }

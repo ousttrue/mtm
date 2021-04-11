@@ -4,7 +4,8 @@
 
 * CMakeLists.txt
 * c++ 化。`C99` の文法がコンパイルできなくなったので、コンパイラを `clang` に変えた
-* 
+* shared_ptr を導入して NODE の管理を簡略化
+* WIP: select, NODE管理, view(curses), vtparser が疎結合になるように改造
 
 # 構造
 
@@ -13,11 +14,11 @@ root(HORIZONTAL)
  +----+----+
  |    |    |
  +----+----+
-   |     |
-   v     v
-+----+ +----+
-|    | |    |
-+----+ +----+
+   |     |    +- user input
+   v     v    v
++----+ +------+
+|    | | focus|
++----+ +------+
 view   view
  |      |
  pty   pty
@@ -28,7 +29,7 @@ view   view
 +---------+
   |read
   v
-+--------------+
-|VTParserが解釈|
-+--------------+
++--------+
+|VTParser| update visual
++--------+
 ```
