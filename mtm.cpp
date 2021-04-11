@@ -913,24 +913,21 @@ static const char *getterm(void)
     return DEFAULT_TERMINAL;
 }
 
-static NODE *newview(NODE *p, int y, int x, int h, int w) /* Open a new view. */
+static std::shared_ptr<NODE> newview(const std::shared_ptr<NODE> &p, int y,
+                                     int x, int h, int w) /* Open a new view. */
 {
     struct winsize ws = {.ws_row = (unsigned short)h,
                          .ws_col = (unsigned short)w};
-    NODE *n = new NODE(VIEW, p, y, x, h, w);
-    if (!n)
-        return NULL;
-
+    auto n = std::make_shared<NODE>(VIEW, p, y, x, h, w);
     auto pri = n->pri;
     auto alt = n->alt;
     pri->win = newpad(MAX(h, SCROLLBACK), w);
     alt->win = newpad(h, w);
     if (!pri->win || !alt->win)
     {
-        n->detachchildren();
-        delete n;
         return nullptr;
     }
+
     pri->tos = pri->off = MAX(0, SCROLLBACK - h);
     n->s = pri;
 
@@ -941,20 +938,24 @@ static NODE *newview(NODE *p, int y, int x, int h, int w) /* Open a new view. */
     keypad(pri->win, TRUE);
     keypad(alt->win, TRUE);
 
-    setupevents(n);
-    ris(&n->vp, n, L'c', 0, 0, NULL, NULL);
+    setupevents(n.get());
+    ris(&n->vp, n.get(), L'c', 0, 0, NULL, NULL);
 
     pid_t pid = forkpty(&n->pt, NULL, NULL, &ws);
     if (pid < 0)
     {
+        // error
         if (!p)
+        {
             perror("forkpty");
-        n->detachchildren();
-        delete n;
+        }
         return nullptr;
     }
     else if (pid == 0)
     {
+        //
+        // new process
+        //
         char buf[100] = {0};
         snprintf(buf, sizeof(buf) - 1, "%lu", (unsigned long)getppid());
         setsid();
@@ -965,28 +966,29 @@ static NODE *newview(NODE *p, int y, int x, int h, int w) /* Open a new view. */
         return NULL;
     }
 
+    //
+    // continue
+    //
     selector::set(n->pt);
     fcntl(n->pt, F_SETFL, O_NONBLOCK);
     g_nfds = n->pt > g_nfds ? n->pt : g_nfds;
     return n;
 }
 
-static NODE *newcontainer(Node t, NODE *p, int y, int x, int h, int w, NODE *c1,
-                          NODE *c2) /* Create a new container */
+static std::shared_ptr<NODE>
+newcontainer(Node t, const std::shared_ptr<NODE> &p, int y, int x, int h, int w,
+             const std::shared_ptr<NODE> &c1,
+             const std::shared_ptr<NODE> &c2) /* Create a new container */
 {
-    NODE *n = new NODE(t, p, y, x, h, w);
-    if (!n)
-        return NULL;
-
+    auto n = std::make_shared<NODE>(t, p, y, x, h, w);
     n->c1 = c1;
     n->c2 = c2;
     c1->p = c2->p = n;
-
     n->reshapechildren();
     return n;
 }
 
-static void focus(NODE *n) /* Focus a node. */
+static void focus(const std::shared_ptr<NODE> &n) /* Focus a node. */
 {
     if (!n)
     {
@@ -1009,8 +1011,9 @@ static void focus(NODE *n) /* Focus a node. */
 #define LEFT(n) n->y + n->h / 2, n->x - 2
 #define RIGHT(n) n->y + n->h / 2, n->x + n->w + 2
 
-static void replacechild(NODE *n, NODE *c1,
-                         NODE *c2) /* Replace c1 of n with c2. */
+static void replacechild(std::shared_ptr<NODE> n,
+                         const std::shared_ptr<NODE> &c1,
+                         const std::shared_ptr<NODE> &c2)
 {
     c2->p = n;
     if (!n)
@@ -1023,50 +1026,56 @@ static void replacechild(NODE *n, NODE *c1,
     else if (n->c2 == c1)
         n->c2 = c2;
 
-    n = n ? n : root;
+    if (!n)
+    {
+        n = root;
+    }
     n->reshape(n->y, n->x, n->h, n->w);
     n->draw();
 }
 
-static void removechild(NODE *p,
-                        const NODE *c) /* Replace p with other child. */
+static void
+removechild(const std::shared_ptr<NODE> &p,
+            const std::shared_ptr<NODE> &c) /* Replace p with other child. */
 {
-    replacechild(p->p, p, c == p->c1 ? p->c2 : p->c1);
-    p->detachchildren();
-    delete p;
+    replacechild(p->p.lock(), p, c == p->c1 ? p->c2 : p->c1);
 }
 
-static void deletenode(NODE *n) /* Delete a node. */
+static void deletenode(const std::shared_ptr<NODE> &n) /* Delete a node. */
 {
-    if (!n || !n->p)
+    auto p = n->p.lock();
+    if (!n || !p)
     {
         if (root)
         {
-            delete root;
             root = nullptr;
         }
         return;
     }
-    if (n == focused)
-        focus(n->p->c1 == n ? n->p->c2 : n->p->c1);
-    removechild(n->p, n);
-    delete n;
+
+    if (n == focused.lock())
+    {
+        focus(p->c1 == n ? p->c2 : p->c1);
+    }
+    removechild(p, n);
 }
 
-static void split(NODE *n, Node t) /* Split a node. */
+static void split(const std::shared_ptr<NODE> &n,
+                  const Node t) /* Split a node. */
 {
     int nh = t == VERTICAL ? (n->h - 1) / 2 : n->h;
     int nw = t == HORIZONTAL ? (n->w) / 2 : n->w;
-    NODE *p = n->p;
-    NODE *v = newview(NULL, 0, 0, MAX(0, nh), MAX(0, nw));
+    auto p = n->p.lock();
+    auto v = newview(NULL, 0, 0, MAX(0, nh), MAX(0, nw));
     if (!v)
+    {
         return;
+    }
 
-    NODE *c = newcontainer(t, n->p, n->y, n->x, n->h, n->w, n, v);
+    auto c = newcontainer(t, n->p.lock(), n->y, n->x, n->h, n->w, n, v);
     if (!c)
     {
         v->detachchildren();
-        delete v;
         return;
     }
 
@@ -1075,7 +1084,8 @@ static void split(NODE *n, Node t) /* Split a node. */
     (p ? p : root)->draw();
 }
 
-static bool getinput(NODE *n) /* Recursively check all ptty's for input. */
+static bool getinput(const std::shared_ptr<NODE>
+                         &n) /* Recursively check all ptty's for input. */
 {
     if (n && n->c1 && !getinput(n->c1))
         return false;
@@ -1100,7 +1110,7 @@ static bool getinput(NODE *n) /* Recursively check all ptty's for input. */
     return true;
 }
 
-static void sendarrow(const NODE *n, const char *k)
+static void sendarrow(const std::shared_ptr<NODE> &n, const char *k)
 {
     char buf[100] = {0};
     snprintf(buf, sizeof(buf) - 1, "\033%s%s", n->pnm ? "O" : "[", k);
@@ -1111,7 +1121,7 @@ static bool handlechar(int r, int k) /* Handle a single input character. */
 {
     const char cmdstr[] = {(char)g_commandkey, 0};
     static bool cmd = false;
-    NODE *n = focused;
+    auto n = focused.lock();
 #define KERR(i) (r == ERR && (i) == k)
 #define KEY(i) (r == OK && (i) == k)
 #define CODE(i) (r == KEY_CODE_YES && (i) == k)
@@ -1163,7 +1173,7 @@ static bool handlechar(int r, int k) /* Handle a single input character. */
     DO(true, MOVE_DOWN, focus(root->findnode(BELOW(n))))
     DO(true, MOVE_LEFT, focus(root->findnode(LEFT(n))))
     DO(true, MOVE_RIGHT, focus(root->findnode(RIGHT(n))))
-    DO(true, MOVE_OTHER, focus(lastfocused))
+    DO(true, MOVE_OTHER, focus(lastfocused.lock()))
     DO(true, HSPLIT, split(n, HORIZONTAL))
     DO(true, VSPLIT, split(n, VERTICAL))
     DO(true, DELETE_NODE, deletenode(n))
@@ -1213,8 +1223,7 @@ mtm::~mtm()
     // {
     //     if (m)
     //         fprintf(stderr, "%s\n", m);
-    if (root)
-        delete root;
+    root = nullptr;
     endwin();
     // exit(rc);
 }
@@ -1235,10 +1244,13 @@ int mtm::run()
         wint_t w = 0;
         selector::select(g_nfds);
 
-        int r = wget_wch(focused->s->win, &w);
-        while (handlechar(r, w))
         {
-            r = wget_wch(focused->s->win, &w);
+            auto f = focused.lock();
+            int r = wget_wch(f->s->win, &w);
+            while (handlechar(r, w))
+            {
+                r = wget_wch(f->s->win, &w);
+            }
         }
 
         if (!getinput(root))
@@ -1248,11 +1260,14 @@ int mtm::run()
 
         root->draw();
         doupdate();
-        if (focused)
         {
-            focused->s->fixcursor(focused->h);
+            auto f = focused.lock();
+            if (f)
+            {
+                f->s->fixcursor(f->h);
+            }
+            f->draw();
         }
-        focused->draw();
         doupdate();
     }
 

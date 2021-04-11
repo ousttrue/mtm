@@ -13,7 +13,7 @@ enum Node
 };
 
 struct SCRN;
-struct NODE
+struct NODE: std::enable_shared_from_this<NODE>
 {
 private:
     Node t;
@@ -35,9 +35,12 @@ public:
     bool am = false;
     bool lnm = false;
     wchar_t repc;
-    NODE *p = nullptr;
-    NODE *c1 = nullptr;
-    NODE *c2 = nullptr;
+
+    // node tree
+    std::weak_ptr<NODE> p;
+    std::shared_ptr<NODE> c1;
+    std::shared_ptr<NODE> c2;
+
     std::shared_ptr<SCRN> pri;
     std::shared_ptr<SCRN> alt;
     std::shared_ptr<SCRN> s;
@@ -52,7 +55,7 @@ public:
     VTPARSER vp = {};
 
 public:
-    NODE(Node t, NODE *p, int y, int x, int h, int w);
+    NODE(Node t, const std::shared_ptr<NODE> &p, int y, int x, int h, int w);
     ~NODE();
     void reshape(int y, int x, int h, int w);
     void reshapechildren();
@@ -64,10 +67,10 @@ public:
         this->c1 = nullptr;
         this->c2 = nullptr;
     }
-    NODE *findnode(int y, int x);
+    std::shared_ptr<NODE> findnode(int y, int x);
     bool IN(int y, int x) const;
 };
 
-extern NODE *root;
-extern NODE *focused;
-extern NODE *lastfocused;
+extern std::shared_ptr<NODE> root;
+extern std::weak_ptr<NODE> focused;
+extern std::weak_ptr<NODE> lastfocused;

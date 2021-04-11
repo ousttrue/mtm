@@ -5,11 +5,11 @@
 #include "scrn.h"
 #include <cstdlib>
 
-NODE *root = nullptr;
-NODE *focused = nullptr;
-NODE *lastfocused = nullptr;
+std::shared_ptr<NODE> root;
+std::weak_ptr<NODE> focused;
+std::weak_ptr<NODE> lastfocused;
 
-NODE::NODE(Node t, NODE *p, int y, int x, int h, int w)
+NODE::NODE(Node t, const std::shared_ptr<NODE> &p, int y, int x, int h, int w)
 {
     this->t = t;
     this->pt = -1;
@@ -30,16 +30,13 @@ NODE::NODE(Node t, NODE *p, int y, int x, int h, int w)
 
 NODE::~NODE()
 {
-    if (lastfocused == this)
-        lastfocused = NULL;
+    if (auto l = lastfocused.lock())
+        if (l.get() == this)
+            lastfocused.reset();
     if (this->pri->win)
         delwin(this->pri->win);
     if (this->alt->win)
         delwin(this->alt->win);
-    if (this->c1)
-        delete this->c1;
-    if (this->c2)
-        delete this->c2;
     if (this->pt >= 0)
     {
         selector::close(this->pt);
@@ -141,7 +138,7 @@ bool NODE::IN(int y, int x) const
             x <= this->x + this->w);
 }
 
-NODE *NODE::findnode(int y, int x) /* Find the node enclosing y,x. */
+std::shared_ptr<NODE> NODE::findnode(int y, int x) /* Find the node enclosing y,x. */
 {
     if (IN(y, x))
     {
@@ -149,7 +146,7 @@ NODE *NODE::findnode(int y, int x) /* Find the node enclosing y,x. */
             return this->c1->findnode(y, x);
         if (this->c2 && this->c2->IN(y, x))
             return this->c2->findnode(y, x);
-        return this;
+        return shared_from_this();
     }
     return NULL;
 }
