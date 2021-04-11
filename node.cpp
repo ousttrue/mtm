@@ -338,3 +338,15 @@ void NODE::processVT() /* Recursively check all ptty's for input. */
         }
     }
 }
+
+bool NODE::handleUserInput()
+{
+    wint_t w = 0;
+    int r = wget_wch(this->s->win, &w);
+    return handlechar(r, w);
+}
+
+void NODE::fixCursor()
+{
+    this->s->fixcursor(this->h);
+}

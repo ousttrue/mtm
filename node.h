@@ -65,6 +65,8 @@ public:
     std::shared_ptr<NODE> findnode(int y, int x);
     bool IN(int y, int x) const;
     void processVT();
+    bool handleUserInput();
+    void fixCursor();
 };
 
 extern std::shared_ptr<NODE> root;

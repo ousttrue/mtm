@@ -18,7 +18,6 @@
 #include "selector.h"
 #include "mtm.h"
 #include "vthandler.h"
-#include "scrn.h"
 #include "node.h"
 
 #ifdef __cplusplus
@@ -81,15 +80,8 @@ int mtm::run()
         //
         {
             auto f = focused.lock();
-            while (true)
-            {
-                wint_t w = 0;
-                int r = wget_wch(f->s->win, &w);
-                if (!handlechar(r, w))
-                {
-                    break;
-                }
-            }
+            while (f->handleUserInput())
+                ;
         }
 
         //
@@ -106,16 +98,12 @@ int mtm::run()
         // update visual
         //
         {
-            root->draw();
-
             // cursor for focused
             auto f = focused.lock();
-            if (f)
-            {
-                f->s->fixcursor(f->h);
-                f->draw();
-            }
+            f->fixCursor();
+            // f->draw();
 
+            root->draw();
             doupdate();
         }
     }
