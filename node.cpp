@@ -1,3 +1,14 @@
+#ifdef __cplusplus
+extern "C"
+{
+#endif
+
+#include "vt/vtparser.h"
+
+#ifdef __cplusplus
+}
+#endif
+
 #include "config.h"
 #include "node.h"
 #include "minmax.h"
@@ -5,6 +16,7 @@
 #include "scrn.h"
 #include "vthandler.h"
 #include <cstdlib>
+#include <unistd.h>
 
 std::shared_ptr<NODE> root;
 std::weak_ptr<NODE> focused;
@@ -139,7 +151,8 @@ bool NODE::IN(int y, int x) const
             x <= this->x + this->w);
 }
 
-std::shared_ptr<NODE> NODE::findnode(int y, int x) /* Find the node enclosing y,x. */
+std::shared_ptr<NODE> NODE::findnode(int y,
+                                     int x) /* Find the node enclosing y,x. */
 {
     if (IN(y, x))
     {
@@ -170,8 +183,8 @@ void focus(const std::shared_ptr<NODE> &n) /* Focus a node. */
     }
 }
 
-std::shared_ptr<NODE> newview(const std::shared_ptr<NODE> &p, int y,
-                                     int x, int h, int w) /* Open a new view. */
+std::shared_ptr<NODE> newview(const std::shared_ptr<NODE> &p, int y, int x,
+                              int h, int w) /* Open a new view. */
 {
     auto n = std::make_shared<NODE>(VIEW, p, y, x, h, w);
     auto pri = n->pri;
@@ -228,8 +241,6 @@ newcontainer(Node t, const std::shared_ptr<NODE> &p, int y, int x, int h, int w,
     return n;
 }
 
-
-
 static void replacechild(std::shared_ptr<NODE> n,
                          const std::shared_ptr<NODE> &c1,
                          const std::shared_ptr<NODE> &c2)
@@ -279,8 +290,7 @@ void deletenode(const std::shared_ptr<NODE> &n) /* Delete a node. */
     removechild(p, n);
 }
 
-void split(const std::shared_ptr<NODE> &n,
-                  const Node t) /* Split a node. */
+void split(const std::shared_ptr<NODE> &n, const Node t) /* Split a node. */
 {
     int nh = t == VERTICAL ? (n->h - 1) / 2 : n->h;
     int nw = t == HORIZONTAL ? (n->w) / 2 : n->w;
@@ -300,4 +310,31 @@ void split(const std::shared_ptr<NODE> &n,
     replacechild(p, n, c);
     focus(v);
     (p ? p : root)->draw();
+}
+
+void NODE::processVT() /* Recursively check all ptty's for input. */
+{
+    if (this->c1)
+    {
+        this->c1->processVT();
+    }
+
+    if (this->c2)
+    {
+        this->c2->processVT();
+    }
+
+    if (this->isView() && this->pt > 0 && selector::isSet(this->pt))
+    {
+        char g_iobuf[BUFSIZ];
+        ssize_t r = read(this->pt, g_iobuf, sizeof(g_iobuf));
+        if (r > 0)
+        {
+            vtwrite(&this->vp, g_iobuf, r);
+        }
+        if (r <= 0 && errno != EINTR && errno != EWOULDBLOCK)
+        {
+            deletenode(shared_from_this());
+        }
+    }
 }

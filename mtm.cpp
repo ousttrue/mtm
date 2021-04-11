@@ -16,51 +16,21 @@
 #include <cstdio>
 #include <unistd.h>
 #include "selector.h"
-#include "minmax.h"
 #include "mtm.h"
+#include "vthandler.h"
+#include "scrn.h"
+#include "node.h"
 
 #ifdef __cplusplus
 extern "C"
 {
 #endif
 
-#include "vt/vtparser.h"
 #include "pair.h"
 
 #ifdef __cplusplus
 }
 #endif
-
-#include "vthandler.h"
-#include "node.h"
-#include "scrn.h"
-
-static bool process(const std::shared_ptr<NODE>
-                        &n) /* Recursively check all ptty's for input. */
-{
-    if (n && n->c1 && !process(n->c1))
-        return false;
-
-    if (n && n->c2 && !process(n->c2))
-        return false;
-
-    if (n && n->isView() && n->pt > 0 && selector::isSet(n->pt))
-    {
-        char g_iobuf[BUFSIZ];
-        ssize_t r = read(n->pt, g_iobuf, sizeof(g_iobuf));
-        if (r > 0)
-        {
-            vtwrite(&n->vp, g_iobuf, r);
-        }
-        if (r <= 0 && errno != EINTR && errno != EWOULDBLOCK)
-        {
-            deletenode(n);
-            return false;
-        }
-    }
-
-    return true;
-}
 
 mtm::mtm()
 {
@@ -126,7 +96,7 @@ int mtm::run()
         // read pty and process vt
         //
         selector::select();
-        process(root);
+        root->processVT();
         if (!root)
         {
             break;

@@ -64,6 +64,7 @@ public:
     void drawchildren() const;
     std::shared_ptr<NODE> findnode(int y, int x);
     bool IN(int y, int x) const;
+    void processVT();
 };
 
 extern std::shared_ptr<NODE> root;
@@ -71,5 +72,6 @@ extern std::weak_ptr<NODE> focused;
 extern std::weak_ptr<NODE> lastfocused;
 void focus(const std::shared_ptr<NODE> &n);
 void deletenode(const std::shared_ptr<NODE> &n);
-std::shared_ptr<NODE> newview(const std::shared_ptr<NODE> &p, int y, int x, int h, int w);
+std::shared_ptr<NODE> newview(const std::shared_ptr<NODE> &p, int y, int x,
+                              int h, int w);
 void split(const std::shared_ptr<NODE> &n, const Node t);
