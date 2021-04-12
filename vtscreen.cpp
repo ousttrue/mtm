@@ -22,6 +22,7 @@ extern "C"
 
 
 VTScreen::VTScreen(int h, int w)
+: m_h(h), m_w(w)
 {
     for (int i = 0; i < w; i++)
     {
@@ -67,6 +68,8 @@ VTScreen::~VTScreen()
 
 void VTScreen::reshapeview(int d, int ow, int lines, int cols) /* Reshape a view. */
 {
+    m_h = lines;
+    m_w = cols;
     int oy, ox;
     struct winsize ws = {.ws_row = (unsigned short)lines,
                          .ws_col = (unsigned short)cols};
