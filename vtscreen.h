@@ -35,8 +35,8 @@ struct VTScreen
     void draw(int y, int x, int h, int w);
     bool process();
     bool handleUserInput();
-    void fixCursor(int h);
-    void reset(int h);
+    void fixCursor();
+    void reset();
     bool alternate_screen_buffer_mode(bool set);
 };
 

@@ -102,7 +102,7 @@ int mtm::run()
         {
             // cursor for focused
             auto f = focused.lock();
-            f->vt->fixCursor(f->h);
+            f->vt->fixCursor();
             // f->draw();
 
             root->draw();

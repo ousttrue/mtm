@@ -400,7 +400,7 @@ ENDHANDLER
 HANDLER(ris) /* RIS - Reset to Initial State */
 CALL(cls);
 CALL(sgr0);
-n->vt->reset(n->h);
+n->vt->reset();
 ENDHANDLER
 
 HANDLER(mode) /* Set or Reset Mode */

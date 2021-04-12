@@ -100,6 +100,8 @@ void VTScreen::reshapeview(int d, int ow, int lines, int cols) /* Reshape a view
 
 void VTScreen::draw(int y, int x, int h, int w)
 {
+    m_h = h;
+    m_w = w;
     pnoutrefresh(this->s->win, this->s->off, 0, y, x, y + h - 1, x + w - 1);
 }
 
@@ -129,12 +131,12 @@ bool VTScreen::handleUserInput()
     return handlechar(r, w);
 }
 
-void VTScreen::fixCursor(int h)
+void VTScreen::fixCursor()
 {
-    this->s->fixcursor(h);
+    this->s->fixcursor(m_h);
 }
 
-void VTScreen::reset(int h)
+void VTScreen::reset()
 {
     this->gs = this->gc = this->g0 = CSET_US;
     this->g1 = CSET_GRAPH;
@@ -145,8 +147,8 @@ void VTScreen::reset(int h)
     this->pnm = false;
     this->pri->vis = this->alt->vis = 1;
     this->s = this->pri;
-    wsetscrreg(this->pri->win, 0, MAX(SCROLLBACK, h) - 1);
-    wsetscrreg(this->alt->win, 0, h - 1);
+    wsetscrreg(this->pri->win, 0, MAX(SCROLLBACK, m_h) - 1);
+    wsetscrreg(this->alt->win, 0, m_h - 1);
     for (int i = 0; i < this->tabs.size(); i++)
         this->tabs[i] = (i % 8 == 0);
 }
