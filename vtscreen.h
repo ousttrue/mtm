@@ -37,3 +37,5 @@ struct VTScreen
     void reset(int h);
     bool alternate_screen_buffer_mode(bool set);
 };
+
+int fork_setup(struct VTPARSER *vp, void *p, int *pt, int h, int w);

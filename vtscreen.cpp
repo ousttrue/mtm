@@ -3,7 +3,10 @@
 #include "minmax.h"
 #include "selector.h"
 #include "vthandler.h"
+#include <pwd.h>
 #include <unistd.h>
+#include <signal.h>
+
 
 #ifdef __cplusplus
 extern "C"
@@ -159,4 +162,39 @@ bool VTScreen::alternate_screen_buffer_mode(bool set)
         n->s = n->pri;
     }
     return false;
+}
+
+static const char *getshell(void) /* Get the user's preferred shell. */
+{
+    if (getenv("SHELL"))
+        return getenv("SHELL");
+    struct passwd *pwd = getpwuid(getuid());
+    if (pwd)
+        return pwd->pw_shell;
+    return "/bin/sh";
+}
+
+int fork_setup(VTPARSER *vp, void *p, int *pt, int h, int w)
+{
+    vp_initialize(vp, p);
+
+    struct winsize ws = {.ws_row = (unsigned short)h,
+                         .ws_col = (unsigned short)w};
+    pid_t pid = forkpty(pt, NULL, NULL, &ws);
+    if (pid == 0)
+    {
+        //
+        // new process
+        //
+        char buf[100] = {0};
+        snprintf(buf, sizeof(buf) - 1, "%lu", (unsigned long)getppid());
+        setsid();
+        setenv("MTM", buf, 1);
+        setenv("TERM", get_term(), 1);
+        signal(SIGCHLD, SIG_DFL);
+        execl(getshell(), getshell(), NULL);
+
+        // not reach here
+    }
+    return pid;
 }

@@ -865,41 +865,6 @@ const char *get_term(void)
     return DEFAULT_TERMINAL;
 }
 
-static const char *getshell(void) /* Get the user's preferred shell. */
-{
-    if (getenv("SHELL"))
-        return getenv("SHELL");
-    struct passwd *pwd = getpwuid(getuid());
-    if (pwd)
-        return pwd->pw_shell;
-    return "/bin/sh";
-}
-
-int fork_setup(VTPARSER *vp, void *p, int *pt, int h, int w)
-{
-    vp->p = p;
-    setupevents(vp);
-    ris(vp, p, L'c', 0, 0, NULL, NULL);
-
-    struct winsize ws = {.ws_row = (unsigned short)h,
-                         .ws_col = (unsigned short)w};
-    pid_t pid = forkpty(pt, NULL, NULL, &ws);
-    if (pid == 0)
-    {
-        //
-        // new process
-        //
-        char buf[100] = {0};
-        snprintf(buf, sizeof(buf) - 1, "%lu", (unsigned long)getppid());
-        setsid();
-        setenv("MTM", buf, 1);
-        setenv("TERM", get_term(), 1);
-        signal(SIGCHLD, SIG_DFL);
-        execl(getshell(), getshell(), NULL);
-    }
-    return pid;
-}
-
 void sendarrow(const std::shared_ptr<NODE> &n, const char *k)
 {
     char buf[100] = {0};
@@ -979,4 +944,11 @@ bool handlechar(int r, int k) /* Handle a single input character. */
         SEND(n, c);
     }
     return cmd = false, true;
+}
+
+void vp_initialize(VTPARSER *vp, void *p)
+{
+    vp->p = p;
+    setupevents(vp);
+    ris(vp, p, L'c', 0, 0, NULL, NULL);
 }
