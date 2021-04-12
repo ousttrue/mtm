@@ -7,7 +7,7 @@ struct VTPARSER;
 struct VTScreen
 {
     int pt = -1;
-    int ntabs = 0;
+
     std::vector<bool> tabs;
     bool pnm = false;
     bool decom = false;

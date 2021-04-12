@@ -158,7 +158,7 @@ SEND(n, "\006");
 ENDHANDLER
 
 HANDLER(hts) /* HTS - Horizontal Tab Set */
-if (x < n->vt->ntabs && x > 0)
+if (x < n->vt->tabs.size() && x > 0)
     n->vt->tabs[x] = true;
 ENDHANDLER
 
@@ -194,7 +194,7 @@ wmove(win, MIN(tos + bot - 1, MAX(tos + top, py + P1(0))), x);
 ENDHANDLER
 
 HANDLER(cbt) /* CBT - Cursor Backwards Tab */
-for (int i = x - 1; i < n->vt->ntabs && i >= 0; i--)
+for (int i = x - 1; i < n->vt->tabs.size() && i >= 0; i--)
     if (n->vt->tabs[i])
     {
         wmove(win, py, i);
@@ -204,7 +204,7 @@ wmove(win, py, 0);
 ENDHANDLER
 
 HANDLER(ht) /* HT - Horizontal Tab */
-for (int i = x + 1; i < n->w && i < n->vt->ntabs; i++)
+for (int i = x + 1; i < n->w && i < n->vt->tabs.size(); i++)
     if (n->vt->tabs[i])
     {
         wmove(win, py, i);
@@ -283,7 +283,7 @@ HANDLER(tbc) /* TBC - Tabulation Clear */
 switch (P0(0))
 {
 case 0:
-    n->vt->tabs[x < n->vt->ntabs ? x : 0] = false;
+    n->vt->tabs[x < n->vt->tabs.size() ? x : 0] = false;
     break;
 case 3:
     for (int i = 0; i < n->vt->tabs.size(); ++i)

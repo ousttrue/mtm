@@ -25,7 +25,7 @@ VTScreen::VTScreen(int h, int w)
         /* keep old overlapping tabs */
         tabs.push_back(i % 8 == 0);
     }
-    this->ntabs = w;
+
     this->pri = std::make_shared<SCRN>();
     this->alt = std::make_shared<SCRN>();
 
@@ -69,7 +69,6 @@ void VTScreen::reshapeview(int d, int ow, int lines, int cols) /* Reshape a view
                          .ws_col = (unsigned short)cols};
 
     {
-        this->ntabs = cols;
         auto oldtabs = tabs;
         this->tabs.clear();
         for (int i = 0; i < cols; i++) /* keep old overlapping tabs */
@@ -142,7 +141,7 @@ void VTScreen::reset(int h)
     this->s = this->pri;
     wsetscrreg(this->pri->win, 0, MAX(SCROLLBACK, h) - 1);
     wsetscrreg(this->alt->win, 0, h - 1);
-    for (int i = 0; i < this->ntabs; i++)
+    for (int i = 0; i < this->tabs.size(); i++)
         this->tabs[i] = (i % 8 == 0);
 }
 
