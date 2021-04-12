@@ -150,16 +150,15 @@ void VTScreen::reset(int h)
 
 bool VTScreen::alternate_screen_buffer_mode(bool set)
 {
-    auto n = this;
-    if (set && n->s != n->alt)
+    if (set && this->s != this->alt)
     {
-        n->s = n->alt;
+        this->s = this->alt;
         return true;
         // CALL(cls);
     }
-    else if (!set && n->s != n->pri)
+    else if (!set && this->s != this->pri)
     {
-        n->s = n->pri;
+        this->s = this->pri;
     }
     return false;
 }
