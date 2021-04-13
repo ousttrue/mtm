@@ -1,14 +1,14 @@
 #pragma once
 #include <vector>
 #include <memory>
+#include "rect.h"
 
 struct SCRN;
 struct VTPARSER;
 struct VTScreen
 {
     int pt = -1;
-    int m_w = -1;
-    int m_h = -1;
+    Rect m_rect;
 
     std::vector<bool> tabs;
     bool pnm = false;
@@ -29,10 +29,10 @@ struct VTScreen
     wchar_t *sgs = nullptr;
     std::unique_ptr<VTPARSER> vp;
 
-    VTScreen(int lines, int cols);
+    VTScreen(const Rect &rect);
     ~VTScreen();
-    void reshapeview(int d, int ow, int lines, int cols);
-    void draw(int y, int x, int h, int w);
+    void reshapeview(int d, int ow, const Rect &rect);
+    void draw(const Rect &rect);
     bool process();
     bool handleUserInput();
     void fixCursor();
@@ -40,4 +40,4 @@ struct VTScreen
     bool alternate_screen_buffer_mode(bool set);
 };
 
-int fork_setup(struct VTPARSER *vp, void *p, int *pt, int h, int w);
+int fork_setup(struct VTPARSER *vp, void *p, int *pt, const Rect &rect);

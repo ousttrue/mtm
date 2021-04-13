@@ -65,7 +65,7 @@ mtm::~mtm()
 
 int mtm::run()
 {
-    root = newview(NULL, 0, 0, LINES, COLS);
+    root = newview(NULL, Rect(0, 0, LINES, COLS));
     if (!root)
     {
         return 1;

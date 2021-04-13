@@ -21,10 +21,10 @@ extern "C"
 #include <unistd.h>
 #include <signal.h>
 
-#define ABOVE(n) n->y - 2, n->x + n->w / 2
-#define BELOW(n) n->y + n->h + 2, n->x + n->w / 2
-#define LEFT(n) n->y + n->h / 2, n->x - 2
-#define RIGHT(n) n->y + n->h / 2, n->x + n->w + 2
+#define ABOVE(n) n->m_rect.y - 2, n->m_rect.x + n->m_rect.w / 2
+#define BELOW(n) n->m_rect.y + n->m_rect.h + 2, n->m_rect.x + n->m_rect.w / 2
+#define LEFT(n) n->m_rect.y + n->m_rect.h / 2, n->m_rect.x - 2
+#define RIGHT(n) n->m_rect.y + n->m_rect.h / 2, n->m_rect.x + n->m_rect.w + 2
 
 static int g_commandkey = CTL(COMMAND_KEY);
 
@@ -204,7 +204,7 @@ wmove(win, py, 0);
 ENDHANDLER
 
 HANDLER(ht) /* HT - Horizontal Tab */
-for (int i = x + 1; i < n->w && i < n->vt->tabs.size(); i++)
+for (int i = x + 1; i < n->m_rect.w && i < n->vt->tabs.size(); i++)
     if (n->vt->tabs[i])
     {
         wmove(win, py, i);
@@ -891,13 +891,13 @@ bool handlechar(int r, int k) /* Handle a single input character. */
     }
 
     DO(cmd, KERR(k), return false)
-    DO(cmd, CODE(KEY_RESIZE), root->reshape(0, 0, LINES, COLS); SB)
+    DO(cmd, CODE(KEY_RESIZE), root->reshape(Rect(0, 0, LINES, COLS)); SB)
     DO(false, KEY(g_commandkey), return cmd = true)
     DO(false, KEY(0), SENDN(n, "\000", 1); SB)
     DO(false, KEY(L'\n'), SEND(n, "\n"); SB)
     DO(false, KEY(L'\r'), SEND(n, n->vt->lnm ? "\r\n" : "\r"); SB)
-    DO(false, SCROLLUP && INSCR, n->vt->s->scrollback(n->h))
-    DO(false, SCROLLDOWN && INSCR, n->vt->s->scrollforward(n->h))
+    DO(false, SCROLLUP && INSCR, n->vt->s->scrollback(n->m_rect.h))
+    DO(false, SCROLLDOWN && INSCR, n->vt->s->scrollforward(n->m_rect.h))
     DO(false, RECENTER && INSCR, n->vt->s->scrollbottom())
     DO(false, CODE(KEY_ENTER), SEND(n, n->vt->lnm ? "\r\n" : "\r"); SB)
     DO(false, CODE(KEY_UP), sendarrow(n, "A"); SB);
@@ -933,8 +933,8 @@ bool handlechar(int r, int k) /* Handle a single input character. */
     DO(true, VSPLIT, split(n, VERTICAL))
     DO(true, DELETE_NODE, deletenode(n))
     DO(true, REDRAW, touchwin(stdscr); root->draw(); redrawwin(stdscr))
-    DO(true, SCROLLUP, n->vt->s->scrollback(n->h))
-    DO(true, SCROLLDOWN, n->vt->s->scrollforward(n->h))
+    DO(true, SCROLLUP, n->vt->s->scrollback(n->m_rect.h))
+    DO(true, SCROLLDOWN, n->vt->s->scrollforward(n->m_rect.h))
     DO(true, RECENTER, n->vt->s->scrollbottom())
     DO(true, KEY(g_commandkey), SENDN(n, cmdstr, 1));
     char c[MB_LEN_MAX + 1] = {0};

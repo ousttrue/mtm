@@ -21,10 +21,10 @@ extern "C"
 #endif
 
 
-VTScreen::VTScreen(int h, int w)
-: m_h(h), m_w(w)
+VTScreen::VTScreen(const Rect &rect)
+: m_rect(rect)
 {
-    for (int i = 0; i < w; i++)
+    for (int i = 0; i < m_rect.w; i++)
     {
         /* keep old overlapping tabs */
         tabs.push_back(i % 8 == 0);
@@ -33,15 +33,15 @@ VTScreen::VTScreen(int h, int w)
     this->pri = std::make_shared<SCRN>();
     this->alt = std::make_shared<SCRN>();
 
-    this->pri->win = newpad(MAX(h, SCROLLBACK), w);
-    this->alt->win = newpad(h, w);
+    this->pri->win = newpad(MAX(m_rect.h, SCROLLBACK), m_rect.w);
+    this->alt->win = newpad(m_rect.h, m_rect.w);
     if (!pri->win || !alt->win)
     {
         throw "new pad";
         // return nullptr;
     }
 
-    pri->tos = pri->off = MAX(0, SCROLLBACK - h);
+    pri->tos = pri->off = MAX(0, SCROLLBACK - m_rect.h);
     this->s = this->pri;
 
     nodelay(pri->win, TRUE);
@@ -66,28 +66,27 @@ VTScreen::~VTScreen()
     }
 }
 
-void VTScreen::reshapeview(int d, int ow, int lines, int cols) /* Reshape a view. */
+void VTScreen::reshapeview(int d, int ow, const Rect &rect) /* Reshape a view. */
 {
-    m_h = lines;
-    m_w = cols;
-    int oy, ox;
-    struct winsize ws = {.ws_row = (unsigned short)lines,
-                         .ws_col = (unsigned short)cols};
+    m_rect = rect;
+    struct winsize ws = {.ws_row = (unsigned short)m_rect.h,
+                         .ws_col = (unsigned short)m_rect.w};
 
     {
         auto oldtabs = tabs;
         this->tabs.clear();
-        for (int i = 0; i < cols; i++) /* keep old overlapping tabs */
+        for (int i = 0; i < m_rect.w; i++) /* keep old overlapping tabs */
             tabs.push_back(i < ow ? oldtabs[i] : (i % 8 == 0));
     }
 
+    int oy, ox;
     getyx(this->s->win, oy, ox);
-    wresize(this->pri->win, MAX(lines, SCROLLBACK), MAX(cols, 2));
-    wresize(this->alt->win, MAX(lines, 2), MAX(cols, 2));
-    this->pri->tos = this->pri->off = MAX(0, SCROLLBACK - lines);
+    wresize(this->pri->win, MAX(m_rect.h, SCROLLBACK), MAX(m_rect.w, 2));
+    wresize(this->alt->win, MAX(m_rect.h, 2), MAX(m_rect.w, 2));
+    this->pri->tos = this->pri->off = MAX(0, SCROLLBACK - m_rect.h);
     this->alt->tos = this->alt->off = 0;
-    wsetscrreg(this->pri->win, 0, MAX(SCROLLBACK, lines) - 1);
-    wsetscrreg(this->alt->win, 0, lines - 1);
+    wsetscrreg(this->pri->win, 0, MAX(SCROLLBACK, m_rect.h) - 1);
+    wsetscrreg(this->alt->win, 0, m_rect.h - 1);
     if (d > 0)
     { /* make sure the new top line syncs up after reshape */
         wmove(this->s->win, oy + d, ox);
@@ -98,11 +97,10 @@ void VTScreen::reshapeview(int d, int ow, int lines, int cols) /* Reshape a view
     ioctl(this->pt, TIOCSWINSZ, &ws);
 }
 
-void VTScreen::draw(int y, int x, int h, int w)
+void VTScreen::draw(const Rect &rect)
 {
-    m_h = h;
-    m_w = w;
-    pnoutrefresh(this->s->win, this->s->off, 0, y, x, y + h - 1, x + w - 1);
+    m_rect = rect;
+    pnoutrefresh(this->s->win, this->s->off, 0, m_rect.y, m_rect.x, m_rect.y + m_rect.h - 1, m_rect.x + m_rect.w - 1);
 }
 
 bool VTScreen::process()
@@ -133,7 +131,7 @@ bool VTScreen::handleUserInput()
 
 void VTScreen::fixCursor()
 {
-    this->s->fixcursor(m_h);
+    this->s->fixcursor(m_rect.h);
 }
 
 void VTScreen::reset()
@@ -147,8 +145,8 @@ void VTScreen::reset()
     this->pnm = false;
     this->pri->vis = this->alt->vis = 1;
     this->s = this->pri;
-    wsetscrreg(this->pri->win, 0, MAX(SCROLLBACK, m_h) - 1);
-    wsetscrreg(this->alt->win, 0, m_h - 1);
+    wsetscrreg(this->pri->win, 0, MAX(SCROLLBACK, m_rect.h) - 1);
+    wsetscrreg(this->alt->win, 0, m_rect.h - 1);
     for (int i = 0; i < this->tabs.size(); i++)
         this->tabs[i] = (i % 8 == 0);
 }
@@ -178,12 +176,12 @@ static const char *getshell(void) /* Get the user's preferred shell. */
     return "/bin/sh";
 }
 
-int fork_setup(VTPARSER *vp, void *p, int *pt, int h, int w)
+int fork_setup(VTPARSER *vp, void *p, int *pt, const Rect &rect)
 {
     vp_initialize(vp, p);
 
-    struct winsize ws = {.ws_row = (unsigned short)h,
-                         .ws_col = (unsigned short)w};
+    struct winsize ws = {.ws_row = (unsigned short)rect.h,
+                         .ws_col = (unsigned short)rect.w};
     pid_t pid = forkpty(pt, NULL, NULL, &ws);
     if (pid == 0)
     {
