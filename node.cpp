@@ -113,19 +113,16 @@ void focus(const std::shared_ptr<NODE> &n) /* Focus a node. */
     }
 }
 
-std::shared_ptr<NODE> newview(const std::shared_ptr<NODE> &p, const Rect &rect) /* Open a new view. */
+std::shared_ptr<NODE> newview(const Rect &rect) /* Open a new view. */
 {
-    auto n = std::make_shared<NODE>(VIEW, p, rect);
+    auto n = std::make_shared<NODE>(VIEW, nullptr, rect);
     n->vt = std::make_unique<VTScreen>(rect);
 
     auto pid = fork_setup(n->vt->vp.get(), n.get(), &n->vt->pt, rect);
     if (pid < 0)
     {
         // error
-        if (!p)
-        {
-            perror("forkpty");
-        }
+        perror("forkpty");
         return nullptr;
     }
     else if (pid == 0)
@@ -202,13 +199,12 @@ newcontainer(Node t, const std::shared_ptr<NODE> &p, const Rect &rect,
     return n;
 }
 
-
 void split(const std::shared_ptr<NODE> &n, const Node t) /* Split a node. */
 {
     int nh = t == VERTICAL ? (n->m_rect.h - 1) / 2 : n->m_rect.h;
     int nw = t == HORIZONTAL ? (n->m_rect.w) / 2 : n->m_rect.w;
     auto p = n->p.lock();
-    auto v = newview(NULL, Rect(0, 0, MAX(0, nh), MAX(0, nw)));
+    auto v = newview(Rect(0, 0, MAX(0, nh), MAX(0, nw)));
     if (!v)
     {
         return;

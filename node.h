@@ -48,5 +48,5 @@ extern std::weak_ptr<NODE> focused;
 extern std::weak_ptr<NODE> lastfocused;
 void focus(const std::shared_ptr<NODE> &n);
 void deletenode(const std::shared_ptr<NODE> &n);
-std::shared_ptr<NODE> newview(const std::shared_ptr<NODE> &p, const Rect &rect);
+std::shared_ptr<NODE> newview(const Rect &rect);
 void split(const std::shared_ptr<NODE> &n, const Node t);
