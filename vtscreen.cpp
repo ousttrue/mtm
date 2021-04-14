@@ -3,10 +3,11 @@
 #include "minmax.h"
 #include "selector.h"
 #include "vthandler.h"
+#include <curses.h>
+#include <memory>
 #include <pwd.h>
 #include <unistd.h>
 #include <signal.h>
-
 
 #ifdef __cplusplus
 extern "C"
@@ -20,14 +21,12 @@ extern "C"
 }
 #endif
 
-
-VTScreen::VTScreen(const Rect &rect)
-: m_rect(rect)
+VTScreen::VTScreen(const Rect &rect) : m_rect(rect)
 {
     for (int i = 0; i < m_rect.w; i++)
     {
-        /* keep old overlapping tabs */
-        tabs.push_back(i % 8 == 0);
+        /* keep old overlapping m_tabs */
+        m_tabs.push_back(i % 8 == 0);
     }
 
     this->pri = std::make_shared<SCRN>();
@@ -66,17 +65,18 @@ VTScreen::~VTScreen()
     }
 }
 
-void VTScreen::reshapeview(int d, int ow, const Rect &rect) /* Reshape a view. */
+void VTScreen::reshapeview(int d, int ow,
+                           const Rect &rect) /* Reshape a view. */
 {
     m_rect = rect;
     struct winsize ws = {.ws_row = (unsigned short)m_rect.h,
                          .ws_col = (unsigned short)m_rect.w};
 
     {
-        auto oldtabs = tabs;
-        this->tabs.clear();
-        for (int i = 0; i < m_rect.w; i++) /* keep old overlapping tabs */
-            tabs.push_back(i < ow ? oldtabs[i] : (i % 8 == 0));
+        auto oldtabs = m_tabs;
+        this->m_tabs.clear();
+        for (int i = 0; i < m_rect.w; i++) /* keep old overlapping m_tabs */
+            m_tabs.push_back(i < ow ? oldtabs[i] : (i % 8 == 0));
     }
 
     int oy, ox;
@@ -100,7 +100,8 @@ void VTScreen::reshapeview(int d, int ow, const Rect &rect) /* Reshape a view. *
 void VTScreen::draw(const Rect &rect)
 {
     m_rect = rect;
-    pnoutrefresh(this->s->win, this->s->off, 0, m_rect.y, m_rect.x, m_rect.y + m_rect.h - 1, m_rect.x + m_rect.w - 1);
+    pnoutrefresh(this->s->win, this->s->off, 0, m_rect.y, m_rect.x,
+                 m_rect.y + m_rect.h - 1, m_rect.x + m_rect.w - 1);
 }
 
 bool VTScreen::process()
@@ -147,8 +148,8 @@ void VTScreen::reset()
     this->s = this->pri;
     wsetscrreg(this->pri->win, 0, MAX(SCROLLBACK, m_rect.h) - 1);
     wsetscrreg(this->alt->win, 0, m_rect.h - 1);
-    for (int i = 0; i < this->tabs.size(); i++)
-        this->tabs[i] = (i % 8 == 0);
+    for (int i = 0; i < this->m_tabs.size(); i++)
+        this->m_tabs[i] = (i % 8 == 0);
 }
 
 bool VTScreen::alternate_screen_buffer_mode(bool set)
@@ -199,4 +200,47 @@ int fork_setup(VTPARSER *vp, void *p, int *pt, const Rect &rect)
         // not reach here
     }
     return pid;
+}
+
+void VTScreen::HorizontalTabSet(int x)
+{
+    if (x < m_tabs.size() && x > 0)
+        m_tabs[x] = true;
+}
+
+bool VTScreen::TryGetBackwardTab(int x, int *out)
+{
+    for (int i = x - 1; i < m_tabs.size() && i >= 0; i--)
+        if (m_tabs[i])
+        {
+            *out = i;
+            return true;
+        }
+
+    return false;
+}
+
+bool VTScreen::TryGetForwardTab(int x, int *out)
+{
+    for (int i = x + 1; i < m_rect.w && i < m_tabs.size(); i++)
+        if (m_tabs[i])
+        {
+            *out = i;
+            return true;
+        }
+
+    return false;
+}
+
+void VTScreen::TabClear(int x)
+{
+    m_tabs[x < m_tabs.size() ? x : 0] = false;
+}
+
+void VTScreen::TabClearAll()
+{
+    for (int i = 0; i < m_tabs.size(); ++i)
+    {
+        m_tabs[i] = false;
+    }
 }

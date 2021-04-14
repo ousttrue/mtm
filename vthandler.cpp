@@ -79,7 +79,7 @@ static void safewrite(int fd, const char *b,
 #define SEND(n, s) SENDN(n, s, strlen(s))
 #define COMMONVARS                                                             \
     NODE *n = (NODE *)p;                                                       \
-    auto s = n->vt->s;                                                             \
+    auto s = n->vt->s;                                                         \
     WINDOW *win = s->win;                                                      \
     int py, px, y, x, my, mx, top = 0, bot = 0, tos = s->tos;                  \
     (void)v;                                                                   \
@@ -111,7 +111,7 @@ static void safewrite(int fd, const char *b,
     {                                                                          \
         COMMONVARS
 #define ENDHANDLER                                                             \
-    n->vt->repc = 0;                                                               \
+    n->vt->repc = 0;                                                           \
     } /* control sequences aren't repeated */
 
 HANDLER(bell) /* Terminal bell. */
@@ -158,8 +158,7 @@ SEND(n, "\006");
 ENDHANDLER
 
 HANDLER(hts) /* HTS - Horizontal Tab Set */
-if (x < n->vt->tabs.size() && x > 0)
-    n->vt->tabs[x] = true;
+n->vt->HorizontalTabSet(x);
 ENDHANDLER
 
 HANDLER(ri) /* RI - Reverse Index */
@@ -194,22 +193,20 @@ wmove(win, MIN(tos + bot - 1, MAX(tos + top, py + P1(0))), x);
 ENDHANDLER
 
 HANDLER(cbt) /* CBT - Cursor Backwards Tab */
-for (int i = x - 1; i < n->vt->tabs.size() && i >= 0; i--)
-    if (n->vt->tabs[i])
-    {
-        wmove(win, py, i);
-        return;
-    }
+int i;
+if (n->vt->TryGetBackwardTab(x, &i))
+{
+    wmove(win, py, i);
+}
 wmove(win, py, 0);
 ENDHANDLER
 
 HANDLER(ht) /* HT - Horizontal Tab */
-for (int i = x + 1; i < n->m_rect.w && i < n->vt->tabs.size(); i++)
-    if (n->vt->tabs[i])
-    {
-        wmove(win, py, i);
-        return;
-    }
+int i;
+if (n->vt->TryGetForwardTab(x, &i))
+{
+    wmove(win, py, i);
+}
 wmove(win, py, mx - 1);
 ENDHANDLER
 
@@ -283,13 +280,11 @@ HANDLER(tbc) /* TBC - Tabulation Clear */
 switch (P0(0))
 {
 case 0:
-    n->vt->tabs[x < n->vt->tabs.size() ? x : 0] = false;
+    n->vt->TabClear(x);
     break;
+
 case 3:
-    for (int i = 0; i < n->vt->tabs.size(); ++i)
-    {
-        n->vt->tabs[i] = false;
-    }
+    n->vt->TabClearAll();
     break;
 }
 ENDHANDLER
@@ -357,8 +352,8 @@ ENDHANDLER
 HANDLER(dsr) /* DSR - Device Status Report */
 char buf[100] = {0};
 if (P0(0) == 6)
-    snprintf(buf, sizeof(buf) - 1, "\033[%d;%dR", (n->vt->decom ? y - top : y) + 1,
-             x + 1);
+    snprintf(buf, sizeof(buf) - 1, "\033[%d;%dR",
+             (n->vt->decom ? y - top : y) + 1, x + 1);
 else
     snprintf(buf, sizeof(buf) - 1, "\033[0n");
 SEND(n, buf);

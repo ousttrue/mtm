@@ -10,7 +10,10 @@ struct VTScreen
     int pt = -1;
     Rect m_rect;
 
-    std::vector<bool> tabs;
+private:
+    std::vector<bool> m_tabs;
+
+public:
     bool pnm = false;
     bool decom = false;
     bool am = false;
@@ -38,6 +41,12 @@ struct VTScreen
     void fixCursor();
     void reset();
     bool alternate_screen_buffer_mode(bool set);
+
+    void HorizontalTabSet(int x);
+    bool TryGetBackwardTab(int x, int *out);
+    bool TryGetForwardTab(int x, int *out);
+    void TabClear(int x);
+    void TabClearAll();
 };
 
 int fork_setup(struct VTPARSER *vp, void *p, int *pt, const Rect &rect);
