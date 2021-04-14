@@ -39,7 +39,7 @@ public:
     void reshapechildren();
     void draw() const;
     void drawchildren() const;
-    std::shared_ptr<NODE> findnode(int y, int x);
+    std::shared_ptr<NODE> findnode(const YX &yx);
     void processVT();
 };
 

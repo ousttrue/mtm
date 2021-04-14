@@ -21,10 +21,7 @@ extern "C"
 #include <unistd.h>
 #include <signal.h>
 
-#define ABOVE(n) n->m_rect.y - 2, n->m_rect.x + n->m_rect.w / 2
-#define BELOW(n) n->m_rect.y + n->m_rect.h + 2, n->m_rect.x + n->m_rect.w / 2
-#define LEFT(n) n->m_rect.y + n->m_rect.h / 2, n->m_rect.x - 2
-#define RIGHT(n) n->m_rect.y + n->m_rect.h / 2, n->m_rect.x + n->m_rect.w + 2
+
 
 static int g_commandkey = CTL(COMMAND_KEY);
 
@@ -919,10 +916,10 @@ bool handlechar(int r, int k) /* Handle a single input character. */
     DO(false, CODE(KEY_F(10)), SEND(n, "\033[21~"); SB)
     DO(false, CODE(KEY_F(11)), SEND(n, "\033[23~"); SB)
     DO(false, CODE(KEY_F(12)), SEND(n, "\033[24~"); SB)
-    DO(true, MOVE_UP, focus(root->findnode(ABOVE(n))))
-    DO(true, MOVE_DOWN, focus(root->findnode(BELOW(n))))
-    DO(true, MOVE_LEFT, focus(root->findnode(LEFT(n))))
-    DO(true, MOVE_RIGHT, focus(root->findnode(RIGHT(n))))
+    DO(true, MOVE_UP, focus(root->findnode(n->m_rect.above())))
+    DO(true, MOVE_DOWN, focus(root->findnode(n->m_rect.below())))
+    DO(true, MOVE_LEFT, focus(root->findnode(n->m_rect.left())))
+    DO(true, MOVE_RIGHT, focus(root->findnode(n->m_rect.right())))
     DO(true, MOVE_OTHER, focus(lastfocused.lock()))
     DO(true, HSPLIT, split(n, HORIZONTAL))
     DO(true, VSPLIT, split(n, VERTICAL))

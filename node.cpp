@@ -81,15 +81,14 @@ void NODE::drawchildren() const /* Draw all children of n. */
     this->c2->draw();
 }
 
-std::shared_ptr<NODE> NODE::findnode(int y,
-                                     int x) /* Find the node enclosing y,x. */
+std::shared_ptr<NODE> NODE::findnode(const YX &p) /* Find the node enclosing y,x. */
 {
-    if (m_rect.contains(y, x))
+    if (m_rect.contains(p))
     {
-        if (this->c1 && this->c1->m_rect.contains(y, x))
-            return this->c1->findnode(y, x);
-        if (this->c2 && this->c2->m_rect.contains(y, x))
-            return this->c2->findnode(y, x);
+        if (this->c1 && this->c1->m_rect.contains(p))
+            return this->c1->findnode(p);
+        if (this->c2 && this->c2->m_rect.contains(p))
+            return this->c2->findnode(p);
         return shared_from_this();
     }
     return NULL;
