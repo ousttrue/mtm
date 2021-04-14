@@ -30,20 +30,6 @@ void set_commandkey(int k)
     g_commandkey = k;
 }
 
-static void safewrite(int fd, const char *b,
-                      size_t n) /* Write, checking for errors. */
-{
-    size_t w = 0;
-    while (w < n)
-    {
-        ssize_t s = write(fd, b + w, n - w);
-        if (s < 0 && errno != EINTR)
-            return;
-        else if (s < 0)
-            s = 0;
-        w += (size_t)s;
-    }
-}
 
 /*** TERMINAL EMULATION HANDLERS
  * These functions implement the various terminal commands activated by
@@ -68,12 +54,13 @@ static void safewrite(int fd, const char *b,
  *                       s        - the current SCRN buffer
  * The funny names for handlers are from their ANSI/ECMA/DEC mnemonics.
  */
+
 #define PD(x, d) (argc < (x) || !argv ? (d) : argv[(x)])
 #define P0(x) PD(x, 0)
 #define P1(x) (!P0(x) ? 1 : P0(x))
 #define CALL(x) (x)(v, n, 0, 0, 0, NULL, NULL)
-#define SENDN(n, s, c) safewrite(n->vt->pt, s, c)
-#define SEND(n, s) SENDN(n, s, strlen(s))
+// #define SENDN(n, s, c) safewrite(n->vt->pt, s, c)
+#define SEND(n, s) n->vt->safewrite(s, strlen(s))
 #define COMMONVARS                                                             \
     NODE *n = (NODE *)p;                                                       \
     auto s = n->vt->s;                                                         \
@@ -885,7 +872,7 @@ bool handlechar(int r, int k) /* Handle a single input character. */
     DO(cmd, KERR(k), return false)
     DO(cmd, CODE(KEY_RESIZE), root->reshape(Rect(0, 0, LINES, COLS)); SB)
     DO(false, KEY(g_commandkey), return cmd = true)
-    DO(false, KEY(0), SENDN(n, "\000", 1); SB)
+    DO(false, KEY(0), n->vt->safewrite("\000", 1); SB)
     DO(false, KEY(L'\n'), SEND(n, "\n"); SB)
     DO(false, KEY(L'\r'), SEND(n, n->vt->lnm ? "\r\n" : "\r"); SB)
     DO(false, SCROLLUP && INSCR, n->vt->s->scrollback(n->m_rect.h))
@@ -928,7 +915,7 @@ bool handlechar(int r, int k) /* Handle a single input character. */
     DO(true, SCROLLUP, n->vt->s->scrollback(n->m_rect.h))
     DO(true, SCROLLDOWN, n->vt->s->scrollforward(n->m_rect.h))
     DO(true, RECENTER, n->vt->s->scrollbottom())
-    DO(true, KEY(g_commandkey), SENDN(n, cmdstr, 1));
+    DO(true, KEY(g_commandkey), n->vt->safewrite(cmdstr, 1));
     char c[MB_LEN_MAX + 1] = {0};
     if (wctomb(c, k) > 0)
     {

@@ -244,3 +244,18 @@ void VTScreen::TabClearAll()
         m_tabs[i] = false;
     }
 }
+
+void VTScreen::safewrite(const char *b,
+                         size_t n) /* Write, checking for errors. */
+{
+    size_t w = 0;
+    while (w < n)
+    {
+        ssize_t s = write(pt, b + w, n - w);
+        if (s < 0 && errno != EINTR)
+            return;
+        else if (s < 0)
+            s = 0;
+        w += (size_t)s;
+    }
+}
