@@ -3,6 +3,7 @@
 #include "minmax.h"
 #include "selector.h"
 #include "vthandler.h"
+#include <cstring>
 #include <curses.h>
 #include <memory>
 #include <pwd.h>
@@ -258,4 +259,9 @@ void VTScreen::safewrite(const char *b,
             s = 0;
         w += (size_t)s;
     }
+}
+
+void VTScreen::safewrite(const char *s)
+{
+    safewrite(s, strlen(s));
 }

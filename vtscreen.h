@@ -48,6 +48,7 @@ public:
     void TabClear(int x);
     void TabClearAll();
     void safewrite(const char *b, size_t n); /* Write, checking for errors. */
+    void safewrite(const char *s);
 };
 
 int fork_setup(struct VTPARSER *vp, void *p, int *pt, const Rect &rect);
