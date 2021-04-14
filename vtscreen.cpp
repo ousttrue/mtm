@@ -15,12 +15,13 @@ extern "C"
 {
 #endif
 
-#include "vt/vtparser.h"
 #include "config.h"
 
 #ifdef __cplusplus
 }
 #endif
+
+#include "vt/vtparser.h"
 
 VTScreen::VTScreen(const Rect &rect) : m_rect(rect)
 {

@@ -3,12 +3,12 @@ extern "C"
 {
 #endif
 #include "pair.h"
-#include "vt/vtparser.h"
 #include "config.h"
 #ifdef __cplusplus
 }
 #endif
 
+#include "vt/vtparser.h"
 #include "vthandler.h"
 #include "node.h"
 #include "vtscreen.h"

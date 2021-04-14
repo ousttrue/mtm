@@ -43,9 +43,13 @@ struct STATE{
     ACTION actions[MAXACTIONS];
 };
 
+
+
 /**** GLOBALS */
-static STATE ground, escape, escape_intermediate, csi_entry,
+extern STATE ground, escape, escape_intermediate, csi_entry,
              csi_ignore, csi_param, csi_intermediate, osc_string;
+
+
 
 /**** ACTION FUNCTIONS */
 static void
@@ -91,7 +95,7 @@ param(VTPARSER *v, wchar_t w)
     do ## k (VTPARSER *v, wchar_t w)                    \
     {                                                   \
         if (t)                                          \
-            f (v, v->p, w, v->inter, n, a, v->oscbuf);  \
+            f (v, v->p, w, v->inter, n, a, (const wchar_t *)v->oscbuf);  \
     }
 
 DO(control, w < MAXCALLBACK && v->cons[w], v->cons[w], 0, NULL)
@@ -138,10 +142,10 @@ vtwrite(VTPARSER *vp, const char *s, size_t n)
     while (n){
         size_t r = mbrtowc(&w, s, n, &vp->ms);
         switch (r){
-            case -2: /* incomplete character, try again */
+            case (size_t)-2: /* incomplete character, try again */
                 return;
 
-            case -1: /* invalid character, skip it */
+            case (size_t)-1: /* invalid character, skip it */
                 w = VTPARSER_BAD_CHAR;
                 r = 1;
                 break;
@@ -163,7 +167,7 @@ vtwrite(VTPARSER *vp, const char *s, size_t n)
  * Please note that Williams does not (AFAIK) endorse this work.
  */
 #define MAKESTATE(name, onentry, ...)         \
-    static STATE name ={                      \
+    STATE name ={                      \
         onentry ,                             \
         {                                     \
             {0x00, 0x00, ignore,    NULL},    \
@@ -180,6 +184,8 @@ vtwrite(VTPARSER *vp, const char *s, size_t n)
             {0x00, 0x00, NULL,      NULL}     \
         }                                     \
     }
+
+
 
 MAKESTATE(ground, NULL,
     {0x20, WCHAR_MAX, doprint, NULL}
@@ -240,3 +246,4 @@ MAKESTATE(osc_string, reset,
     {0x07, 0x07, doosc, &ground},
     {0x20, 0x7f, collectosc, NULL}
 );
+
