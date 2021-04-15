@@ -117,7 +117,7 @@ std::shared_ptr<NODE> newview(const Rect &rect) /* Open a new view. */
     auto n = std::make_shared<NODE>(VIEW, nullptr, rect);
     n->vt = std::make_unique<VTScreen>(rect, n.get());
 
-    vp_initialize(n->vt->vp.get(), n.get());
+    vp_initialize(n->vt->vp, n.get());
     auto pid = fork_setup(&n->vt->pt, rect);
     if (pid < 0)
     {

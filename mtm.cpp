@@ -21,17 +21,8 @@
 #include "vthandler.h"
 #include "node.h"
 #include "vtscreen.h"
-
-#ifdef __cplusplus
-extern "C"
-{
-#endif
-
 #include "pair.h"
 
-#ifdef __cplusplus
-}
-#endif
 
 mtm::mtm()
 {

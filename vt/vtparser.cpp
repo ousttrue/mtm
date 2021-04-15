@@ -24,24 +24,58 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
+#include "vtparser.h"
 #include <stdbool.h>
 #include <string.h>
-#include "vtparser.h"
+#include <wchar.h>
+
+/**** CONFIGURATION
+ * VTPARSER_BAD_CHAR is the character that will be displayed when
+ * an application sends an invalid multibyte sequence to the terminal.
+ */
+#ifndef VTPARSER_BAD_CHAR
+#ifdef __STDC_ISO_10646__
+#define VTPARSER_BAD_CHAR ((wchar_t)0xfffd)
+#else
+#define VTPARSER_BAD_CHAR L'?'
+#endif
+#endif
 
 /**** DATA TYPES */
+#define MAXPARAM 16
+#define MAXCALLBACK 128
+#define MAXOSC 100
+#define MAXBUF 100
 #define MAXACTIONS 128
 
 struct ACTION
 {
     wchar_t lo, hi;
     void (*cb)(VTPARSER *p, wchar_t w);
-    STATE *next;
+    struct STATE *next;
 };
 
 struct STATE
 {
     void (*entry)(VTPARSER *v);
     ACTION actions[MAXACTIONS];
+};
+
+struct VTPARSER
+{
+    STATE *s = nullptr;
+    int narg = 0;
+    int nosc = 0;
+    int args[MAXPARAM] = {};
+    int inter = 0;
+    int oscbuf[MAXOSC + 1] = {};
+    mbstate_t ms = {};
+    void *p = nullptr;
+    VTCALLBACK print = nullptr;
+    VTCALLBACK osc = nullptr;
+    VTCALLBACK cons[MAXCALLBACK] = {};
+    VTCALLBACK escs[MAXCALLBACK] = {};
+    VTCALLBACK csis[MAXCALLBACK] = {};
 };
 
 /**** GLOBALS */
@@ -226,9 +260,14 @@ MAKESTATE(csi_intermediate, NULL, {0x20, 0x2f, collect, NULL},
 MAKESTATE(osc_string, reset, {0x07, 0x07, doosc, &ground},
           {0x20, 0x7f, collectosc, NULL});
 
-std::unique_ptr<VTPARSER> VTPARSER::create(void *p)
+VTPARSER *VTPARSER_create(void *p)
 {
-    auto vp = std::unique_ptr<VTPARSER>(new VTPARSER);
+    auto vp = new VTPARSER;
     vp->p = p;
     return vp;
+}
+
+void VTPARSER_delete(VTPARSER *vp)
+{
+    delete vp;
 }

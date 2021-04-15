@@ -30,7 +30,7 @@ public:
     wchar_t *gs = nullptr;
     wchar_t *sgc = nullptr;
     wchar_t *sgs = nullptr;
-    std::unique_ptr<VTPARSER> vp;
+    VTPARSER *vp=nullptr;
 
     VTScreen(const Rect &rect, void *p);
     ~VTScreen();

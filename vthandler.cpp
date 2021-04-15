@@ -1,13 +1,5 @@
-#ifdef __cplusplus
-extern "C"
-{
-#endif
 #include "pair.h"
 #include "config.h"
-#ifdef __cplusplus
-}
-#endif
-
 #include "global.h"
 #include "vt/vtparser.h"
 #include "vthandler.h"
@@ -15,16 +7,11 @@ extern "C"
 #include "vtscreen.h"
 #include "scrn.h"
 #include "minmax.h"
-
 #include <climits>
 #include <pwd.h>
 #include <string.h>
 #include <unistd.h>
 #include <signal.h>
-
-
-
-
 
 /*** TERMINAL EMULATION HANDLERS
  * These functions implement the various terminal commands activated by
@@ -54,7 +41,6 @@ extern "C"
 #define P0(x) PD(x, 0)
 #define P1(x) (!P0(x) ? 1 : P0(x))
 #define CALL(x) (x)(v, n, 0, 0, 0, NULL, NULL)
-
 
 #define COMMONVARS                                                             \
     NODE *n = (NODE *)p;                                                       \
@@ -150,9 +136,9 @@ ENDHANDLER
 
 HANDLER(decid) /* DECID - Send Terminal Identification */
 if (w == L'c')
-    n->vt->safewrite( iw == L'>' ? "\033[>1;10;0c" : "\033[?1;2c");
+    n->vt->safewrite(iw == L'>' ? "\033[>1;10;0c" : "\033[?1;2c");
 else if (w == L'Z')
-    n->vt->safewrite( "\033[?6c");
+    n->vt->safewrite("\033[?6c");
 ENDHANDLER
 
 HANDLER(hpa) /* HPA - Cursor Horizontal Absolute */
@@ -335,7 +321,7 @@ if (P0(0) == 6)
              (n->vt->decom ? y - top : y) + 1, x + 1);
 else
     snprintf(buf, sizeof(buf) - 1, "\033[0n");
-n->vt->safewrite( buf);
+n->vt->safewrite(buf);
 ENDHANDLER
 
 HANDLER(idl) /* IL or DL - Insert/Delete Line */
@@ -355,7 +341,7 @@ if (wsetscrreg(win, tos + P1(0) - 1, tos + PD(1, my) - 1) == OK)
 ENDHANDLER
 
 HANDLER(decreqtparm) /* DECREQTPARM - Request Device Parameters */
-n->vt->safewrite( P0(0) ? "\033[3;1;2;120;1;0x" : "\033[2;1;2;120;128;1;0x");
+n->vt->safewrite(P0(0) ? "\033[3;1;2;120;1;0x" : "\033[2;1;2;120;128;1;0x");
 ENDHANDLER
 
 HANDLER(sgr0) /* Reset SGR to default */
@@ -819,13 +805,11 @@ static void setupevents(VTPARSER *vp)
     vtonevent(vp, VTPARSER_PRINT, 0, print);
 }
 
-
-
 void sendarrow(const std::shared_ptr<NODE> &n, const char *k)
 {
     char buf[100] = {0};
     snprintf(buf, sizeof(buf) - 1, "\033%s%s", n->vt->pnm ? "O" : "[", k);
-    n->vt->safewrite( buf);
+    n->vt->safewrite(buf);
 }
 
 bool handlechar(int r, int k) /* Handle a single input character. */
@@ -850,36 +834,36 @@ bool handlechar(int r, int k) /* Handle a single input character. */
     DO(cmd, CODE(KEY_RESIZE), root->reshape(Rect(0, 0, LINES, COLS)); SB)
     DO(false, KEY(global::get_commandKey()), return cmd = true)
     DO(false, KEY(0), n->vt->safewrite("\000", 1); SB)
-    DO(false, KEY(L'\n'), n->vt->safewrite( "\n"); SB)
-    DO(false, KEY(L'\r'), n->vt->safewrite( n->vt->lnm ? "\r\n" : "\r"); SB)
+    DO(false, KEY(L'\n'), n->vt->safewrite("\n"); SB)
+    DO(false, KEY(L'\r'), n->vt->safewrite(n->vt->lnm ? "\r\n" : "\r"); SB)
     DO(false, SCROLLUP && INSCR, n->vt->s->scrollback(n->m_rect.h))
     DO(false, SCROLLDOWN && INSCR, n->vt->s->scrollforward(n->m_rect.h))
     DO(false, RECENTER && INSCR, n->vt->s->scrollbottom())
-    DO(false, CODE(KEY_ENTER), n->vt->safewrite( n->vt->lnm ? "\r\n" : "\r"); SB)
+    DO(false, CODE(KEY_ENTER), n->vt->safewrite(n->vt->lnm ? "\r\n" : "\r"); SB)
     DO(false, CODE(KEY_UP), sendarrow(n, "A"); SB);
     DO(false, CODE(KEY_DOWN), sendarrow(n, "B"); SB);
     DO(false, CODE(KEY_RIGHT), sendarrow(n, "C"); SB);
     DO(false, CODE(KEY_LEFT), sendarrow(n, "D"); SB);
-    DO(false, CODE(KEY_HOME), n->vt->safewrite( "\033[1~"); SB)
-    DO(false, CODE(KEY_END), n->vt->safewrite( "\033[4~"); SB)
-    DO(false, CODE(KEY_PPAGE), n->vt->safewrite( "\033[5~"); SB)
-    DO(false, CODE(KEY_NPAGE), n->vt->safewrite( "\033[6~"); SB)
-    DO(false, CODE(KEY_BACKSPACE), n->vt->safewrite( "\177"); SB)
-    DO(false, CODE(KEY_DC), n->vt->safewrite( "\033[3~"); SB)
-    DO(false, CODE(KEY_IC), n->vt->safewrite( "\033[2~"); SB)
-    DO(false, CODE(KEY_BTAB), n->vt->safewrite( "\033[Z"); SB)
-    DO(false, CODE(KEY_F(1)), n->vt->safewrite( "\033OP"); SB)
-    DO(false, CODE(KEY_F(2)), n->vt->safewrite( "\033OQ"); SB)
-    DO(false, CODE(KEY_F(3)), n->vt->safewrite( "\033OR"); SB)
-    DO(false, CODE(KEY_F(4)), n->vt->safewrite( "\033OS"); SB)
-    DO(false, CODE(KEY_F(5)), n->vt->safewrite( "\033[15~"); SB)
-    DO(false, CODE(KEY_F(6)), n->vt->safewrite( "\033[17~"); SB)
-    DO(false, CODE(KEY_F(7)), n->vt->safewrite( "\033[18~"); SB)
-    DO(false, CODE(KEY_F(8)), n->vt->safewrite( "\033[19~"); SB)
-    DO(false, CODE(KEY_F(9)), n->vt->safewrite( "\033[20~"); SB)
-    DO(false, CODE(KEY_F(10)), n->vt->safewrite( "\033[21~"); SB)
-    DO(false, CODE(KEY_F(11)), n->vt->safewrite( "\033[23~"); SB)
-    DO(false, CODE(KEY_F(12)), n->vt->safewrite( "\033[24~"); SB)
+    DO(false, CODE(KEY_HOME), n->vt->safewrite("\033[1~"); SB)
+    DO(false, CODE(KEY_END), n->vt->safewrite("\033[4~"); SB)
+    DO(false, CODE(KEY_PPAGE), n->vt->safewrite("\033[5~"); SB)
+    DO(false, CODE(KEY_NPAGE), n->vt->safewrite("\033[6~"); SB)
+    DO(false, CODE(KEY_BACKSPACE), n->vt->safewrite("\177"); SB)
+    DO(false, CODE(KEY_DC), n->vt->safewrite("\033[3~"); SB)
+    DO(false, CODE(KEY_IC), n->vt->safewrite("\033[2~"); SB)
+    DO(false, CODE(KEY_BTAB), n->vt->safewrite("\033[Z"); SB)
+    DO(false, CODE(KEY_F(1)), n->vt->safewrite("\033OP"); SB)
+    DO(false, CODE(KEY_F(2)), n->vt->safewrite("\033OQ"); SB)
+    DO(false, CODE(KEY_F(3)), n->vt->safewrite("\033OR"); SB)
+    DO(false, CODE(KEY_F(4)), n->vt->safewrite("\033OS"); SB)
+    DO(false, CODE(KEY_F(5)), n->vt->safewrite("\033[15~"); SB)
+    DO(false, CODE(KEY_F(6)), n->vt->safewrite("\033[17~"); SB)
+    DO(false, CODE(KEY_F(7)), n->vt->safewrite("\033[18~"); SB)
+    DO(false, CODE(KEY_F(8)), n->vt->safewrite("\033[19~"); SB)
+    DO(false, CODE(KEY_F(9)), n->vt->safewrite("\033[20~"); SB)
+    DO(false, CODE(KEY_F(10)), n->vt->safewrite("\033[21~"); SB)
+    DO(false, CODE(KEY_F(11)), n->vt->safewrite("\033[23~"); SB)
+    DO(false, CODE(KEY_F(12)), n->vt->safewrite("\033[24~"); SB)
     DO(true, MOVE_UP, focus(root->findnode(n->m_rect.above())))
     DO(true, MOVE_DOWN, focus(root->findnode(n->m_rect.below())))
     DO(true, MOVE_LEFT, focus(root->findnode(n->m_rect.left())))
@@ -897,7 +881,7 @@ bool handlechar(int r, int k) /* Handle a single input character. */
     if (wctomb(c, k) > 0)
     {
         n->vt->s->scrollbottom();
-        n->vt->safewrite( c);
+        n->vt->safewrite(c);
     }
     return cmd = false, true;
 }
