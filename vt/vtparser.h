@@ -27,6 +27,7 @@
 #ifndef VTC_H
 #define VTC_H
 
+#include <memory>
 #include <stddef.h>
 #include <wchar.h>
 
@@ -68,6 +69,8 @@ struct VTPARSER
     VTCALLBACK cons[MAXCALLBACK];
     VTCALLBACK escs[MAXCALLBACK];
     VTCALLBACK csis[MAXCALLBACK];
+
+    static std::unique_ptr<VTPARSER> create(void *p);
 };
 
 enum VtEvent

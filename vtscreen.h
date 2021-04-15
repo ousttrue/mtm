@@ -32,7 +32,7 @@ public:
     wchar_t *sgs = nullptr;
     std::unique_ptr<VTPARSER> vp;
 
-    VTScreen(const Rect &rect);
+    VTScreen(const Rect &rect, void *p);
     ~VTScreen();
     void reshapeview(int d, int ow, const Rect &rect);
     void draw(const Rect &rect);

@@ -23,7 +23,7 @@ extern "C"
 
 #include "vt/vtparser.h"
 
-VTScreen::VTScreen(const Rect &rect) : m_rect(rect)
+VTScreen::VTScreen(const Rect &rect, void *p) : m_rect(rect)
 {
     for (int i = 0; i < m_rect.w; i++)
     {
@@ -52,7 +52,7 @@ VTScreen::VTScreen(const Rect &rect) : m_rect(rect)
     keypad(pri->win, TRUE);
     keypad(alt->win, TRUE);
 
-    this->vp = std::make_unique<VTPARSER>();
+    this->vp = VTPARSER::create(p);
 }
 
 VTScreen::~VTScreen()

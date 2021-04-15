@@ -225,3 +225,9 @@ MAKESTATE(csi_intermediate, NULL, {0x20, 0x2f, collect, NULL},
 
 MAKESTATE(osc_string, reset, {0x07, 0x07, doosc, &ground},
           {0x20, 0x7f, collectosc, NULL});
+
+
+std::unique_ptr<VTPARSER> VTPARSER::create(void *p)
+{
+    return std::unique_ptr<VTPARSER>(new VTPARSER);    
+}

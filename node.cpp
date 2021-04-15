@@ -115,7 +115,7 @@ void focus(const std::shared_ptr<NODE> &n) /* Focus a node. */
 std::shared_ptr<NODE> newview(const Rect &rect) /* Open a new view. */
 {
     auto n = std::make_shared<NODE>(VIEW, nullptr, rect);
-    n->vt = std::make_unique<VTScreen>(rect);
+    n->vt = std::make_unique<VTScreen>(rect, n.get());
 
     auto pid = fork_setup(n->vt->vp.get(), n.get(), &n->vt->pt, rect);
     if (pid < 0)
