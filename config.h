@@ -19,8 +19,6 @@
  * list, meaning that terminfo-aware programs may get a small
  * speed boost.
  */
-#define DEFAULT_TERMINAL "screen-bce"
-#define DEFAULT_256_COLOR_TERMINAL "screen-256color-bce"
 
 /* mtm supports a scrollback buffer, allowing users to scroll back
  * through the output history of a virtual terminal. The SCROLLBACK
@@ -33,11 +31,6 @@
  * expect to use is tall.
  */
 #define SCROLLBACK 1000
-
-/* The default command prefix key, when modified by cntrl.
- * This can be changed at runtime using the '-c' flag.
- */
-#define COMMAND_KEY 'g'
 
 /* The change focus keys. */
 #define MOVE_UP         CODE(KEY_UP)

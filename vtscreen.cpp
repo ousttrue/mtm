@@ -3,6 +3,7 @@
 #include "minmax.h"
 #include "selector.h"
 #include "vthandler.h"
+#include "global.h"
 #include <cstring>
 #include <curses.h>
 #include <memory>
@@ -193,7 +194,7 @@ int fork_setup(int *pt, const Rect &rect)
         snprintf(buf, sizeof(buf) - 1, "%lu", (unsigned long)getppid());
         setsid();
         setenv("MTM", buf, 1);
-        setenv("TERM", get_term(), 1);
+        setenv("TERM", global::get_term(), 1);
         signal(SIGCHLD, SIG_DFL);
         execl(getshell(), getshell(), NULL);
 

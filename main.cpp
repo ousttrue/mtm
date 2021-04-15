@@ -1,5 +1,6 @@
 #include "mtm.h"
 #include "vthandler.h"
+#include "global.h"
 #include <signal.h>
 #include <unistd.h>
 
@@ -30,6 +31,8 @@ int main(int argc, char **argv)
             return EXIT_FAILURE;
         }
 
-    auto app = mtm::create(term, commandkey);
+    global::set_term(term);
+    global::set_commandkey(commandkey);
+    auto app = mtm::create();
     return app->run();
 }

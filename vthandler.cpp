@@ -8,6 +8,7 @@ extern "C"
 }
 #endif
 
+#include "global.h"
 #include "vt/vtparser.h"
 #include "vthandler.h"
 #include "node.h"
@@ -23,12 +24,6 @@ extern "C"
 
 
 
-static int g_commandkey = CTL(COMMAND_KEY);
-
-void set_commandkey(int k)
-{
-    g_commandkey = k;
-}
 
 
 /*** TERMINAL EMULATION HANDLERS
@@ -824,25 +819,7 @@ static void setupevents(VTPARSER *vp)
     vtonevent(vp, VTPARSER_PRINT, 0, print);
 }
 
-std::string g_term;
 
-void set_term(const char *term)
-{
-    if (term)
-    {
-        g_term = term;
-    }
-}
-
-const char *get_term(void)
-{
-    const char *envterm = getenv("TERM");
-    if (!g_term.empty())
-        return g_term.c_str();
-    if (envterm && COLORS >= 256 && !strstr(DEFAULT_TERMINAL, "-256color"))
-        return DEFAULT_256_COLOR_TERMINAL;
-    return DEFAULT_TERMINAL;
-}
 
 void sendarrow(const std::shared_ptr<NODE> &n, const char *k)
 {
@@ -853,7 +830,7 @@ void sendarrow(const std::shared_ptr<NODE> &n, const char *k)
 
 bool handlechar(int r, int k) /* Handle a single input character. */
 {
-    const char cmdstr[] = {(char)g_commandkey, 0};
+    const char cmdstr[] = {(char)global::get_commandKey(), 0};
     static bool cmd = false;
     auto n = focused.lock();
 #define KERR(i) (r == ERR && (i) == k)
@@ -871,7 +848,7 @@ bool handlechar(int r, int k) /* Handle a single input character. */
 
     DO(cmd, KERR(k), return false)
     DO(cmd, CODE(KEY_RESIZE), root->reshape(Rect(0, 0, LINES, COLS)); SB)
-    DO(false, KEY(g_commandkey), return cmd = true)
+    DO(false, KEY(global::get_commandKey()), return cmd = true)
     DO(false, KEY(0), n->vt->safewrite("\000", 1); SB)
     DO(false, KEY(L'\n'), n->vt->safewrite( "\n"); SB)
     DO(false, KEY(L'\r'), n->vt->safewrite( n->vt->lnm ? "\r\n" : "\r"); SB)
@@ -915,7 +892,7 @@ bool handlechar(int r, int k) /* Handle a single input character. */
     DO(true, SCROLLUP, n->vt->s->scrollback(n->m_rect.h))
     DO(true, SCROLLDOWN, n->vt->s->scrollforward(n->m_rect.h))
     DO(true, RECENTER, n->vt->s->scrollbottom())
-    DO(true, KEY(g_commandkey), n->vt->safewrite(cmdstr, 1));
+    DO(true, KEY(global::get_commandKey()), n->vt->safewrite(cmdstr, 1));
     char c[MB_LEN_MAX + 1] = {0};
     if (wctomb(c, k) > 0)
     {
@@ -927,7 +904,6 @@ bool handlechar(int r, int k) /* Handle a single input character. */
 
 void vp_initialize(VTPARSER *vp, void *p)
 {
-    vp->p = p;
     setupevents(vp);
     ris(vp, p, L'c', 0, 0, NULL, NULL);
 }

@@ -44,10 +44,8 @@ mtm::mtm()
     start_pairs();
 }
 
-std::unique_ptr<mtm> mtm::create(const char *term, int commandKey)
+std::unique_ptr<mtm> mtm::create()
 {
-    set_term(term);
-    set_commandkey(commandKey);
     if (!initscr())
     {
         // quit(EXIT_FAILURE, "could not initialize terminal");
