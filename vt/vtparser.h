@@ -56,19 +56,19 @@ typedef void (*VTCALLBACK)(VTPARSER *v, void *p, wchar_t w, wchar_t iw,
 
 struct VTPARSER
 {
-    STATE *s;
-    int narg;
-    int nosc;
-    int args[MAXPARAM];
-    int inter;
-    int oscbuf[MAXOSC + 1];
-    mbstate_t ms;
-    void *p;
-    VTCALLBACK print;
-    VTCALLBACK osc;
-    VTCALLBACK cons[MAXCALLBACK];
-    VTCALLBACK escs[MAXCALLBACK];
-    VTCALLBACK csis[MAXCALLBACK];
+    STATE *s = nullptr;
+    int narg = 0;
+    int nosc = 0;
+    int args[MAXPARAM] = {};
+    int inter = 0;
+    int oscbuf[MAXOSC + 1] = {};
+    mbstate_t ms = {};
+    void *p = nullptr;
+    VTCALLBACK print = nullptr;
+    VTCALLBACK osc = nullptr;
+    VTCALLBACK cons[MAXCALLBACK] = {};
+    VTCALLBACK escs[MAXCALLBACK] = {};
+    VTCALLBACK csis[MAXCALLBACK] = {};
 
     static std::unique_ptr<VTPARSER> create(void *p);
 };
