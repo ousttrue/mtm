@@ -51,4 +51,4 @@ public:
     void safewrite(const char *s);
 };
 
-int fork_setup(struct VTPARSER *vp, void *p, int *pt, const Rect &rect);
+int fork_setup(int *pt, const Rect &rect);

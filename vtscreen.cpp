@@ -179,10 +179,8 @@ static const char *getshell(void) /* Get the user's preferred shell. */
     return "/bin/sh";
 }
 
-int fork_setup(VTPARSER *vp, void *p, int *pt, const Rect &rect)
+int fork_setup(int *pt, const Rect &rect)
 {
-    vp_initialize(vp, p);
-
     struct winsize ws = {.ws_row = (unsigned short)rect.h,
                          .ws_col = (unsigned short)rect.w};
     pid_t pid = forkpty(pt, NULL, NULL, &ws);
