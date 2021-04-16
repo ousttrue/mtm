@@ -51,17 +51,17 @@
 struct ACTION
 {
     wchar_t lo, hi;
-    void (*cb)(VTPARSER *p, wchar_t w);
+    void (*cb)(VTPARSERImpl *p, wchar_t w);
     struct STATE *next;
 };
 
 struct STATE
 {
-    void (*entry)(VTPARSER *v);
+    void (*entry)(VTPARSERImpl *v);
     ACTION actions[MAXACTIONS];
 };
 
-struct VTPARSER
+struct VTPARSERImpl
 {
     STATE *s = nullptr;
     int narg = 0;
@@ -83,31 +83,31 @@ extern STATE ground, escape, escape_intermediate, csi_entry, csi_ignore,
     csi_param, csi_intermediate, osc_string;
 
 /**** ACTION FUNCTIONS */
-static void reset(VTPARSER *v)
+static void reset(VTPARSERImpl *v)
 {
     v->inter = v->narg = v->nosc = 0;
     memset(v->args, 0, sizeof(v->args));
     memset(v->oscbuf, 0, sizeof(v->oscbuf));
 }
 
-static void ignore(VTPARSER *v, wchar_t w)
+static void ignore(VTPARSERImpl *v, wchar_t w)
 {
     (void)v;
     (void)w; /* avoid warnings */
 }
 
-static void collect(VTPARSER *v, wchar_t w)
+static void collect(VTPARSERImpl *v, wchar_t w)
 {
     v->inter = v->inter ? v->inter : (int)w;
 }
 
-static void collectosc(VTPARSER *v, wchar_t w)
+static void collectosc(VTPARSERImpl *v, wchar_t w)
 {
     if (v->nosc < MAXOSC)
         v->oscbuf[v->nosc++] = w;
 }
 
-static void param(VTPARSER *v, wchar_t w)
+static void param(VTPARSERImpl *v, wchar_t w)
 {
     v->narg = v->narg ? v->narg : 1;
 
@@ -118,7 +118,7 @@ static void param(VTPARSER *v, wchar_t w)
 }
 
 #define DO(k, t, f, n, a)                                                      \
-    static void do##k(VTPARSER *v, wchar_t w)                                  \
+    static void do##k(VTPARSERImpl *v, wchar_t w)                                  \
     {                                                                          \
         if (t)                                                                 \
             f(v, v->p, w, v->inter, n, a, (const wchar_t *)v->oscbuf);         \
@@ -132,7 +132,7 @@ DO(osc, v->osc, v->osc, v->nosc, NULL)
 
 /**** PUBLIC FUNCTIONS */
 VTCALLBACK
-vtonevent(VTPARSER *vp, VtEvent t, wchar_t w, VTCALLBACK cb)
+vtonevent(VTPARSERImpl *vp, VtEvent t, wchar_t w, VTCALLBACK cb)
 {
     VTCALLBACK o = NULL;
     if (w < MAXCALLBACK)
@@ -163,7 +163,7 @@ vtonevent(VTPARSER *vp, VtEvent t, wchar_t w, VTCALLBACK cb)
     return o;
 }
 
-static void handlechar(VTPARSER *vp, wchar_t w)
+static void handlechar(VTPARSERImpl *vp, wchar_t w)
 {
     vp->s = vp->s ? vp->s : &ground;
     for (ACTION *a = vp->s->actions; a->cb; a++)
@@ -180,7 +180,7 @@ static void handlechar(VTPARSER *vp, wchar_t w)
         }
 }
 
-void vtwrite(VTPARSER *vp, const char *s, size_t n)
+void vtwrite(VTPARSERImpl *vp, const char *s, unsigned int n)
 {
     wchar_t w = 0;
     while (n)
@@ -260,14 +260,14 @@ MAKESTATE(csi_intermediate, NULL, {0x20, 0x2f, collect, NULL},
 MAKESTATE(osc_string, reset, {0x07, 0x07, doosc, &ground},
           {0x20, 0x7f, collectosc, NULL});
 
-VTPARSER *VTPARSER_create(void *p)
+VTPARSERImpl *VTPARSER_create(void *p)
 {
-    auto vp = new VTPARSER;
+    auto vp = new VTPARSERImpl;
     vp->p = p;
     return vp;
 }
 
-void VTPARSER_delete(VTPARSER *vp)
+void VTPARSER_delete(VTPARSERImpl *vp)
 {
     delete vp;
 }

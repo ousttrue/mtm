@@ -170,7 +170,7 @@ removechild(const std::shared_ptr<NODE> &p,
 void deletenode(const std::shared_ptr<NODE> &n) /* Delete a node. */
 {
     auto p = n->p.lock();
-    if (!n || !p)
+    if (!p)
     {
         if (root)
         {

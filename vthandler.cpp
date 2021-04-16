@@ -71,7 +71,7 @@
     top = top <= tos ? 0 : top - tos;
 
 #define HANDLER(name)                                                          \
-    static void name(VTPARSER *v, void *p, wchar_t w, wchar_t iw, int argc,    \
+    static void name(VTPARSERImpl *v, void *p, wchar_t w, wchar_t iw, int argc,    \
                      int *argv, const wchar_t *osc)                            \
     {                                                                          \
         COMMONVARS
@@ -738,7 +738,7 @@ else if (w == L'O')
 }
 ENDHANDLER
 
-static void setupevents(VTPARSER *vp)
+static void setupevents(VTPARSERImpl *vp)
 {
     vtonevent(vp, VTPARSER_CONTROL, 0x05, ack);
     vtonevent(vp, VTPARSER_CONTROL, 0x07, bell);
@@ -886,7 +886,7 @@ bool handlechar(int r, int k) /* Handle a single input character. */
     return cmd = false, true;
 }
 
-void vp_initialize(VTPARSER *vp, void *p)
+void vp_initialize(VTPARSERImpl *vp, void *p)
 {
     setupevents(vp);
     ris(vp, p, L'c', 0, 0, NULL, NULL);

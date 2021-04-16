@@ -8,4 +8,4 @@ bool handlechar(int r, int k); /* Handle a single input character. */
 
 
 
-void vp_initialize(struct VTPARSER *vp, void *p);
+void vp_initialize(struct VTPARSERImpl *vp, void *p);

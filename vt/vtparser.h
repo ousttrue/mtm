@@ -25,12 +25,6 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #pragma once
-#include <stddef.h>
-
-
-struct VTPARSER;
-typedef void (*VTCALLBACK)(VTPARSER *v, void *p, wchar_t w, wchar_t iw,
-                           int argc, int *argv, const wchar_t *osc);
 
 enum VtEvent
 {
@@ -41,11 +35,15 @@ enum VtEvent
     VTPARSER_PRINT
 };
 
+struct VTPARSERImpl;
+using VTCALLBACK = void (*)(VTPARSERImpl *v, void *p, wchar_t w, wchar_t iw,
+                            int argc, int *argv, const wchar_t *osc);
+
 /**** FUNCTIONS */
 VTCALLBACK
-vtonevent(VTPARSER *vp, VtEvent t, wchar_t w, VTCALLBACK cb);
+vtonevent(VTPARSERImpl *vp, VtEvent t, wchar_t w, VTCALLBACK cb);
 
-void vtwrite(VTPARSER *vp, const char *s, size_t n);
+void vtwrite(VTPARSERImpl *vp, const char *s, unsigned int n);
 
-VTPARSER* VTPARSER_create(void *p);
-void VTPARSER_delete(VTPARSER *vp);
+VTPARSERImpl *VTPARSER_create(void *p);
+void VTPARSER_delete(VTPARSERImpl *vp);

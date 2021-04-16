@@ -4,7 +4,7 @@
 #include "rect.h"
 
 struct SCRN;
-struct VTPARSER;
+struct VTPARSERImpl;
 struct VTScreen
 {
     int pt = -1;
@@ -30,7 +30,7 @@ public:
     wchar_t *gs = nullptr;
     wchar_t *sgc = nullptr;
     wchar_t *sgs = nullptr;
-    VTPARSER *vp=nullptr;
+    VTPARSERImpl *vp=nullptr;
 
     VTScreen(const Rect &rect, void *p);
     ~VTScreen();
