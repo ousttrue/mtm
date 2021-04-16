@@ -35,11 +35,11 @@ enum class VtEvent
     PRINT
 };
 
-struct VTPARSERImpl;
-using VTCALLBACK = void (*)(VTPARSERImpl *v, void *p, wchar_t w, wchar_t iw,
+using VTCALLBACK = void (*)(void *p, wchar_t w, wchar_t iw,
                             int argc, int *argv, const wchar_t *osc);
 
 /**** FUNCTIONS */
+struct VTPARSERImpl;
 VTCALLBACK
 vtonevent(VTPARSERImpl *vp, VtEvent t, wchar_t w, VTCALLBACK cb);
 

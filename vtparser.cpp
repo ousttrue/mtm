@@ -121,7 +121,7 @@ static void param(VTPARSERImpl *v, wchar_t w)
     static void do##k(VTPARSERImpl *v, wchar_t w)                                  \
     {                                                                          \
         if (t)                                                                 \
-            f(v, v->p, w, v->inter, n, a, (const wchar_t *)v->oscbuf);         \
+            f(v->p, w, v->inter, n, a, (const wchar_t *)v->oscbuf);         \
     }
 
 DO(control, w < MAXCALLBACK && v->cons[w], v->cons[w], 0, NULL)

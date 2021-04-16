@@ -40,14 +40,13 @@
 #define PD(x, d) (argc < (x) || !argv ? (d) : argv[(x)])
 #define P0(x) PD(x, 0)
 #define P1(x) (!P0(x) ? 1 : P0(x))
-#define CALL(x) (x)(v, n, 0, 0, 0, NULL, NULL)
+#define CALL(x) (x)(n, 0, 0, 0, NULL, NULL)
 
 #define COMMONVARS                                                             \
     NODE *n = (NODE *)p;                                                       \
     auto s = n->vt->s;                                                         \
     WINDOW *win = s->win;                                                      \
     int py, px, y, x, my, mx, top = 0, bot = 0, tos = s->tos;                  \
-    (void)v;                                                                   \
     (void)p;                                                                   \
     (void)w;                                                                   \
     (void)iw;                                                                  \
@@ -71,7 +70,7 @@
     top = top <= tos ? 0 : top - tos;
 
 #define HANDLER(name)                                                          \
-    static void name(VTPARSERImpl *v, void *p, wchar_t w, wchar_t iw, int argc,    \
+    static void name(void *p, wchar_t w, wchar_t iw, int argc,    \
                      int *argv, const wchar_t *osc)                            \
     {                                                                          \
         COMMONVARS
@@ -300,7 +299,7 @@ case 1:
         wclrtoeol(win);
     }
     wmove(win, py, x);
-    el(v, p, w, iw, 1, &o, NULL);
+    el(p, w, iw, 1, &o, NULL);
     break;
 }
 wmove(win, py, px);
@@ -674,7 +673,7 @@ n->vt->gc = n->vt->gs;
 
 HANDLER(rep) /* REP - Repeat Character */
 for (int i = 0; i < P1(0) && n->vt->repc; i++)
-    print(v, p, n->vt->repc, 0, 0, NULL, NULL);
+    print(p, n->vt->repc, 0, 0, NULL, NULL);
 ENDHANDLER
 
 HANDLER(scs) /* Select Character Set */
@@ -889,5 +888,5 @@ bool handlechar(int r, int k) /* Handle a single input character. */
 void vp_initialize(VTPARSERImpl *vp, void *p)
 {
     setupevents(vp);
-    ris(vp, p, L'c', 0, 0, NULL, NULL);
+    ris(p, L'c', 0, 0, NULL, NULL);
 }
