@@ -138,23 +138,23 @@ vtonevent(VTPARSERImpl *vp, VtEvent t, wchar_t w, VTCALLBACK cb)
     if (w < MAXCALLBACK)
         switch (t)
         {
-        case VTPARSER_CONTROL:
+        case VtEvent::CONTROL:
             o = vp->cons[w];
             vp->cons[w] = cb;
             break;
-        case VTPARSER_ESCAPE:
+        case VtEvent::ESCAPE:
             o = vp->escs[w];
             vp->escs[w] = cb;
             break;
-        case VTPARSER_CSI:
+        case VtEvent::CSI:
             o = vp->csis[w];
             vp->csis[w] = cb;
             break;
-        case VTPARSER_PRINT:
+        case VtEvent::PRINT:
             o = vp->print;
             vp->print = cb;
             break;
-        case VTPARSER_OSC:
+        case VtEvent::OSC:
             o = vp->osc;
             vp->osc = cb;
             break;

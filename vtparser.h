@@ -26,13 +26,13 @@
  */
 #pragma once
 
-enum VtEvent
+enum class VtEvent
 {
-    VTPARSER_CONTROL,
-    VTPARSER_ESCAPE,
-    VTPARSER_CSI,
-    VTPARSER_OSC,
-    VTPARSER_PRINT
+    CONTROL,
+    ESCAPE,
+    CSI,
+    OSC,
+    PRINT
 };
 
 struct VTPARSERImpl;
