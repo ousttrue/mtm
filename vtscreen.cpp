@@ -10,7 +10,7 @@
 #include <pwd.h>
 #include <unistd.h>
 #include <signal.h>
-#include "vt/vtparser.h"
+#include "vtparser.h"
 #include "config.h"
 
 VTScreen::VTScreen(const Rect &rect, void *p) : m_rect(rect)

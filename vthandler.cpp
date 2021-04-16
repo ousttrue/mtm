@@ -1,7 +1,7 @@
 #include "pair.h"
 #include "config.h"
 #include "global.h"
-#include "vt/vtparser.h"
+#include "vtparser.h"
 #include "vthandler.h"
 #include "node.h"
 #include "vtscreen.h"
