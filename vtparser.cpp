@@ -118,10 +118,10 @@ static void param(VTPARSERImpl *v, wchar_t w)
 }
 
 #define DO(k, t, f, n, a)                                                      \
-    static void do##k(VTPARSERImpl *v, wchar_t w)                                  \
+    static void do##k(VTPARSERImpl *v, wchar_t w)                              \
     {                                                                          \
         if (t)                                                                 \
-            f(v->p, w, v->inter, n, a, (const wchar_t *)v->oscbuf);         \
+            f(v->p, w, v->inter, n, a, (const wchar_t *)v->oscbuf);            \
     }
 
 DO(control, w < MAXCALLBACK && v->cons[w], v->cons[w], 0, NULL)
@@ -260,14 +260,26 @@ MAKESTATE(csi_intermediate, NULL, {0x20, 0x2f, collect, NULL},
 MAKESTATE(osc_string, reset, {0x07, 0x07, doosc, &ground},
           {0x20, 0x7f, collectosc, NULL});
 
-VTPARSERImpl *VTPARSER_create(void *p)
+///
+/// VtParser
+///
+VtParser::VtParser(void *p)
 {
-    auto vp = new VTPARSERImpl;
-    vp->p = p;
-    return vp;
+    m_impl = new VTPARSERImpl;
+    m_impl->p = p;
 }
 
-void VTPARSER_delete(VTPARSERImpl *vp)
+VtParser::~VtParser()
 {
-    delete vp;
+    delete m_impl;
+}
+
+void VtParser::vtonevent(VtEvent t, wchar_t w, VTCALLBACK cb)
+{
+    ::vtonevent(m_impl, t, w, cb);
+}
+
+void VtParser::vtwrite(const char *s, unsigned int n)
+{
+    ::vtwrite(m_impl, s, n);
 }

@@ -35,15 +35,16 @@ enum class VtEvent
     PRINT
 };
 
-using VTCALLBACK = void (*)(void *p, wchar_t w, wchar_t iw,
-                            int argc, int *argv, const wchar_t *osc);
+using VTCALLBACK = void (*)(void *p, wchar_t w, wchar_t iw, int argc, int *argv,
+                            const wchar_t *osc);
 
-/**** FUNCTIONS */
-struct VTPARSERImpl;
-VTCALLBACK
-vtonevent(VTPARSERImpl *vp, VtEvent t, wchar_t w, VTCALLBACK cb);
+class VtParser
+{
+    struct VTPARSERImpl *m_impl = nullptr;
 
-void vtwrite(VTPARSERImpl *vp, const char *s, unsigned int n);
-
-VTPARSERImpl *VTPARSER_create(void *p);
-void VTPARSER_delete(VTPARSERImpl *vp);
+public:
+    VtParser(void *p);
+    ~VtParser();
+    void vtonevent(VtEvent t, wchar_t w, VTCALLBACK cb);
+    void vtwrite(const char *s, unsigned int n);
+};

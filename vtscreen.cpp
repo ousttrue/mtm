@@ -42,13 +42,11 @@ VTScreen::VTScreen(const Rect &rect, void *p) : m_rect(rect)
     keypad(pri->win, TRUE);
     keypad(alt->win, TRUE);
 
-    this->vp = VTPARSER_create(p);
+    this->vp = std::make_unique<VtParser>(p);
 }
 
 VTScreen::~VTScreen()
 {
-    VTPARSER_delete(vp);
-
     if (this->pri->win)
         delwin(this->pri->win);
     if (this->alt->win)
@@ -106,7 +104,7 @@ bool VTScreen::process()
         ssize_t r = read(this->pt, g_iobuf, sizeof(g_iobuf));
         if (r > 0)
         {
-            vtwrite(this->vp, g_iobuf, r);
+            this->vp->vtwrite(g_iobuf, r);
         }
         if (r <= 0 && errno != EINTR && errno != EWOULDBLOCK)
         {

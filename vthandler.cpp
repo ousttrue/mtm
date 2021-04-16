@@ -737,71 +737,71 @@ else if (w == L'O')
 }
 ENDHANDLER
 
-static void setupevents(VTPARSERImpl *vp)
+static void setupevents(const std::unique_ptr<VtParser> &vp)
 {
-    vtonevent(vp, VtEvent::CONTROL, 0x05, ack);
-    vtonevent(vp, VtEvent::CONTROL, 0x07, bell);
-    vtonevent(vp, VtEvent::CONTROL, 0x08, cub);
-    vtonevent(vp, VtEvent::CONTROL, 0x09, tab);
-    vtonevent(vp, VtEvent::CONTROL, 0x0a, pnl);
-    vtonevent(vp, VtEvent::CONTROL, 0x0b, pnl);
-    vtonevent(vp, VtEvent::CONTROL, 0x0c, pnl);
-    vtonevent(vp, VtEvent::CONTROL, 0x0d, cr);
-    vtonevent(vp, VtEvent::CONTROL, 0x0e, so);
-    vtonevent(vp, VtEvent::CONTROL, 0x0f, so);
-    vtonevent(vp, VtEvent::CSI, L'A', cuu);
-    vtonevent(vp, VtEvent::CSI, L'B', cud);
-    vtonevent(vp, VtEvent::CSI, L'C', cuf);
-    vtonevent(vp, VtEvent::CSI, L'D', cub);
-    vtonevent(vp, VtEvent::CSI, L'E', cnl);
-    vtonevent(vp, VtEvent::CSI, L'F', cpl);
-    vtonevent(vp, VtEvent::CSI, L'G', hpa);
-    vtonevent(vp, VtEvent::CSI, L'H', cup);
-    vtonevent(vp, VtEvent::CSI, L'I', tab);
-    vtonevent(vp, VtEvent::CSI, L'J', ed);
-    vtonevent(vp, VtEvent::CSI, L'K', el);
-    vtonevent(vp, VtEvent::CSI, L'L', idl);
-    vtonevent(vp, VtEvent::CSI, L'M', idl);
-    vtonevent(vp, VtEvent::CSI, L'P', dch);
-    vtonevent(vp, VtEvent::CSI, L'S', su);
-    vtonevent(vp, VtEvent::CSI, L'T', su);
-    vtonevent(vp, VtEvent::CSI, L'X', ech);
-    vtonevent(vp, VtEvent::CSI, L'Z', tab);
-    vtonevent(vp, VtEvent::CSI, L'`', hpa);
-    vtonevent(vp, VtEvent::CSI, L'^', su);
-    vtonevent(vp, VtEvent::CSI, L'@', ich);
-    vtonevent(vp, VtEvent::CSI, L'a', hpr);
-    vtonevent(vp, VtEvent::CSI, L'b', rep);
-    vtonevent(vp, VtEvent::CSI, L'c', decid);
-    vtonevent(vp, VtEvent::CSI, L'd', vpa);
-    vtonevent(vp, VtEvent::CSI, L'e', vpr);
-    vtonevent(vp, VtEvent::CSI, L'f', cup);
-    vtonevent(vp, VtEvent::CSI, L'g', tbc);
-    vtonevent(vp, VtEvent::CSI, L'h', mode);
-    vtonevent(vp, VtEvent::CSI, L'l', mode);
-    vtonevent(vp, VtEvent::CSI, L'm', sgr);
-    vtonevent(vp, VtEvent::CSI, L'n', dsr);
-    vtonevent(vp, VtEvent::CSI, L'r', csr);
-    vtonevent(vp, VtEvent::CSI, L's', sc);
-    vtonevent(vp, VtEvent::CSI, L'u', rc);
-    vtonevent(vp, VtEvent::CSI, L'x', decreqtparm);
-    vtonevent(vp, VtEvent::ESCAPE, L'0', scs);
-    vtonevent(vp, VtEvent::ESCAPE, L'1', scs);
-    vtonevent(vp, VtEvent::ESCAPE, L'2', scs);
-    vtonevent(vp, VtEvent::ESCAPE, L'7', sc);
-    vtonevent(vp, VtEvent::ESCAPE, L'8', rc);
-    vtonevent(vp, VtEvent::ESCAPE, L'A', scs);
-    vtonevent(vp, VtEvent::ESCAPE, L'B', scs);
-    vtonevent(vp, VtEvent::ESCAPE, L'D', ind);
-    vtonevent(vp, VtEvent::ESCAPE, L'E', nel);
-    vtonevent(vp, VtEvent::ESCAPE, L'H', hts);
-    vtonevent(vp, VtEvent::ESCAPE, L'M', ri);
-    vtonevent(vp, VtEvent::ESCAPE, L'Z', decid);
-    vtonevent(vp, VtEvent::ESCAPE, L'c', ris);
-    vtonevent(vp, VtEvent::ESCAPE, L'p', vis);
-    vtonevent(vp, VtEvent::ESCAPE, L'=', numkp);
-    vtonevent(vp, VtEvent::ESCAPE, L'>', numkp);
-    vtonevent(vp, VtEvent::PRINT, 0, print);
+    vp->vtonevent(VtEvent::CONTROL, 0x05, ack);
+    vp->vtonevent(VtEvent::CONTROL, 0x07, bell);
+    vp->vtonevent(VtEvent::CONTROL, 0x08, cub);
+    vp->vtonevent(VtEvent::CONTROL, 0x09, tab);
+    vp->vtonevent(VtEvent::CONTROL, 0x0a, pnl);
+    vp->vtonevent(VtEvent::CONTROL, 0x0b, pnl);
+    vp->vtonevent(VtEvent::CONTROL, 0x0c, pnl);
+    vp->vtonevent(VtEvent::CONTROL, 0x0d, cr);
+    vp->vtonevent(VtEvent::CONTROL, 0x0e, so);
+    vp->vtonevent(VtEvent::CONTROL, 0x0f, so);
+    vp->vtonevent(VtEvent::CSI, L'A', cuu);
+    vp->vtonevent(VtEvent::CSI, L'B', cud);
+    vp->vtonevent(VtEvent::CSI, L'C', cuf);
+    vp->vtonevent(VtEvent::CSI, L'D', cub);
+    vp->vtonevent(VtEvent::CSI, L'E', cnl);
+    vp->vtonevent(VtEvent::CSI, L'F', cpl);
+    vp->vtonevent(VtEvent::CSI, L'G', hpa);
+    vp->vtonevent(VtEvent::CSI, L'H', cup);
+    vp->vtonevent(VtEvent::CSI, L'I', tab);
+    vp->vtonevent(VtEvent::CSI, L'J', ed);
+    vp->vtonevent(VtEvent::CSI, L'K', el);
+    vp->vtonevent(VtEvent::CSI, L'L', idl);
+    vp->vtonevent(VtEvent::CSI, L'M', idl);
+    vp->vtonevent(VtEvent::CSI, L'P', dch);
+    vp->vtonevent(VtEvent::CSI, L'S', su);
+    vp->vtonevent(VtEvent::CSI, L'T', su);
+    vp->vtonevent(VtEvent::CSI, L'X', ech);
+    vp->vtonevent(VtEvent::CSI, L'Z', tab);
+    vp->vtonevent(VtEvent::CSI, L'`', hpa);
+    vp->vtonevent(VtEvent::CSI, L'^', su);
+    vp->vtonevent(VtEvent::CSI, L'@', ich);
+    vp->vtonevent(VtEvent::CSI, L'a', hpr);
+    vp->vtonevent(VtEvent::CSI, L'b', rep);
+    vp->vtonevent(VtEvent::CSI, L'c', decid);
+    vp->vtonevent(VtEvent::CSI, L'd', vpa);
+    vp->vtonevent(VtEvent::CSI, L'e', vpr);
+    vp->vtonevent(VtEvent::CSI, L'f', cup);
+    vp->vtonevent(VtEvent::CSI, L'g', tbc);
+    vp->vtonevent(VtEvent::CSI, L'h', mode);
+    vp->vtonevent(VtEvent::CSI, L'l', mode);
+    vp->vtonevent(VtEvent::CSI, L'm', sgr);
+    vp->vtonevent(VtEvent::CSI, L'n', dsr);
+    vp->vtonevent(VtEvent::CSI, L'r', csr);
+    vp->vtonevent(VtEvent::CSI, L's', sc);
+    vp->vtonevent(VtEvent::CSI, L'u', rc);
+    vp->vtonevent(VtEvent::CSI, L'x', decreqtparm);
+    vp->vtonevent(VtEvent::ESCAPE, L'0', scs);
+    vp->vtonevent(VtEvent::ESCAPE, L'1', scs);
+    vp->vtonevent(VtEvent::ESCAPE, L'2', scs);
+    vp->vtonevent(VtEvent::ESCAPE, L'7', sc);
+    vp->vtonevent(VtEvent::ESCAPE, L'8', rc);
+    vp->vtonevent(VtEvent::ESCAPE, L'A', scs);
+    vp->vtonevent(VtEvent::ESCAPE, L'B', scs);
+    vp->vtonevent(VtEvent::ESCAPE, L'D', ind);
+    vp->vtonevent(VtEvent::ESCAPE, L'E', nel);
+    vp->vtonevent(VtEvent::ESCAPE, L'H', hts);
+    vp->vtonevent(VtEvent::ESCAPE, L'M', ri);
+    vp->vtonevent(VtEvent::ESCAPE, L'Z', decid);
+    vp->vtonevent(VtEvent::ESCAPE, L'c', ris);
+    vp->vtonevent(VtEvent::ESCAPE, L'p', vis);
+    vp->vtonevent(VtEvent::ESCAPE, L'=', numkp);
+    vp->vtonevent(VtEvent::ESCAPE, L'>', numkp);
+    vp->vtonevent(VtEvent::PRINT, 0, print);
 }
 
 void sendarrow(const std::shared_ptr<NODE> &n, const char *k)
@@ -885,7 +885,7 @@ bool handlechar(int r, int k) /* Handle a single input character. */
     return cmd = false, true;
 }
 
-void vp_initialize(VTPARSERImpl *vp, void *p)
+void vp_initialize(const std::unique_ptr<VtParser> &vp, void *p)
 {
     setupevents(vp);
     ris(p, L'c', 0, 0, NULL, NULL);
