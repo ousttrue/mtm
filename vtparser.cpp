@@ -61,6 +61,10 @@ struct STATE
     ACTION actions[MAXACTIONS];
 };
 
+/**** GLOBALS */
+extern STATE ground, escape, escape_intermediate, csi_entry, csi_ignore,
+    csi_param, csi_intermediate, osc_string;
+
 struct VTPARSERImpl
 {
     STATE *s = nullptr;
@@ -76,11 +80,52 @@ struct VTPARSERImpl
     VTCALLBACK cons[MAXCALLBACK] = {};
     VTCALLBACK escs[MAXCALLBACK] = {};
     VTCALLBACK csis[MAXCALLBACK] = {};
-};
 
-/**** GLOBALS */
-extern STATE ground, escape, escape_intermediate, csi_entry, csi_ignore,
-    csi_param, csi_intermediate, osc_string;
+    void vtwrite(const char *s, unsigned int n)
+    {
+        wchar_t w = 0;
+        while (n)
+        {
+            size_t r = mbrtowc(&w, s, n, &this->ms);
+            switch (r)
+            {
+            case (size_t)-2: /* incomplete character, try again */
+                return;
+
+            case (size_t)-1: /* invalid character, skip it */
+                w = VTPARSER_BAD_CHAR;
+                r = 1;
+                break;
+
+            case 0: /* literal zero, write it but advance */
+                r = 1;
+                break;
+            }
+
+            n -= r;
+            s += r;
+            handlechar(w);
+        }
+    }
+
+    void handlechar(wchar_t w)
+    {
+        auto vp = this;
+        vp->s = vp->s ? vp->s : &ground;
+        for (ACTION *a = vp->s->actions; a->cb; a++)
+            if (w >= a->lo && w <= a->hi)
+            {
+                a->cb(vp, w);
+                if (a->next)
+                {
+                    vp->s = a->next;
+                    if (a->next->entry)
+                        a->next->entry(vp);
+                }
+                return;
+            }
+    }
+};
 
 /**** ACTION FUNCTIONS */
 static void reset(VTPARSERImpl *v)
@@ -163,50 +208,6 @@ vtonevent(VTPARSERImpl *vp, VtEvent t, wchar_t w, VTCALLBACK cb)
     return o;
 }
 
-static void handlechar(VTPARSERImpl *vp, wchar_t w)
-{
-    vp->s = vp->s ? vp->s : &ground;
-    for (ACTION *a = vp->s->actions; a->cb; a++)
-        if (w >= a->lo && w <= a->hi)
-        {
-            a->cb(vp, w);
-            if (a->next)
-            {
-                vp->s = a->next;
-                if (a->next->entry)
-                    a->next->entry(vp);
-            }
-            return;
-        }
-}
-
-void vtwrite(VTPARSERImpl *vp, const char *s, unsigned int n)
-{
-    wchar_t w = 0;
-    while (n)
-    {
-        size_t r = mbrtowc(&w, s, n, &vp->ms);
-        switch (r)
-        {
-        case (size_t)-2: /* incomplete character, try again */
-            return;
-
-        case (size_t)-1: /* invalid character, skip it */
-            w = VTPARSER_BAD_CHAR;
-            r = 1;
-            break;
-
-        case 0: /* literal zero, write it but advance */
-            r = 1;
-            break;
-        }
-
-        n -= r;
-        s += r;
-        handlechar(vp, w);
-    }
-}
-
 /**** STATE DEFINITIONS
  * This was built by consulting the excellent state chart created by
  * Paul Flo Williams: http://vt100.net/emu/dec_ansi_parser
@@ -281,5 +282,5 @@ void VtParser::vtonevent(VtEvent t, wchar_t w, VTCALLBACK cb)
 
 void VtParser::vtwrite(const char *s, unsigned int n)
 {
-    ::vtwrite(m_impl, s, n);
+    m_impl->vtwrite(s, n);
 }
