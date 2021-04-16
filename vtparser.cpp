@@ -63,12 +63,8 @@ using ENTRY = void (*)(VTPARSERImpl *v);
 
 struct STATE
 {
-    ENTRY entry = nullptr;
+    bool entry = false;
     std::vector<ACTION> actions;
-
-    STATE()
-    {
-    }
 };
 
 /**** GLOBALS */
@@ -137,21 +133,22 @@ struct VTPARSERImpl
                 {
                     vp->s = a.next;
                     if (a.next->entry)
-                        a.next->entry(vp);
+                        vp->reset();
                 }
                 return;
             }
         }
     }
+
+    void reset()
+    {
+        this->inter = this->narg = this->nosc = 0;
+        memset(this->args, 0, sizeof(this->args));
+        memset(this->oscbuf, 0, sizeof(this->oscbuf));
+    }
 };
 
 /**** ACTION FUNCTIONS */
-static void reset(VTPARSERImpl *v)
-{
-    v->inter = v->narg = v->nosc = 0;
-    memset(v->args, 0, sizeof(v->args));
-    memset(v->oscbuf, 0, sizeof(v->oscbuf));
-}
 
 static void ignore(VTPARSERImpl *v, wchar_t w)
 {
@@ -232,7 +229,7 @@ vtonevent(VTPARSERImpl *vp, VtEvent t, wchar_t w, VTCALLBACK cb)
  * Please note that Williams does not (AFAIK) endorse this work.
  */
 
-void MAKESTATE(STATE &state, ENTRY entry, const std::vector<ACTION> actions)
+void MAKESTATE(STATE &state, bool entry, const std::vector<ACTION> actions)
 {
     state.entry = entry;
     state.actions.push_back({0x00, 0x00, ignore, NULL});
@@ -256,9 +253,9 @@ void MAKESTATE(STATE &state, ENTRY entry, const std::vector<ACTION> actions)
 
 void Initialize()
 {
-    MAKESTATE(ground, NULL, {{0x20, WCHAR_MAX, doprint, NULL}});
+    MAKESTATE(ground, false, {{0x20, WCHAR_MAX, doprint, NULL}});
 
-    MAKESTATE(escape, reset,
+    MAKESTATE(escape, true,
               {{0x21, 0x21, ignore, &osc_string},
                {0x20, 0x2f, collect, &escape_intermediate},
                {0x30, 0x4f, doescape, &ground},
@@ -274,10 +271,10 @@ void Initialize()
                {0x50, 0x50, ignore, &osc_string},
                {0x5f, 0x5f, ignore, &osc_string}});
 
-    MAKESTATE(escape_intermediate, NULL,
+    MAKESTATE(escape_intermediate, false,
               {{0x20, 0x2f, collect, NULL}, {0x30, 0x7e, doescape, &ground}});
 
-    MAKESTATE(csi_entry, reset,
+    MAKESTATE(csi_entry, true,
               {{0x20, 0x2f, collect, &csi_intermediate},
                {0x3a, 0x3a, ignore, &csi_ignore},
                {0x30, 0x39, param, &csi_param},
@@ -285,10 +282,10 @@ void Initialize()
                {0x3c, 0x3f, collect, &csi_param},
                {0x40, 0x7e, docsi, &ground}});
 
-    MAKESTATE(csi_ignore, NULL,
+    MAKESTATE(csi_ignore, false,
               {{0x20, 0x3f, ignore, NULL}, {0x40, 0x7e, ignore, &ground}});
 
-    MAKESTATE(csi_param, NULL,
+    MAKESTATE(csi_param, false,
               {{0x30, 0x39, param, NULL},
                {0x3b, 0x3b, param, NULL},
                {0x3a, 0x3a, ignore, &csi_ignore},
@@ -296,12 +293,12 @@ void Initialize()
                {0x20, 0x2f, collect, &csi_intermediate},
                {0x40, 0x7e, docsi, &ground}});
 
-    MAKESTATE(csi_intermediate, NULL,
+    MAKESTATE(csi_intermediate, false,
               {{0x20, 0x2f, collect, NULL},
                {0x30, 0x3f, ignore, &csi_ignore},
                {0x40, 0x7e, docsi, &ground}});
 
-    MAKESTATE(osc_string, reset,
+    MAKESTATE(osc_string, true,
               {{0x07, 0x07, doosc, &ground}, {0x20, 0x7f, collectosc, NULL}});
 }
 
