@@ -28,6 +28,7 @@
 #include <stdbool.h>
 #include <string.h>
 #include <wchar.h>
+#include <vector>
 
 /**** CONFIGURATION
  * VTPARSER_BAD_CHAR is the character that will be displayed when
@@ -48,22 +49,37 @@
 #define MAXBUF 100
 #define MAXACTIONS 128
 
+using CB = void (*)(VTPARSERImpl *p, wchar_t w);
+
 struct ACTION
 {
-    wchar_t lo, hi;
-    void (*cb)(VTPARSERImpl *p, wchar_t w);
-    struct STATE *next;
+    wchar_t lo = 0;
+    wchar_t hi = 0;
+    CB cb = nullptr;
+    struct STATE *next = nullptr;
 };
+
+using ENTRY = void (*)(VTPARSERImpl *v);
 
 struct STATE
 {
-    void (*entry)(VTPARSERImpl *v);
-    ACTION actions[MAXACTIONS];
+    ENTRY entry = nullptr;
+    std::vector<ACTION> actions;
+
+    STATE()
+    {
+    }
 };
 
 /**** GLOBALS */
-extern STATE ground, escape, escape_intermediate, csi_entry, csi_ignore,
-    csi_param, csi_intermediate, osc_string;
+STATE ground;
+STATE escape;
+STATE escape_intermediate;
+STATE csi_entry;
+STATE csi_ignore;
+STATE csi_param;
+STATE csi_intermediate;
+STATE osc_string;
 
 struct VTPARSERImpl
 {
@@ -112,18 +128,20 @@ struct VTPARSERImpl
     {
         auto vp = this;
         vp->s = vp->s ? vp->s : &ground;
-        for (ACTION *a = vp->s->actions; a->cb; a++)
-            if (w >= a->lo && w <= a->hi)
+        for (auto &a : vp->s->actions)
+        {
+            if (w >= a.lo && w <= a.hi)
             {
-                a->cb(vp, w);
-                if (a->next)
+                a.cb(vp, w);
+                if (a.next)
                 {
-                    vp->s = a->next;
-                    if (a->next->entry)
-                        a->next->entry(vp);
+                    vp->s = a.next;
+                    if (a.next->entry)
+                        a.next->entry(vp);
                 }
                 return;
             }
+        }
     }
 };
 
@@ -213,59 +231,91 @@ vtonevent(VTPARSERImpl *vp, VtEvent t, wchar_t w, VTCALLBACK cb)
  * Paul Flo Williams: http://vt100.net/emu/dec_ansi_parser
  * Please note that Williams does not (AFAIK) endorse this work.
  */
-#define MAKESTATE(name, onentry, ...)                                          \
-    STATE name = {onentry,                                                     \
-                  {{0x00, 0x00, ignore, NULL},                                 \
-                   {0x7f, 0x7f, ignore, NULL},                                 \
-                   {0x18, 0x18, docontrol, &ground},                           \
-                   {0x1a, 0x1a, docontrol, &ground},                           \
-                   {0x1b, 0x1b, ignore, &escape},                              \
-                   {0x01, 0x06, docontrol, NULL},                              \
-                   {0x08, 0x17, docontrol, NULL},                              \
-                   {0x19, 0x19, docontrol, NULL},                              \
-                   {0x1c, 0x1f, docontrol, NULL},                              \
-                   __VA_ARGS__,                                                \
-                   {0x07, 0x07, docontrol, NULL},                              \
-                   {0x00, 0x00, NULL, NULL}}}
 
-MAKESTATE(ground, NULL, {0x20, WCHAR_MAX, doprint, NULL});
+void MAKESTATE(STATE &state, ENTRY entry, const std::vector<ACTION> actions)
+{
+    state.entry = entry;
+    state.actions.push_back({0x00, 0x00, ignore, NULL});
+    state.actions.push_back({0x7f, 0x7f, ignore, NULL});
+    state.actions.push_back({0x18, 0x18, docontrol, &ground});
+    state.actions.push_back({0x1a, 0x1a, docontrol, &ground});
+    state.actions.push_back({0x1b, 0x1b, ignore, &escape});
+    state.actions.push_back({0x01, 0x06, docontrol, NULL});
+    state.actions.push_back({0x08, 0x17, docontrol, NULL});
+    state.actions.push_back({0x19, 0x19, docontrol, NULL});
+    state.actions.push_back({0x1c, 0x1f, docontrol, NULL});
 
-MAKESTATE(escape, reset, {0x21, 0x21, ignore, &osc_string},
-          {0x20, 0x2f, collect, &escape_intermediate},
-          {0x30, 0x4f, doescape, &ground}, {0x51, 0x57, doescape, &ground},
-          {0x59, 0x59, doescape, &ground}, {0x5a, 0x5a, doescape, &ground},
-          {0x5c, 0x5c, doescape, &ground}, {0x6b, 0x6b, ignore, &osc_string},
-          {0x60, 0x7e, doescape, &ground}, {0x5b, 0x5b, ignore, &csi_entry},
-          {0x5d, 0x5d, ignore, &osc_string}, {0x5e, 0x5e, ignore, &osc_string},
-          {0x50, 0x50, ignore, &osc_string}, {0x5f, 0x5f, ignore, &osc_string});
+    for (auto &a : actions)
+    {
+        state.actions.push_back(a);
+    }
 
-MAKESTATE(escape_intermediate, NULL, {0x20, 0x2f, collect, NULL},
-          {0x30, 0x7e, doescape, &ground});
+    state.actions.push_back({0x07, 0x07, docontrol, NULL});
+    state.actions.push_back({0x00, 0x00, NULL, NULL});
+}
 
-MAKESTATE(csi_entry, reset, {0x20, 0x2f, collect, &csi_intermediate},
-          {0x3a, 0x3a, ignore, &csi_ignore}, {0x30, 0x39, param, &csi_param},
-          {0x3b, 0x3b, param, &csi_param}, {0x3c, 0x3f, collect, &csi_param},
-          {0x40, 0x7e, docsi, &ground});
+void Initialize()
+{
+    MAKESTATE(ground, NULL, {{0x20, WCHAR_MAX, doprint, NULL}});
 
-MAKESTATE(csi_ignore, NULL, {0x20, 0x3f, ignore, NULL},
-          {0x40, 0x7e, ignore, &ground});
+    MAKESTATE(escape, reset,
+              {{0x21, 0x21, ignore, &osc_string},
+               {0x20, 0x2f, collect, &escape_intermediate},
+               {0x30, 0x4f, doescape, &ground},
+               {0x51, 0x57, doescape, &ground},
+               {0x59, 0x59, doescape, &ground},
+               {0x5a, 0x5a, doescape, &ground},
+               {0x5c, 0x5c, doescape, &ground},
+               {0x6b, 0x6b, ignore, &osc_string},
+               {0x60, 0x7e, doescape, &ground},
+               {0x5b, 0x5b, ignore, &csi_entry},
+               {0x5d, 0x5d, ignore, &osc_string},
+               {0x5e, 0x5e, ignore, &osc_string},
+               {0x50, 0x50, ignore, &osc_string},
+               {0x5f, 0x5f, ignore, &osc_string}});
 
-MAKESTATE(csi_param, NULL, {0x30, 0x39, param, NULL}, {0x3b, 0x3b, param, NULL},
-          {0x3a, 0x3a, ignore, &csi_ignore}, {0x3c, 0x3f, ignore, &csi_ignore},
-          {0x20, 0x2f, collect, &csi_intermediate},
-          {0x40, 0x7e, docsi, &ground});
+    MAKESTATE(escape_intermediate, NULL,
+              {{0x20, 0x2f, collect, NULL}, {0x30, 0x7e, doescape, &ground}});
 
-MAKESTATE(csi_intermediate, NULL, {0x20, 0x2f, collect, NULL},
-          {0x30, 0x3f, ignore, &csi_ignore}, {0x40, 0x7e, docsi, &ground});
+    MAKESTATE(csi_entry, reset,
+              {{0x20, 0x2f, collect, &csi_intermediate},
+               {0x3a, 0x3a, ignore, &csi_ignore},
+               {0x30, 0x39, param, &csi_param},
+               {0x3b, 0x3b, param, &csi_param},
+               {0x3c, 0x3f, collect, &csi_param},
+               {0x40, 0x7e, docsi, &ground}});
 
-MAKESTATE(osc_string, reset, {0x07, 0x07, doosc, &ground},
-          {0x20, 0x7f, collectosc, NULL});
+    MAKESTATE(csi_ignore, NULL,
+              {{0x20, 0x3f, ignore, NULL}, {0x40, 0x7e, ignore, &ground}});
+
+    MAKESTATE(csi_param, NULL,
+              {{0x30, 0x39, param, NULL},
+               {0x3b, 0x3b, param, NULL},
+               {0x3a, 0x3a, ignore, &csi_ignore},
+               {0x3c, 0x3f, ignore, &csi_ignore},
+               {0x20, 0x2f, collect, &csi_intermediate},
+               {0x40, 0x7e, docsi, &ground}});
+
+    MAKESTATE(csi_intermediate, NULL,
+              {{0x20, 0x2f, collect, NULL},
+               {0x30, 0x3f, ignore, &csi_ignore},
+               {0x40, 0x7e, docsi, &ground}});
+
+    MAKESTATE(osc_string, reset,
+              {{0x07, 0x07, doosc, &ground}, {0x20, 0x7f, collectosc, NULL}});
+}
 
 ///
 /// VtParser
 ///
 VtParser::VtParser(void *p)
 {
+    static bool s_initialized = false;
+    if (!s_initialized)
+    {
+        Initialize();
+        s_initialized = true;
+    }
     m_impl = new VTPARSERImpl;
     m_impl->p = p;
 }
