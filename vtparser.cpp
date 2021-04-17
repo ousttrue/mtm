@@ -57,6 +57,8 @@ struct ACTION
     wchar_t hi = 0;
     CB cb = nullptr;
     struct STATE *next = nullptr;
+
+    bool process(wchar_t w, VTPARSERImpl *vp);
 };
 
 using ENTRY = void (*)(VTPARSERImpl *v);
@@ -122,19 +124,14 @@ struct VTPARSERImpl
 
     void handlechar(wchar_t w)
     {
-        auto vp = this;
-        vp->s = vp->s ? vp->s : &ground;
-        for (auto &a : vp->s->actions)
+        if (!this->s)
         {
-            if (w >= a.lo && w <= a.hi)
+            this->s = &ground;
+        }
+        for (auto &a : this->s->actions)
+        {
+            if (a.process(w, this))
             {
-                a.cb(vp, w);
-                if (a.next)
-                {
-                    vp->s = a.next;
-                    if (a.next->entry)
-                        vp->reset();
-                }
                 return;
             }
         }
@@ -147,6 +144,25 @@ struct VTPARSERImpl
         memset(this->oscbuf, 0, sizeof(this->oscbuf));
     }
 };
+
+bool ACTION::process(wchar_t w, VTPARSERImpl *vp)
+{
+    if (w >= this->lo && w <= this->hi)
+    {
+        this->cb(vp, w);
+        if (this->next)
+        {
+            vp->s = this->next;
+            if (this->next->entry)
+            {
+                vp->reset();
+            }
+        }
+        return true;
+    }
+
+    return false;
+}
 
 /**** ACTION FUNCTIONS */
 
