@@ -1,7 +1,7 @@
 #include "node.h"
 #include "minmax.h"
 #include "selector.h"
-#include "vtscreen.h"
+#include "curses_term.h"
 #include "vthandler.h"
 #include <curses.h>
 

@@ -20,7 +20,7 @@
 #include "mtm.h"
 #include "vthandler.h"
 #include "node.h"
-#include "vtscreen.h"
+#include "curses_term.h"
 #include "pair.h"
 
 

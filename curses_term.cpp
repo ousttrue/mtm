@@ -1,4 +1,4 @@
-#include "vtscreen.h"
+#include "curses_term.h"
 #include "scrn.h"
 #include "minmax.h"
 #include "selector.h"

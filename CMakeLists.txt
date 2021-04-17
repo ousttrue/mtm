@@ -6,7 +6,7 @@ add_executable(${PROJECT_NAME}
     pair.cpp
     vtparser.cpp
     vthandler.cpp
-    vtscreen.cpp
+    curses_term.cpp
     main.cpp
     selector.cpp
     node.cpp
