@@ -47,7 +47,7 @@ class ACTION
 {
     wchar_t lo = 0;
     wchar_t hi = 0;
-    using CB = std::function<void(VtParser *p, wchar_t w)>;
+    using CB = std::function<void(VtParser *, void *, wchar_t)>;
     CB cb = nullptr;
     struct STATE *next = nullptr;
 
@@ -56,7 +56,7 @@ public:
         : lo(_lo), hi(_hi), cb(_cb), next(_next)
     {
     }
-    bool process(wchar_t w, VtParser *vp, STATE **pNext)
+    bool process(void *p, wchar_t w, VtParser *vp, STATE **pNext)
     {
         if (w < lo || w > hi)
         {
@@ -65,7 +65,7 @@ public:
         }
 
         // process
-        this->cb(vp, w);
+        this->cb(vp, p, w);
         *pNext = this->next;
         return true;
     }
@@ -181,7 +181,7 @@ StateMachine g_stateMachine;
 // VtParser
 //
 
-void VtParser::write(const char *s, unsigned int n)
+void VtParser::write(void *p, const char *s, unsigned int n)
 {
     wchar_t w = 0;
     while (n)
@@ -204,11 +204,11 @@ void VtParser::write(const char *s, unsigned int n)
 
         n -= r;
         s += r;
-        handlechar(w);
+        handlechar(p, w);
     }
 }
 
-void VtParser::handlechar(wchar_t w)
+void VtParser::handlechar(void *p, wchar_t w)
 {
     if (!this->s)
     {
@@ -217,7 +217,7 @@ void VtParser::handlechar(wchar_t w)
     for (auto &a : this->s->actions)
     {
         STATE *pNext;
-        if (a.process(w, this, &pNext))
+        if (a.process(p, w, this, &pNext))
         {
             if (pNext)
             {
@@ -241,23 +241,23 @@ void VtParser::reset()
 }
 
 /**** ACTION FUNCTIONS */
-void VtParser::ignore(VtParser *v, wchar_t w)
+void VtParser::ignore(VtParser *v, void *p, wchar_t w)
 {
     (void)v;
     (void)w; /* avoid warnings */
 }
-void VtParser::collect(VtParser *v, wchar_t w)
+void VtParser::collect(VtParser *v, void *p, wchar_t w)
 {
     v->inter = v->inter ? v->inter : (int)w;
 }
 
-void VtParser::collectosc(VtParser *v, wchar_t w)
+void VtParser::collectosc(VtParser *v, void *p, wchar_t w)
 {
     if (v->nosc < MAXOSC)
         v->oscbuf[v->nosc++] = w;
 }
 
-void VtParser::param(VtParser *v, wchar_t w)
+void VtParser::param(VtParser *v, void *p, wchar_t w)
 {
     v->narg = v->narg ? v->narg : 1;
 
@@ -268,14 +268,15 @@ void VtParser::param(VtParser *v, wchar_t w)
 }
 
 #define DO(k, t, f, n, a)                                                      \
-    void VtParser::do##k(VtParser *v, wchar_t w)                               \
+    void VtParser::do##k(VtParser *v, void *p, wchar_t w)                      \
     {                                                                          \
         if (t)                                                                 \
-            f(v->p, w, v->inter, n, a, (const wchar_t *)v->oscbuf);            \
+            f(p, w, v->inter, n, a, (const wchar_t *)v->oscbuf);               \
     }
 
 DO(control, w < MAXCALLBACK && v->m_controls[w], v->m_controls[w], 0, NULL)
-DO(escape, w<MAXCALLBACK && v->m_escapes[w], v->m_escapes[w], v->inter> 0, &v->inter)
+DO(escape, w<MAXCALLBACK && v->m_escapes[w], v->m_escapes[w], v->inter> 0,
+   &v->inter)
 DO(csi, w < MAXCALLBACK && v->m_csis[w], v->m_csis[w], v->narg, v->args)
 DO(print, v->m_print, v->m_print, 0, NULL)
 DO(osc, v->m_osc, v->m_osc, v->nosc, NULL)

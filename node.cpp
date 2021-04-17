@@ -235,7 +235,7 @@ void NODE::processVT() /* Recursively check all ptty's for input. */
 
     if (this->term)
     {
-        if (!term->process())
+        if (!term->process(this))
         {
             deletenode(shared_from_this());
         }

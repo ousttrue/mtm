@@ -36,7 +36,7 @@ public:
     ~CursesTerm();
     void reshapeview(int d, int ow, const Rect &rect);
     void draw(const Rect &rect);
-    bool process();
+    bool process(void *p);
     bool handleUserInput();
     void fixCursor();
     void reset();

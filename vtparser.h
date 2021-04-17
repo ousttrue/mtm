@@ -46,7 +46,6 @@ class VtParser
     int inter = 0;
     int oscbuf[MAXOSC + 1] = {};
     mbstate_t ms = {};
-    void *p = nullptr;
     VTCALLBACK m_print = nullptr;
     VTCALLBACK m_osc = nullptr;
     VTCALLBACK m_controls[MAXCALLBACK] = {};
@@ -54,10 +53,6 @@ class VtParser
     VTCALLBACK m_csis[MAXCALLBACK] = {};
 
 public:
-    VtParser(void *_p) : p(_p)
-    {
-    }
-
     // void onevent(VtEvent t, wchar_t w, VTCALLBACK cb);
     void setPrint(VTCALLBACK cb)
     {
@@ -80,21 +75,21 @@ public:
         m_csis[w] = cb;
     }
 
-    void write(const char *s, unsigned int n);
+    void write(void *p, const char *s, unsigned int n);
 
 private:
-    void handlechar(wchar_t w);
+    void handlechar(void *p, wchar_t w);
     void reset();
 
 public:
     /**** ACTION FUNCTIONS */
-    static void ignore(VtParser *v, wchar_t w);
-    static void collect(VtParser *v, wchar_t w);
-    static void collectosc(VtParser *v, wchar_t w);
-    static void param(VtParser *v, wchar_t w);
-    static void docontrol(VtParser *v, wchar_t w);
-    static void doescape(VtParser *v, wchar_t w);
-    static void docsi(VtParser *v, wchar_t w);
-    static void doprint(VtParser *v, wchar_t w);
-    static void doosc(VtParser *v, wchar_t w);
+    static void ignore(VtParser *v, void *p, wchar_t w);
+    static void collect(VtParser *v, void *p, wchar_t w);
+    static void collectosc(VtParser *v, void *p, wchar_t w);
+    static void param(VtParser *v, void *p, wchar_t w);
+    static void docontrol(VtParser *v, void *p, wchar_t w);
+    static void doescape(VtParser *v, void *p, wchar_t w);
+    static void docsi(VtParser *v, void *p, wchar_t w);
+    static void doprint(VtParser *v, void *p, wchar_t w);
+    static void doosc(VtParser *v, void *p, wchar_t w);
 };
