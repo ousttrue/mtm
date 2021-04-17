@@ -69,14 +69,28 @@ struct STATE
 };
 
 /**** GLOBALS */
-STATE ground;
-STATE escape;
-STATE escape_intermediate;
-STATE csi_entry;
-STATE csi_ignore;
-STATE csi_param;
-STATE csi_intermediate;
-STATE osc_string;
+class StateMachine
+{
+    STATE ground;
+    STATE escape;
+    STATE escape_intermediate;
+    STATE csi_entry;
+    STATE csi_ignore;
+    STATE csi_param;
+    STATE csi_intermediate;
+    STATE osc_string;
+
+public:
+    StateMachine();
+    STATE *getGround()
+    {
+        return &ground;
+    }
+
+private:
+    void MAKESTATE(STATE &state, bool entry, const std::vector<ACTION> actions);
+};
+StateMachine g_stateMachine;
 
 struct VTPARSERImpl
 {
@@ -154,7 +168,7 @@ struct VTPARSERImpl
     {
         if (!this->s)
         {
-            this->s = &ground;
+            this->s = g_stateMachine.getGround();
         }
         for (auto &a : this->s->actions)
         {
@@ -240,7 +254,8 @@ DO(osc, v->osc, v->osc, v->nosc, NULL)
  * Please note that Williams does not (AFAIK) endorse this work.
  */
 
-void MAKESTATE(STATE &state, bool entry, const std::vector<ACTION> actions)
+void StateMachine::MAKESTATE(STATE &state, bool entry,
+                             const std::vector<ACTION> actions)
 {
     state.entry = entry;
     state.actions.push_back({0x00, 0x00, ignore, NULL});
@@ -259,10 +274,9 @@ void MAKESTATE(STATE &state, bool entry, const std::vector<ACTION> actions)
     }
 
     state.actions.push_back({0x07, 0x07, docontrol, NULL});
-    state.actions.push_back({0x00, 0x00, NULL, NULL});
 }
 
-void Initialize()
+StateMachine::StateMachine()
 {
     MAKESTATE(ground, false, {{0x20, WCHAR_MAX, doprint, NULL}});
 
@@ -318,12 +332,6 @@ void Initialize()
 ///
 VtParser::VtParser(void *p)
 {
-    static bool s_initialized = false;
-    if (!s_initialized)
-    {
-        Initialize();
-        s_initialized = true;
-    }
     m_impl = new VTPARSERImpl;
     m_impl->p = p;
 }
