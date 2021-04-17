@@ -70,8 +70,8 @@
     top = top <= tos ? 0 : top - tos;
 
 #define HANDLER(name)                                                          \
-    static void name(void *p, wchar_t w, wchar_t iw, int argc,    \
-                     int *argv, const wchar_t *osc)                            \
+    static void name(void *p, wchar_t w, wchar_t iw, int argc, int *argv,      \
+                     const wchar_t *osc)                                       \
     {                                                                          \
         COMMONVARS
 #define ENDHANDLER                                                             \
@@ -739,69 +739,69 @@ ENDHANDLER
 
 static void setupevents(const std::unique_ptr<VtParser> &vp)
 {
-    vp->onevent(VtEvent::CONTROL, 0x05, ack);
-    vp->onevent(VtEvent::CONTROL, 0x07, bell);
-    vp->onevent(VtEvent::CONTROL, 0x08, cub);
-    vp->onevent(VtEvent::CONTROL, 0x09, tab);
-    vp->onevent(VtEvent::CONTROL, 0x0a, pnl);
-    vp->onevent(VtEvent::CONTROL, 0x0b, pnl);
-    vp->onevent(VtEvent::CONTROL, 0x0c, pnl);
-    vp->onevent(VtEvent::CONTROL, 0x0d, cr);
-    vp->onevent(VtEvent::CONTROL, 0x0e, so);
-    vp->onevent(VtEvent::CONTROL, 0x0f, so);
-    vp->onevent(VtEvent::CSI, L'A', cuu);
-    vp->onevent(VtEvent::CSI, L'B', cud);
-    vp->onevent(VtEvent::CSI, L'C', cuf);
-    vp->onevent(VtEvent::CSI, L'D', cub);
-    vp->onevent(VtEvent::CSI, L'E', cnl);
-    vp->onevent(VtEvent::CSI, L'F', cpl);
-    vp->onevent(VtEvent::CSI, L'G', hpa);
-    vp->onevent(VtEvent::CSI, L'H', cup);
-    vp->onevent(VtEvent::CSI, L'I', tab);
-    vp->onevent(VtEvent::CSI, L'J', ed);
-    vp->onevent(VtEvent::CSI, L'K', el);
-    vp->onevent(VtEvent::CSI, L'L', idl);
-    vp->onevent(VtEvent::CSI, L'M', idl);
-    vp->onevent(VtEvent::CSI, L'P', dch);
-    vp->onevent(VtEvent::CSI, L'S', su);
-    vp->onevent(VtEvent::CSI, L'T', su);
-    vp->onevent(VtEvent::CSI, L'X', ech);
-    vp->onevent(VtEvent::CSI, L'Z', tab);
-    vp->onevent(VtEvent::CSI, L'`', hpa);
-    vp->onevent(VtEvent::CSI, L'^', su);
-    vp->onevent(VtEvent::CSI, L'@', ich);
-    vp->onevent(VtEvent::CSI, L'a', hpr);
-    vp->onevent(VtEvent::CSI, L'b', rep);
-    vp->onevent(VtEvent::CSI, L'c', decid);
-    vp->onevent(VtEvent::CSI, L'd', vpa);
-    vp->onevent(VtEvent::CSI, L'e', vpr);
-    vp->onevent(VtEvent::CSI, L'f', cup);
-    vp->onevent(VtEvent::CSI, L'g', tbc);
-    vp->onevent(VtEvent::CSI, L'h', mode);
-    vp->onevent(VtEvent::CSI, L'l', mode);
-    vp->onevent(VtEvent::CSI, L'm', sgr);
-    vp->onevent(VtEvent::CSI, L'n', dsr);
-    vp->onevent(VtEvent::CSI, L'r', csr);
-    vp->onevent(VtEvent::CSI, L's', sc);
-    vp->onevent(VtEvent::CSI, L'u', rc);
-    vp->onevent(VtEvent::CSI, L'x', decreqtparm);
-    vp->onevent(VtEvent::ESCAPE, L'0', scs);
-    vp->onevent(VtEvent::ESCAPE, L'1', scs);
-    vp->onevent(VtEvent::ESCAPE, L'2', scs);
-    vp->onevent(VtEvent::ESCAPE, L'7', sc);
-    vp->onevent(VtEvent::ESCAPE, L'8', rc);
-    vp->onevent(VtEvent::ESCAPE, L'A', scs);
-    vp->onevent(VtEvent::ESCAPE, L'B', scs);
-    vp->onevent(VtEvent::ESCAPE, L'D', ind);
-    vp->onevent(VtEvent::ESCAPE, L'E', nel);
-    vp->onevent(VtEvent::ESCAPE, L'H', hts);
-    vp->onevent(VtEvent::ESCAPE, L'M', ri);
-    vp->onevent(VtEvent::ESCAPE, L'Z', decid);
-    vp->onevent(VtEvent::ESCAPE, L'c', ris);
-    vp->onevent(VtEvent::ESCAPE, L'p', vis);
-    vp->onevent(VtEvent::ESCAPE, L'=', numkp);
-    vp->onevent(VtEvent::ESCAPE, L'>', numkp);
-    vp->onevent(VtEvent::PRINT, 0, print);
+    vp->setControl(0x05, ack);
+    vp->setControl(0x07, bell);
+    vp->setControl(0x08, cub);
+    vp->setControl(0x09, tab);
+    vp->setControl(0x0a, pnl);
+    vp->setControl(0x0b, pnl);
+    vp->setControl(0x0c, pnl);
+    vp->setControl(0x0d, cr);
+    vp->setControl(0x0e, so);
+    vp->setControl(0x0f, so);
+    vp->setCsi(L'A', cuu);
+    vp->setCsi(L'B', cud);
+    vp->setCsi(L'C', cuf);
+    vp->setCsi(L'D', cub);
+    vp->setCsi(L'E', cnl);
+    vp->setCsi(L'F', cpl);
+    vp->setCsi(L'G', hpa);
+    vp->setCsi(L'H', cup);
+    vp->setCsi(L'I', tab);
+    vp->setCsi(L'J', ed);
+    vp->setCsi(L'K', el);
+    vp->setCsi(L'L', idl);
+    vp->setCsi(L'M', idl);
+    vp->setCsi(L'P', dch);
+    vp->setCsi(L'S', su);
+    vp->setCsi(L'T', su);
+    vp->setCsi(L'X', ech);
+    vp->setCsi(L'Z', tab);
+    vp->setCsi(L'`', hpa);
+    vp->setCsi(L'^', su);
+    vp->setCsi(L'@', ich);
+    vp->setCsi(L'a', hpr);
+    vp->setCsi(L'b', rep);
+    vp->setCsi(L'c', decid);
+    vp->setCsi(L'd', vpa);
+    vp->setCsi(L'e', vpr);
+    vp->setCsi(L'f', cup);
+    vp->setCsi(L'g', tbc);
+    vp->setCsi(L'h', mode);
+    vp->setCsi(L'l', mode);
+    vp->setCsi(L'm', sgr);
+    vp->setCsi(L'n', dsr);
+    vp->setCsi(L'r', csr);
+    vp->setCsi(L's', sc);
+    vp->setCsi(L'u', rc);
+    vp->setCsi(L'x', decreqtparm);
+    vp->setEscape(L'0', scs);
+    vp->setEscape(L'1', scs);
+    vp->setEscape(L'2', scs);
+    vp->setEscape(L'7', sc);
+    vp->setEscape(L'8', rc);
+    vp->setEscape(L'A', scs);
+    vp->setEscape(L'B', scs);
+    vp->setEscape(L'D', ind);
+    vp->setEscape(L'E', nel);
+    vp->setEscape(L'H', hts);
+    vp->setEscape(L'M', ri);
+    vp->setEscape(L'Z', decid);
+    vp->setEscape(L'c', ris);
+    vp->setEscape(L'p', vis);
+    vp->setEscape(L'=', numkp);
+    vp->setEscape(L'>', numkp);
+    vp->setPrint(print);
 }
 
 void sendarrow(const std::shared_ptr<NODE> &n, const char *k)

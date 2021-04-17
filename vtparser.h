@@ -27,15 +27,6 @@
 #pragma once
 #include <wchar.h>
 
-enum class VtEvent
-{
-    CONTROL,
-    ESCAPE,
-    CSI,
-    OSC,
-    PRINT
-};
-
 using VTCALLBACK = void (*)(void *p, wchar_t w, wchar_t iw, int argc, int *argv,
                             const wchar_t *osc);
 
@@ -56,18 +47,39 @@ class VtParser
     int oscbuf[MAXOSC + 1] = {};
     mbstate_t ms = {};
     void *p = nullptr;
-    VTCALLBACK print = nullptr;
-    VTCALLBACK osc = nullptr;
-    VTCALLBACK cons[MAXCALLBACK] = {};
-    VTCALLBACK escs[MAXCALLBACK] = {};
-    VTCALLBACK csis[MAXCALLBACK] = {};
+    VTCALLBACK m_print = nullptr;
+    VTCALLBACK m_osc = nullptr;
+    VTCALLBACK m_controls[MAXCALLBACK] = {};
+    VTCALLBACK m_escapes[MAXCALLBACK] = {};
+    VTCALLBACK m_csis[MAXCALLBACK] = {};
 
 public:
     VtParser(void *_p) : p(_p)
     {
     }
 
-    void onevent(VtEvent t, wchar_t w, VTCALLBACK cb);
+    // void onevent(VtEvent t, wchar_t w, VTCALLBACK cb);
+    void setPrint(VTCALLBACK cb)
+    {
+        m_print = cb;
+    }
+    void setOsc(VTCALLBACK cb)
+    {
+        m_osc = cb;
+    }
+    void setControl(wchar_t w, VTCALLBACK cb)
+    {
+        m_controls[w] = cb;
+    }
+    void setEscape(wchar_t w, VTCALLBACK cb)
+    {
+        m_escapes[w] = cb;
+    }
+    void setCsi(wchar_t w, VTCALLBACK cb)
+    {
+        m_csis[w] = cb;
+    }
+
     void write(const char *s, unsigned int n);
 
 private:

@@ -77,7 +77,11 @@ struct STATE
     std::vector<ACTION> actions;
 };
 
-/**** GLOBALS */
+/**** STATE DEFINITIONS
+ * This was built by consulting the excellent state chart created by
+ * Paul Flo Williams: http://vt100.net/emu/dec_ansi_parser
+ * Please note that Williams does not (AFAIK) endorse this work.
+ */
 class StateMachine
 {
     STATE ground;
@@ -90,43 +94,92 @@ class StateMachine
     STATE osc_string;
 
 public:
-    StateMachine();
+    StateMachine()
+    {
+        MAKESTATE(ground, false, {{0x20, WCHAR_MAX, VtParser::doprint, NULL}});
+
+        MAKESTATE(escape, true,
+                  {{0x21, 0x21, VtParser::ignore, &osc_string},
+                   {0x20, 0x2f, VtParser::collect, &escape_intermediate},
+                   {0x30, 0x4f, VtParser::doescape, &ground},
+                   {0x51, 0x57, VtParser::doescape, &ground},
+                   {0x59, 0x59, VtParser::doescape, &ground},
+                   {0x5a, 0x5a, VtParser::doescape, &ground},
+                   {0x5c, 0x5c, VtParser::doescape, &ground},
+                   {0x6b, 0x6b, VtParser::ignore, &osc_string},
+                   {0x60, 0x7e, VtParser::doescape, &ground},
+                   {0x5b, 0x5b, VtParser::ignore, &csi_entry},
+                   {0x5d, 0x5d, VtParser::ignore, &osc_string},
+                   {0x5e, 0x5e, VtParser::ignore, &osc_string},
+                   {0x50, 0x50, VtParser::ignore, &osc_string},
+                   {0x5f, 0x5f, VtParser::ignore, &osc_string}});
+
+        MAKESTATE(escape_intermediate, false,
+                  {{0x20, 0x2f, VtParser::collect, NULL},
+                   {0x30, 0x7e, VtParser::doescape, &ground}});
+
+        MAKESTATE(csi_entry, true,
+                  {{0x20, 0x2f, VtParser::collect, &csi_intermediate},
+                   {0x3a, 0x3a, VtParser::ignore, &csi_ignore},
+                   {0x30, 0x39, VtParser::param, &csi_param},
+                   {0x3b, 0x3b, VtParser::param, &csi_param},
+                   {0x3c, 0x3f, VtParser::collect, &csi_param},
+                   {0x40, 0x7e, VtParser::docsi, &ground}});
+
+        MAKESTATE(csi_ignore, false,
+                  {{0x20, 0x3f, VtParser::ignore, NULL},
+                   {0x40, 0x7e, VtParser::ignore, &ground}});
+
+        MAKESTATE(csi_param, false,
+                  {{0x30, 0x39, VtParser::param, NULL},
+                   {0x3b, 0x3b, VtParser::param, NULL},
+                   {0x3a, 0x3a, VtParser::ignore, &csi_ignore},
+                   {0x3c, 0x3f, VtParser::ignore, &csi_ignore},
+                   {0x20, 0x2f, VtParser::collect, &csi_intermediate},
+                   {0x40, 0x7e, VtParser::docsi, &ground}});
+
+        MAKESTATE(csi_intermediate, false,
+                  {{0x20, 0x2f, VtParser::collect, NULL},
+                   {0x30, 0x3f, VtParser::ignore, &csi_ignore},
+                   {0x40, 0x7e, VtParser::docsi, &ground}});
+
+        MAKESTATE(osc_string, true,
+                  {{0x07, 0x07, VtParser::doosc, &ground},
+                   {0x20, 0x7f, VtParser::collectosc, NULL}});
+    }
+
     STATE *getGround()
     {
         return &ground;
     }
 
 private:
-    void MAKESTATE(STATE &state, bool entry, const std::vector<ACTION> actions);
+    void MAKESTATE(STATE &state, bool entry, const std::vector<ACTION> actions)
+    {
+        state.entry = entry;
+        state.actions.push_back({0x00, 0x00, VtParser::ignore, NULL});
+        state.actions.push_back({0x7f, 0x7f, VtParser::ignore, NULL});
+        state.actions.push_back({0x18, 0x18, VtParser::docontrol, &ground});
+        state.actions.push_back({0x1a, 0x1a, VtParser::docontrol, &ground});
+        state.actions.push_back({0x1b, 0x1b, VtParser::ignore, &escape});
+        state.actions.push_back({0x01, 0x06, VtParser::docontrol, NULL});
+        state.actions.push_back({0x08, 0x17, VtParser::docontrol, NULL});
+        state.actions.push_back({0x19, 0x19, VtParser::docontrol, NULL});
+        state.actions.push_back({0x1c, 0x1f, VtParser::docontrol, NULL});
+
+        for (auto &a : actions)
+        {
+            state.actions.push_back(a);
+        }
+
+        state.actions.push_back({0x07, 0x07, VtParser::docontrol, NULL});
+    }
 };
 StateMachine g_stateMachine;
 
-void VtParser::onevent(VtEvent t, wchar_t w, VTCALLBACK cb)
-{
-    if (w >= MAXCALLBACK)
-    {
-        throw std::exception();
-    }
-
-    switch (t)
-    {
-    case VtEvent::CONTROL:
-        this->cons[w] = cb;
-        break;
-    case VtEvent::ESCAPE:
-        this->escs[w] = cb;
-        break;
-    case VtEvent::CSI:
-        this->csis[w] = cb;
-        break;
-    case VtEvent::PRINT:
-        this->print = cb;
-        break;
-    case VtEvent::OSC:
-        this->osc = cb;
-        break;
-    }
-}
+//
+// VtParser
+//
 
 void VtParser::write(const char *s, unsigned int n)
 {
@@ -215,96 +268,14 @@ void VtParser::param(VtParser *v, wchar_t w)
 }
 
 #define DO(k, t, f, n, a)                                                      \
-    void VtParser::do##k(VtParser *v, wchar_t w)                           \
+    void VtParser::do##k(VtParser *v, wchar_t w)                               \
     {                                                                          \
         if (t)                                                                 \
             f(v->p, w, v->inter, n, a, (const wchar_t *)v->oscbuf);            \
     }
 
-DO(control, w < MAXCALLBACK && v->cons[w], v->cons[w], 0, NULL)
-DO(escape, w<MAXCALLBACK && v->escs[w], v->escs[w], v->inter> 0, &v->inter)
-DO(csi, w < MAXCALLBACK && v->csis[w], v->csis[w], v->narg, v->args)
-DO(print, v->print, v->print, 0, NULL)
-DO(osc, v->osc, v->osc, v->nosc, NULL)
-
-/**** STATE DEFINITIONS
- * This was built by consulting the excellent state chart created by
- * Paul Flo Williams: http://vt100.net/emu/dec_ansi_parser
- * Please note that Williams does not (AFAIK) endorse this work.
- */
-
-void StateMachine::MAKESTATE(STATE &state, bool entry,
-                             const std::vector<ACTION> actions)
-{
-    state.entry = entry;
-    state.actions.push_back({0x00, 0x00, VtParser::ignore, NULL});
-    state.actions.push_back({0x7f, 0x7f, VtParser::ignore, NULL});
-    state.actions.push_back({0x18, 0x18, VtParser::docontrol, &ground});
-    state.actions.push_back({0x1a, 0x1a, VtParser::docontrol, &ground});
-    state.actions.push_back({0x1b, 0x1b, VtParser::ignore, &escape});
-    state.actions.push_back({0x01, 0x06, VtParser::docontrol, NULL});
-    state.actions.push_back({0x08, 0x17, VtParser::docontrol, NULL});
-    state.actions.push_back({0x19, 0x19, VtParser::docontrol, NULL});
-    state.actions.push_back({0x1c, 0x1f, VtParser::docontrol, NULL});
-
-    for (auto &a : actions)
-    {
-        state.actions.push_back(a);
-    }
-
-    state.actions.push_back({0x07, 0x07, VtParser::docontrol, NULL});
-}
-
-StateMachine::StateMachine()
-{
-    MAKESTATE(ground, false, {{0x20, WCHAR_MAX, VtParser::doprint, NULL}});
-
-    MAKESTATE(escape, true,
-              {{0x21, 0x21, VtParser::ignore, &osc_string},
-               {0x20, 0x2f, VtParser::collect, &escape_intermediate},
-               {0x30, 0x4f, VtParser::doescape, &ground},
-               {0x51, 0x57, VtParser::doescape, &ground},
-               {0x59, 0x59, VtParser::doescape, &ground},
-               {0x5a, 0x5a, VtParser::doescape, &ground},
-               {0x5c, 0x5c, VtParser::doescape, &ground},
-               {0x6b, 0x6b, VtParser::ignore, &osc_string},
-               {0x60, 0x7e, VtParser::doescape, &ground},
-               {0x5b, 0x5b, VtParser::ignore, &csi_entry},
-               {0x5d, 0x5d, VtParser::ignore, &osc_string},
-               {0x5e, 0x5e, VtParser::ignore, &osc_string},
-               {0x50, 0x50, VtParser::ignore, &osc_string},
-               {0x5f, 0x5f, VtParser::ignore, &osc_string}});
-
-    MAKESTATE(escape_intermediate, false,
-              {{0x20, 0x2f, VtParser::collect, NULL},
-               {0x30, 0x7e, VtParser::doescape, &ground}});
-
-    MAKESTATE(csi_entry, true,
-              {{0x20, 0x2f, VtParser::collect, &csi_intermediate},
-               {0x3a, 0x3a, VtParser::ignore, &csi_ignore},
-               {0x30, 0x39, VtParser::param, &csi_param},
-               {0x3b, 0x3b, VtParser::param, &csi_param},
-               {0x3c, 0x3f, VtParser::collect, &csi_param},
-               {0x40, 0x7e, VtParser::docsi, &ground}});
-
-    MAKESTATE(csi_ignore, false,
-              {{0x20, 0x3f, VtParser::ignore, NULL},
-               {0x40, 0x7e, VtParser::ignore, &ground}});
-
-    MAKESTATE(csi_param, false,
-              {{0x30, 0x39, VtParser::param, NULL},
-               {0x3b, 0x3b, VtParser::param, NULL},
-               {0x3a, 0x3a, VtParser::ignore, &csi_ignore},
-               {0x3c, 0x3f, VtParser::ignore, &csi_ignore},
-               {0x20, 0x2f, VtParser::collect, &csi_intermediate},
-               {0x40, 0x7e, VtParser::docsi, &ground}});
-
-    MAKESTATE(csi_intermediate, false,
-              {{0x20, 0x2f, VtParser::collect, NULL},
-               {0x30, 0x3f, VtParser::ignore, &csi_ignore},
-               {0x40, 0x7e, VtParser::docsi, &ground}});
-
-    MAKESTATE(osc_string, true,
-              {{0x07, 0x07, VtParser::doosc, &ground},
-               {0x20, 0x7f, VtParser::collectosc, NULL}});
-}
+DO(control, w < MAXCALLBACK && v->m_controls[w], v->m_controls[w], 0, NULL)
+DO(escape, w<MAXCALLBACK && v->m_escapes[w], v->m_escapes[w], v->inter> 0, &v->inter)
+DO(csi, w < MAXCALLBACK && v->m_csis[w], v->m_csis[w], v->narg, v->args)
+DO(print, v->m_print, v->m_print, 0, NULL)
+DO(osc, v->m_osc, v->m_osc, v->nosc, NULL)
