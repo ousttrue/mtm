@@ -43,17 +43,11 @@
 #endif
 #endif
 
-/**** DATA TYPES */
-#define MAXPARAM 16
-#define MAXOSC 100
-#define MAXBUF 100
-#define MAXACTIONS 128
-
 class ACTION
 {
     wchar_t lo = 0;
     wchar_t hi = 0;
-    using CB = std::function<void(VTPARSERImpl *p, wchar_t w)>;
+    using CB = std::function<void(VtParser *p, wchar_t w)>;
     CB cb = nullptr;
     struct STATE *next = nullptr;
 
@@ -62,7 +56,7 @@ public:
         : lo(_lo), hi(_hi), cb(_cb), next(_next)
     {
     }
-    bool process(wchar_t w, VTPARSERImpl *vp, STATE **pNext)
+    bool process(wchar_t w, VtParser *vp, STATE **pNext)
     {
         if (w < lo || w > hi)
         {
@@ -107,157 +101,131 @@ private:
 };
 StateMachine g_stateMachine;
 
-class VTPARSERImpl
+void VtParser::onevent(VtEvent t, wchar_t w, VTCALLBACK cb)
 {
-#define MAXCALLBACK 128
-
-    STATE *s = nullptr;
-    int narg = 0;
-    int nosc = 0;
-    int args[MAXPARAM] = {};
-    int inter = 0;
-    int oscbuf[MAXOSC + 1] = {};
-    mbstate_t ms = {};
-    void *p = nullptr;
-    VTCALLBACK print = nullptr;
-    VTCALLBACK osc = nullptr;
-    VTCALLBACK cons[MAXCALLBACK] = {};
-    VTCALLBACK escs[MAXCALLBACK] = {};
-    VTCALLBACK csis[MAXCALLBACK] = {};
-
-public:
-    VTPARSERImpl(void *_p) : p(_p)
+    if (w >= MAXCALLBACK)
     {
+        throw std::exception();
     }
 
-    void onevent(VtEvent t, wchar_t w, VTCALLBACK cb)
+    switch (t)
     {
-        if (w >= MAXCALLBACK)
-        {
-            throw std::exception();
-        }
-
-        switch (t)
-        {
-        case VtEvent::CONTROL:
-            this->cons[w] = cb;
-            break;
-        case VtEvent::ESCAPE:
-            this->escs[w] = cb;
-            break;
-        case VtEvent::CSI:
-            this->csis[w] = cb;
-            break;
-        case VtEvent::PRINT:
-            this->print = cb;
-            break;
-        case VtEvent::OSC:
-            this->osc = cb;
-            break;
-        }
+    case VtEvent::CONTROL:
+        this->cons[w] = cb;
+        break;
+    case VtEvent::ESCAPE:
+        this->escs[w] = cb;
+        break;
+    case VtEvent::CSI:
+        this->csis[w] = cb;
+        break;
+    case VtEvent::PRINT:
+        this->print = cb;
+        break;
+    case VtEvent::OSC:
+        this->osc = cb;
+        break;
     }
+}
 
-    void write(const char *s, unsigned int n)
+void VtParser::write(const char *s, unsigned int n)
+{
+    wchar_t w = 0;
+    while (n)
     {
-        wchar_t w = 0;
-        while (n)
+        size_t r = mbrtowc(&w, s, n, &this->ms);
+        switch (r)
         {
-            size_t r = mbrtowc(&w, s, n, &this->ms);
-            switch (r)
+        case (size_t)-2: /* incomplete character, try again */
+            return;
+
+        case (size_t)-1: /* invalid character, skip it */
+            w = VTPARSER_BAD_CHAR;
+            r = 1;
+            break;
+
+        case 0: /* literal zero, write it but advance */
+            r = 1;
+            break;
+        }
+
+        n -= r;
+        s += r;
+        handlechar(w);
+    }
+}
+
+void VtParser::handlechar(wchar_t w)
+{
+    if (!this->s)
+    {
+        this->s = g_stateMachine.getGround();
+    }
+    for (auto &a : this->s->actions)
+    {
+        STATE *pNext;
+        if (a.process(w, this, &pNext))
+        {
+            if (pNext)
             {
-            case (size_t)-2: /* incomplete character, try again */
-                return;
-
-            case (size_t)-1: /* invalid character, skip it */
-                w = VTPARSER_BAD_CHAR;
-                r = 1;
-                break;
-
-            case 0: /* literal zero, write it but advance */
-                r = 1;
-                break;
-            }
-
-            n -= r;
-            s += r;
-            handlechar(w);
-        }
-    }
-
-private:
-    void handlechar(wchar_t w)
-    {
-        if (!this->s)
-        {
-            this->s = g_stateMachine.getGround();
-        }
-        for (auto &a : this->s->actions)
-        {
-            STATE *pNext;
-            if (a.process(w, this, &pNext))
-            {
-                if (pNext)
+                this->s = pNext;
+                if (pNext->entry)
                 {
-                    this->s = pNext;
-                    if (pNext->entry)
-                    {
-                        this->reset();
-                    }
+                    this->reset();
                 }
-
-                return;
             }
+
+            return;
         }
     }
+}
 
-    void reset()
-    {
-        this->inter = this->narg = this->nosc = 0;
-        memset(this->args, 0, sizeof(this->args));
-        memset(this->oscbuf, 0, sizeof(this->oscbuf));
-    }
+void VtParser::reset()
+{
+    this->inter = this->narg = this->nosc = 0;
+    memset(this->args, 0, sizeof(this->args));
+    memset(this->oscbuf, 0, sizeof(this->oscbuf));
+}
 
-public:
-    /**** ACTION FUNCTIONS */
-    static void ignore(VTPARSERImpl *v, wchar_t w)
-    {
-        (void)v;
-        (void)w; /* avoid warnings */
-    }
-    static void collect(VTPARSERImpl *v, wchar_t w)
-    {
-        v->inter = v->inter ? v->inter : (int)w;
-    }
+/**** ACTION FUNCTIONS */
+void VtParser::ignore(VtParser *v, wchar_t w)
+{
+    (void)v;
+    (void)w; /* avoid warnings */
+}
+void VtParser::collect(VtParser *v, wchar_t w)
+{
+    v->inter = v->inter ? v->inter : (int)w;
+}
 
-    static void collectosc(VTPARSERImpl *v, wchar_t w)
-    {
-        if (v->nosc < MAXOSC)
-            v->oscbuf[v->nosc++] = w;
-    }
+void VtParser::collectosc(VtParser *v, wchar_t w)
+{
+    if (v->nosc < MAXOSC)
+        v->oscbuf[v->nosc++] = w;
+}
 
-    static void param(VTPARSERImpl *v, wchar_t w)
-    {
-        v->narg = v->narg ? v->narg : 1;
+void VtParser::param(VtParser *v, wchar_t w)
+{
+    v->narg = v->narg ? v->narg : 1;
 
-        if (w == L';')
-            v->args[v->narg++] = 0;
-        else if (v->narg < MAXPARAM && v->args[v->narg - 1] < 9999)
-            v->args[v->narg - 1] = v->args[v->narg - 1] * 10 + (w - 0x30);
-    }
+    if (w == L';')
+        v->args[v->narg++] = 0;
+    else if (v->narg < MAXPARAM && v->args[v->narg - 1] < 9999)
+        v->args[v->narg - 1] = v->args[v->narg - 1] * 10 + (w - 0x30);
+}
 
 #define DO(k, t, f, n, a)                                                      \
-    static void do##k(VTPARSERImpl *v, wchar_t w)                              \
+    void VtParser::do##k(VtParser *v, wchar_t w)                           \
     {                                                                          \
         if (t)                                                                 \
             f(v->p, w, v->inter, n, a, (const wchar_t *)v->oscbuf);            \
     }
 
-    DO(control, w < MAXCALLBACK && v->cons[w], v->cons[w], 0, NULL)
-    DO(escape, w<MAXCALLBACK && v->escs[w], v->escs[w], v->inter> 0, &v->inter)
-    DO(csi, w < MAXCALLBACK && v->csis[w], v->csis[w], v->narg, v->args)
-    DO(print, v->print, v->print, 0, NULL)
-    DO(osc, v->osc, v->osc, v->nosc, NULL)
-};
+DO(control, w < MAXCALLBACK && v->cons[w], v->cons[w], 0, NULL)
+DO(escape, w<MAXCALLBACK && v->escs[w], v->escs[w], v->inter> 0, &v->inter)
+DO(csi, w < MAXCALLBACK && v->csis[w], v->csis[w], v->narg, v->args)
+DO(print, v->print, v->print, 0, NULL)
+DO(osc, v->osc, v->osc, v->nosc, NULL)
 
 /**** STATE DEFINITIONS
  * This was built by consulting the excellent state chart created by
@@ -269,97 +237,74 @@ void StateMachine::MAKESTATE(STATE &state, bool entry,
                              const std::vector<ACTION> actions)
 {
     state.entry = entry;
-    state.actions.push_back({0x00, 0x00, VTPARSERImpl::ignore, NULL});
-    state.actions.push_back({0x7f, 0x7f, VTPARSERImpl::ignore, NULL});
-    state.actions.push_back({0x18, 0x18, VTPARSERImpl::docontrol, &ground});
-    state.actions.push_back({0x1a, 0x1a, VTPARSERImpl::docontrol, &ground});
-    state.actions.push_back({0x1b, 0x1b, VTPARSERImpl::ignore, &escape});
-    state.actions.push_back({0x01, 0x06, VTPARSERImpl::docontrol, NULL});
-    state.actions.push_back({0x08, 0x17, VTPARSERImpl::docontrol, NULL});
-    state.actions.push_back({0x19, 0x19, VTPARSERImpl::docontrol, NULL});
-    state.actions.push_back({0x1c, 0x1f, VTPARSERImpl::docontrol, NULL});
+    state.actions.push_back({0x00, 0x00, VtParser::ignore, NULL});
+    state.actions.push_back({0x7f, 0x7f, VtParser::ignore, NULL});
+    state.actions.push_back({0x18, 0x18, VtParser::docontrol, &ground});
+    state.actions.push_back({0x1a, 0x1a, VtParser::docontrol, &ground});
+    state.actions.push_back({0x1b, 0x1b, VtParser::ignore, &escape});
+    state.actions.push_back({0x01, 0x06, VtParser::docontrol, NULL});
+    state.actions.push_back({0x08, 0x17, VtParser::docontrol, NULL});
+    state.actions.push_back({0x19, 0x19, VtParser::docontrol, NULL});
+    state.actions.push_back({0x1c, 0x1f, VtParser::docontrol, NULL});
 
     for (auto &a : actions)
     {
         state.actions.push_back(a);
     }
 
-    state.actions.push_back({0x07, 0x07, VTPARSERImpl::docontrol, NULL});
+    state.actions.push_back({0x07, 0x07, VtParser::docontrol, NULL});
 }
 
 StateMachine::StateMachine()
 {
-    MAKESTATE(ground, false, {{0x20, WCHAR_MAX, VTPARSERImpl::doprint, NULL}});
+    MAKESTATE(ground, false, {{0x20, WCHAR_MAX, VtParser::doprint, NULL}});
 
     MAKESTATE(escape, true,
-              {{0x21, 0x21, VTPARSERImpl::ignore, &osc_string},
-               {0x20, 0x2f, VTPARSERImpl::collect, &escape_intermediate},
-               {0x30, 0x4f, VTPARSERImpl::doescape, &ground},
-               {0x51, 0x57, VTPARSERImpl::doescape, &ground},
-               {0x59, 0x59, VTPARSERImpl::doescape, &ground},
-               {0x5a, 0x5a, VTPARSERImpl::doescape, &ground},
-               {0x5c, 0x5c, VTPARSERImpl::doescape, &ground},
-               {0x6b, 0x6b, VTPARSERImpl::ignore, &osc_string},
-               {0x60, 0x7e, VTPARSERImpl::doescape, &ground},
-               {0x5b, 0x5b, VTPARSERImpl::ignore, &csi_entry},
-               {0x5d, 0x5d, VTPARSERImpl::ignore, &osc_string},
-               {0x5e, 0x5e, VTPARSERImpl::ignore, &osc_string},
-               {0x50, 0x50, VTPARSERImpl::ignore, &osc_string},
-               {0x5f, 0x5f, VTPARSERImpl::ignore, &osc_string}});
+              {{0x21, 0x21, VtParser::ignore, &osc_string},
+               {0x20, 0x2f, VtParser::collect, &escape_intermediate},
+               {0x30, 0x4f, VtParser::doescape, &ground},
+               {0x51, 0x57, VtParser::doescape, &ground},
+               {0x59, 0x59, VtParser::doescape, &ground},
+               {0x5a, 0x5a, VtParser::doescape, &ground},
+               {0x5c, 0x5c, VtParser::doescape, &ground},
+               {0x6b, 0x6b, VtParser::ignore, &osc_string},
+               {0x60, 0x7e, VtParser::doescape, &ground},
+               {0x5b, 0x5b, VtParser::ignore, &csi_entry},
+               {0x5d, 0x5d, VtParser::ignore, &osc_string},
+               {0x5e, 0x5e, VtParser::ignore, &osc_string},
+               {0x50, 0x50, VtParser::ignore, &osc_string},
+               {0x5f, 0x5f, VtParser::ignore, &osc_string}});
 
     MAKESTATE(escape_intermediate, false,
-              {{0x20, 0x2f, VTPARSERImpl::collect, NULL},
-               {0x30, 0x7e, VTPARSERImpl::doescape, &ground}});
+              {{0x20, 0x2f, VtParser::collect, NULL},
+               {0x30, 0x7e, VtParser::doescape, &ground}});
 
     MAKESTATE(csi_entry, true,
-              {{0x20, 0x2f, VTPARSERImpl::collect, &csi_intermediate},
-               {0x3a, 0x3a, VTPARSERImpl::ignore, &csi_ignore},
-               {0x30, 0x39, VTPARSERImpl::param, &csi_param},
-               {0x3b, 0x3b, VTPARSERImpl::param, &csi_param},
-               {0x3c, 0x3f, VTPARSERImpl::collect, &csi_param},
-               {0x40, 0x7e, VTPARSERImpl::docsi, &ground}});
+              {{0x20, 0x2f, VtParser::collect, &csi_intermediate},
+               {0x3a, 0x3a, VtParser::ignore, &csi_ignore},
+               {0x30, 0x39, VtParser::param, &csi_param},
+               {0x3b, 0x3b, VtParser::param, &csi_param},
+               {0x3c, 0x3f, VtParser::collect, &csi_param},
+               {0x40, 0x7e, VtParser::docsi, &ground}});
 
     MAKESTATE(csi_ignore, false,
-              {{0x20, 0x3f, VTPARSERImpl::ignore, NULL},
-               {0x40, 0x7e, VTPARSERImpl::ignore, &ground}});
+              {{0x20, 0x3f, VtParser::ignore, NULL},
+               {0x40, 0x7e, VtParser::ignore, &ground}});
 
     MAKESTATE(csi_param, false,
-              {{0x30, 0x39, VTPARSERImpl::param, NULL},
-               {0x3b, 0x3b, VTPARSERImpl::param, NULL},
-               {0x3a, 0x3a, VTPARSERImpl::ignore, &csi_ignore},
-               {0x3c, 0x3f, VTPARSERImpl::ignore, &csi_ignore},
-               {0x20, 0x2f, VTPARSERImpl::collect, &csi_intermediate},
-               {0x40, 0x7e, VTPARSERImpl::docsi, &ground}});
+              {{0x30, 0x39, VtParser::param, NULL},
+               {0x3b, 0x3b, VtParser::param, NULL},
+               {0x3a, 0x3a, VtParser::ignore, &csi_ignore},
+               {0x3c, 0x3f, VtParser::ignore, &csi_ignore},
+               {0x20, 0x2f, VtParser::collect, &csi_intermediate},
+               {0x40, 0x7e, VtParser::docsi, &ground}});
 
     MAKESTATE(csi_intermediate, false,
-              {{0x20, 0x2f, VTPARSERImpl::collect, NULL},
-               {0x30, 0x3f, VTPARSERImpl::ignore, &csi_ignore},
-               {0x40, 0x7e, VTPARSERImpl::docsi, &ground}});
+              {{0x20, 0x2f, VtParser::collect, NULL},
+               {0x30, 0x3f, VtParser::ignore, &csi_ignore},
+               {0x40, 0x7e, VtParser::docsi, &ground}});
 
     MAKESTATE(osc_string, true,
-              {{0x07, 0x07, VTPARSERImpl::doosc, &ground},
-               {0x20, 0x7f, VTPARSERImpl::collectosc, NULL}});
-}
-
-///
-/// VtParser
-///
-VtParser::VtParser(void *p)
-{
-    m_impl = new VTPARSERImpl(p);
-}
-
-VtParser::~VtParser()
-{
-    delete m_impl;
-}
-
-void VtParser::vtonevent(VtEvent t, wchar_t w, VTCALLBACK cb)
-{
-    m_impl->onevent(t, w, cb);
-}
-
-void VtParser::vtwrite(const char *s, unsigned int n)
-{
-    m_impl->write(s, n);
+              {{0x07, 0x07, VtParser::doosc, &ground},
+               {0x20, 0x7f, VtParser::collectosc, NULL}});
 }

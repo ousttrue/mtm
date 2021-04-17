@@ -25,6 +25,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #pragma once
+#include <wchar.h>
 
 enum class VtEvent
 {
@@ -38,13 +39,50 @@ enum class VtEvent
 using VTCALLBACK = void (*)(void *p, wchar_t w, wchar_t iw, int argc, int *argv,
                             const wchar_t *osc);
 
+/**** DATA TYPES */
+#define MAXPARAM 16
+#define MAXOSC 100
+#define MAXBUF 100
+#define MAXACTIONS 128
+#define MAXCALLBACK 128
+
 class VtParser
 {
-    struct VTPARSERImpl *m_impl = nullptr;
+    struct STATE *s = nullptr;
+    int narg = 0;
+    int nosc = 0;
+    int args[MAXPARAM] = {};
+    int inter = 0;
+    int oscbuf[MAXOSC + 1] = {};
+    mbstate_t ms = {};
+    void *p = nullptr;
+    VTCALLBACK print = nullptr;
+    VTCALLBACK osc = nullptr;
+    VTCALLBACK cons[MAXCALLBACK] = {};
+    VTCALLBACK escs[MAXCALLBACK] = {};
+    VTCALLBACK csis[MAXCALLBACK] = {};
 
 public:
-    VtParser(void *p);
-    ~VtParser();
-    void vtonevent(VtEvent t, wchar_t w, VTCALLBACK cb);
-    void vtwrite(const char *s, unsigned int n);
+    VtParser(void *_p) : p(_p)
+    {
+    }
+
+    void onevent(VtEvent t, wchar_t w, VTCALLBACK cb);
+    void write(const char *s, unsigned int n);
+
+private:
+    void handlechar(wchar_t w);
+    void reset();
+
+public:
+    /**** ACTION FUNCTIONS */
+    static void ignore(VtParser *v, wchar_t w);
+    static void collect(VtParser *v, wchar_t w);
+    static void collectosc(VtParser *v, wchar_t w);
+    static void param(VtParser *v, wchar_t w);
+    static void docontrol(VtParser *v, wchar_t w);
+    static void doescape(VtParser *v, wchar_t w);
+    static void docsi(VtParser *v, wchar_t w);
+    static void doprint(VtParser *v, wchar_t w);
+    static void doosc(VtParser *v, wchar_t w);
 };

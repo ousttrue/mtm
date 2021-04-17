@@ -104,7 +104,7 @@ bool VTScreen::process()
         ssize_t r = read(this->pt, g_iobuf, sizeof(g_iobuf));
         if (r > 0)
         {
-            this->vp->vtwrite(g_iobuf, r);
+            this->vp->write(g_iobuf, r);
         }
         if (r <= 0 && errno != EINTR && errno != EWOULDBLOCK)
         {
