@@ -14,7 +14,7 @@
 #include "vtparser.h"
 #include "config.h"
 
-CursesTerm::CursesTerm(const Rect &rect, void *p) : m_rect(rect)
+CursesTerm::CursesTerm(const Rect &rect) : m_rect(rect)
 {
     for (int i = 0; i < m_rect.w; i++)
     {
@@ -97,7 +97,7 @@ void CursesTerm::draw(const Rect &rect)
                  m_rect.y + m_rect.h - 1, m_rect.x + m_rect.w - 1);
 }
 
-bool CursesTerm::process(void *p)
+bool CursesTerm::process()
 {
     if (this->pt > 0 && selector::isSet(this->pt))
     {
@@ -105,7 +105,7 @@ bool CursesTerm::process(void *p)
         ssize_t r = read(this->pt, g_iobuf, sizeof(g_iobuf));
         if (r > 0)
         {
-            this->vp->write(p, g_iobuf, r);
+            this->vp->write(this, g_iobuf, r);
         }
         if (r <= 0 && errno != EINTR && errno != EWOULDBLOCK)
         {

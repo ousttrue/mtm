@@ -115,9 +115,9 @@ void focus(const std::shared_ptr<NODE> &n) /* Focus a node. */
 std::shared_ptr<NODE> newview(const Rect &rect) /* Open a new view. */
 {
     auto n = std::make_shared<NODE>(VIEW, nullptr, rect);
-    n->term = std::make_unique<CursesTerm>(rect, n.get());
+    n->term = std::make_unique<CursesTerm>(rect);
 
-    vp_initialize(n->term->vp, n.get());
+    vp_initialize(n->term);
     auto pid = fork_setup(&n->term->pt, rect);
     if (pid < 0)
     {
@@ -235,7 +235,7 @@ void NODE::processVT() /* Recursively check all ptty's for input. */
 
     if (this->term)
     {
-        if (!term->process(this))
+        if (!term->process())
         {
             deletenode(shared_from_this());
         }

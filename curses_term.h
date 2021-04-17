@@ -32,11 +32,11 @@ public:
     wchar_t *sgs = nullptr;
     std::unique_ptr<VtParser> vp;
 
-    CursesTerm(const Rect &rect, void *p);
+    CursesTerm(const Rect &rect);
     ~CursesTerm();
     void reshapeview(int d, int ow, const Rect &rect);
     void draw(const Rect &rect);
-    bool process(void *p);
+    bool process();
     bool handleUserInput();
     void fixCursor();
     void reset();

@@ -1,12 +1,13 @@
 #include "vtcontext.h"
+#include "curses_term.h"
 #include "node.h"
 #include "scrn.h"
 #include <curses.h>
 
 std::tuple<int, int, int, int, int, int, int, int, int> VtContext::get() const
 {
-    NODE *n = (NODE *)this->p;
-    auto s = n->term->s;
+    auto term = (CursesTerm *)this->p;
+    auto s = term->s;
     WINDOW *win = s->win;
 
     int py, px, y, x, my, mx, top = 0, bot = 0, tos = s->tos;

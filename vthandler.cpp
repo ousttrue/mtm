@@ -1,9 +1,7 @@
 #include "pair.h"
 #include "config.h"
-#include "global.h"
 #include "vtparser.h"
 #include "vthandler.h"
-#include "node.h"
 #include "curses_term.h"
 #include "scrn.h"
 #include "minmax.h"
@@ -23,7 +21,7 @@
  *      context.P1(n)          - Parameter n, default 1.
  *      CALL(h)        - Call handler h with no arguments.
  *      SENDN(n, s, c) - Write string c bytes of s to n.
- *      n->term->safewrite( s)     - Write string s to node n's host.
+ *      term->safewrite( s)     - Write string s to node n's host.
  *      (END)HANDLER   - Declare/end a handler function
  *      COMMONVARS     - All of the common variables for a handler.
  *                       x, y     - cursor position
@@ -37,11 +35,11 @@
  * The funny names for handlers are from their ANSI/ECMA/DEC mnemonics.
  */
 
-#define CALL(x) (x)({n, 0, 0, 0, NULL, NULL})
+#define CALL(x) (x)({term, 0, 0, 0, NULL, NULL})
 
 #define COMMONVARS                                                             \
-    NODE *n = (NODE *)context.p;                                               \
-    auto s = n->term->s;                                                       \
+    auto term = (CursesTerm *)context.p;                                               \
+    auto s = term->s;                                                       \
     WINDOW *win = s->win;                                                      \
     int py, px, y, x, my, mx, top, bot, tos;                                   \
     std::tie(py, px, y, x, my, mx, top, bot, tos) = context.get();
@@ -51,7 +49,7 @@
     {                                                                          \
         COMMONVARS
 #define ENDHANDLER                                                             \
-    n->term->repc = 0;                                                         \
+    term->repc = 0;                                                         \
     } /* control sequences aren't repeated */
 
 HANDLER(bell) /* Terminal bell. */
@@ -59,7 +57,7 @@ beep();
 ENDHANDLER
 
 HANDLER(numkp) /* Application/Numeric Keypad Mode */
-n->term->pnm = (context.w == L'=');
+term->pnm = (context.w == L'=');
 ENDHANDLER
 
 HANDLER(vis) /* Cursor visibility */
@@ -68,7 +66,7 @@ ENDHANDLER
 
 HANDLER(cup) /* CUP - Cursor Position */
 s->xenl = false;
-wmove(win, tos + (n->term->decom ? top : 0) + context.P1(0) - 1, context.P1(1) - 1);
+wmove(win, tos + (term->decom ? top : 0) + context.P1(0) - 1, context.P1(1) - 1);
 ENDHANDLER
 
 HANDLER(dch) /* DCH - Delete Character */
@@ -94,11 +92,11 @@ wmove(win, py, MIN(x + context.P1(0), mx - 1));
 ENDHANDLER
 
 HANDLER(ack) /* ACK - Acknowledge Enquiry */
-n->term->safewrite("\006");
+term->safewrite("\006");
 ENDHANDLER
 
 HANDLER(hts) /* HTS - Horizontal Tab Set */
-n->term->HorizontalTabSet(x);
+term->HorizontalTabSet(x);
 ENDHANDLER
 
 HANDLER(ri) /* RI - Reverse Index */
@@ -111,9 +109,9 @@ ENDHANDLER
 
 HANDLER(decid) /* DECID - Send Terminal Identification */
 if (context.w == L'c')
-    n->term->safewrite(context.iw == L'>' ? "\033[>1;10;0c" : "\033[?1;2c");
+    term->safewrite(context.iw == L'>' ? "\033[>1;10;0c" : "\033[?1;2c");
 else if (context.w == L'Z')
-    n->term->safewrite("\033[?6c");
+    term->safewrite("\033[?6c");
 ENDHANDLER
 
 HANDLER(hpa) /* HPA - Cursor Horizontal Absolute */
@@ -134,7 +132,7 @@ ENDHANDLER
 
 HANDLER(cbt) /* CBT - Cursor Backwards Tab */
 int i;
-if (n->term->TryGetBackwardTab(x, &i))
+if (term->TryGetBackwardTab(x, &i))
 {
     wmove(win, py, i);
 }
@@ -143,7 +141,7 @@ ENDHANDLER
 
 HANDLER(ht) /* HT - Horizontal Tab */
 int i;
-if (n->term->TryGetForwardTab(x, &i))
+if (term->TryGetForwardTab(x, &i))
 {
     wmove(win, py, i);
 }
@@ -188,8 +186,8 @@ s->sfg = s->fg;     /* save foreground color      */
 s->sbg = s->bg;     /* save background color      */
 s->oxenl = s->xenl; /* save xenl state            */
 s->saved = true;    /* save data is valid         */
-n->term->sgc = n->term->gc;
-n->term->sgs = n->term->gs; /* save character sets        */
+term->sgc = term->gc;
+term->sgs = term->gs; /* save character sets        */
 ENDHANDLER
 
 HANDLER(rc) /* RC - Restore Cursor */
@@ -205,8 +203,8 @@ s->setAttr();
 s->fg = s->sfg;     /* get foreground color      */
 s->bg = s->sbg;     /* get background color      */
 s->xenl = s->oxenl; /* get xenl state            */
-n->term->gc = n->term->sgc;
-n->term->gs = n->term->sgs; /* save character sets        */
+term->gc = term->sgc;
+term->gs = term->sgs; /* save character sets        */
 
 /* restore colors */
 int cp = mtm_alloc_pair(s->fg, s->bg);
@@ -220,11 +218,11 @@ HANDLER(tbc) /* TBC - Tabulation Clear */
 switch (context.P0(0))
 {
 case 0:
-    n->term->TabClear(x);
+    term->TabClear(x);
     break;
 
 case 3:
-    n->term->TabClearAll();
+    term->TabClearAll();
     break;
 }
 ENDHANDLER
@@ -293,10 +291,10 @@ HANDLER(dsr) /* DSR - Device Status Report */
 char buf[100] = {0};
 if (context.P0(0) == 6)
     snprintf(buf, sizeof(buf) - 1, "\033[%d;%dR",
-             (n->term->decom ? y - top : y) + 1, x + 1);
+             (term->decom ? y - top : y) + 1, x + 1);
 else
     snprintf(buf, sizeof(buf) - 1, "\033[0n");
-n->term->safewrite(buf);
+term->safewrite(buf);
 ENDHANDLER
 
 HANDLER(idl) /* IL or DL - Insert/Delete Line */
@@ -316,7 +314,7 @@ if (wsetscrreg(win, tos + context.P1(0) - 1, tos + context.PD(1, my) - 1) == OK)
 ENDHANDLER
 
 HANDLER(decreqtparm) /* DECREQTPARM - Request Device Parameters */
-n->term->safewrite(context.P0(0) ? "\033[3;1;2;120;1;0x" : "\033[2;1;2;120;128;1;0x");
+term->safewrite(context.P0(0) ? "\033[3;1;2;120;1;0x" : "\033[2;1;2;120;128;1;0x");
 ENDHANDLER
 
 HANDLER(sgr0) /* Reset SGR to default */
@@ -335,7 +333,7 @@ ENDHANDLER
 HANDLER(ris) /* RIS - Reset to Initial State */
 CALL(cls);
 CALL(sgr0);
-n->term->reset();
+term->reset();
 ENDHANDLER
 
 HANDLER(mode) /* Set or Reset Mode */
@@ -344,7 +342,7 @@ for (int i = 0; i < context.argc; i++)
     switch (context.P0(i))
     {
     case 1:
-        n->term->pnm = set;
+        term->pnm = set;
         break;
     case 3:
         CALL(cls);
@@ -353,14 +351,14 @@ for (int i = 0; i < context.argc; i++)
         s->insert = set;
         break;
     case 6:
-        n->term->decom = set;
+        term->decom = set;
         CALL(cup);
         break;
     case 7:
-        n->term->am = set;
+        term->am = set;
         break;
     case 20:
-        n->term->lnm = set;
+        term->lnm = set;
         break;
     case 25:
         s->vis = set ? 1 : 0;
@@ -375,7 +373,7 @@ for (int i = 0; i < context.argc; i++)
         CALL((set ? sc : rc)); /* fall-through */
     case 47:
     case 1047:
-        if (n->term->alternate_screen_buffer_mode(set))
+        if (term->alternate_screen_buffer_mode(set))
         {
             CALL(cls);
         }
@@ -606,7 +604,7 @@ CALL(ind);
 ENDHANDLER
 
 HANDLER(pnl) /* NL - Newline */
-CALL((n->term->lnm ? nel : ind));
+CALL((term->lnm ? nel : ind));
 ENDHANDLER
 
 HANDLER(cpl) /* CPL - Cursor Previous Line */
@@ -627,15 +625,15 @@ if (s->insert)
 if (s->xenl)
 {
     s->xenl = false;
-    if (n->term->am)
+    if (term->am)
         CALL(nel);
     getyx(win, y, x);
     y -= tos;
 }
 
-if (context.w < MAXMAP && n->term->gc[context.w])
-    context.w = n->term->gc[context.w];
-n->term->repc = context.w;
+if (context.w < MAXMAP && term->gc[context.w])
+    context.w = term->gc[context.w];
+term->repc = context.w;
 
 if (x == mx - wcwidth(context.w))
 {
@@ -644,12 +642,12 @@ if (x == mx - wcwidth(context.w))
 }
 else
     waddnwstr(win, &context.w, 1);
-n->term->gc = n->term->gs;
+term->gc = term->gs;
 } /* no ENDHANDLER because we don't want to reset repc */
 
 HANDLER(rep) /* REP - Repeat Character */
-for (int i = 0; i < context.P1(0) && n->term->repc; i++)
-    print({context.p, n->term->repc, 0, 0, NULL, NULL});
+for (int i = 0; i < context.P1(0) && term->repc; i++)
+    print({context.p, term->repc, 0, 0, NULL, NULL});
 ENDHANDLER
 
 HANDLER(scs) /* Select Character Set */
@@ -657,16 +655,16 @@ wchar_t **t = NULL;
 switch (context.iw)
 {
 case L'(':
-    t = &n->term->g0;
+    t = &term->g0;
     break;
 case L')':
-    t = &n->term->g1;
+    t = &term->g1;
     break;
 case L'*':
-    t = &n->term->g2;
+    t = &term->g2;
     break;
 case L'+':
-    t = &n->term->g3;
+    t = &term->g3;
     break;
 default:
     return;
@@ -694,22 +692,22 @@ ENDHANDLER
 
 HANDLER(so) /* Switch Out/In Character Set */
 if (context.w == 0x0e)
-    n->term->gs = n->term->gc = n->term->g1; /* locking shift */
+    term->gs = term->gc = term->g1; /* locking shift */
 else if (context.w == 0xf)
-    n->term->gs = n->term->gc = n->term->g0; /* locking shift */
+    term->gs = term->gc = term->g0; /* locking shift */
 else if (context.w == L'n')
-    n->term->gs = n->term->gc = n->term->g2; /* locking shift */
+    term->gs = term->gc = term->g2; /* locking shift */
 else if (context.w == L'o')
-    n->term->gs = n->term->gc = n->term->g3; /* locking shift */
+    term->gs = term->gc = term->g3; /* locking shift */
 else if (context.w == L'N')
 {
-    n->term->gs = n->term->gc; /* non-locking shift */
-    n->term->gc = n->term->g2;
+    term->gs = term->gc; /* non-locking shift */
+    term->gc = term->g2;
 }
 else if (context.w == L'O')
 {
-    n->term->gs = n->term->gc; /* non-locking shift */
-    n->term->gc = n->term->g3;
+    term->gs = term->gc; /* non-locking shift */
+    term->gc = term->g3;
 }
 ENDHANDLER
 
@@ -780,8 +778,8 @@ static void setupevents(const std::unique_ptr<VtParser> &vp)
     vp->setPrint(print);
 }
 
-void vp_initialize(const std::unique_ptr<VtParser> &vp, void *p)
+void vp_initialize(const std::unique_ptr<CursesTerm> &term)
 {
-    setupevents(vp);
-    ris({p, L'c', 0, 0, NULL, NULL});
+    setupevents(term->vp);
+    ris({term.get(), L'c', 0, 0, NULL, NULL});
 }
