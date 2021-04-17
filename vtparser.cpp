@@ -29,6 +29,7 @@
 #include <string.h>
 #include <wchar.h>
 #include <vector>
+#include <functional>
 
 /**** CONFIGURATION
  * VTPARSER_BAD_CHAR is the character that will be displayed when
@@ -52,7 +53,7 @@ class ACTION
 {
     wchar_t lo = 0;
     wchar_t hi = 0;
-    using CB = void (*)(VTPARSERImpl *p, wchar_t w);
+    using CB = std::function<void(VTPARSERImpl *p, wchar_t w)>;
     CB cb = nullptr;
     struct STATE *next = nullptr;
 
@@ -106,7 +107,7 @@ private:
 };
 StateMachine g_stateMachine;
 
-struct VTPARSERImpl
+class VTPARSERImpl
 {
 #define MAXCALLBACK 128
 
@@ -124,7 +125,12 @@ struct VTPARSERImpl
     VTCALLBACK escs[MAXCALLBACK] = {};
     VTCALLBACK csis[MAXCALLBACK] = {};
 
-    void vtonevent(VtEvent t, wchar_t w, VTCALLBACK cb)
+public:
+    VTPARSERImpl(void *_p) : p(_p)
+    {
+    }
+
+    void onevent(VtEvent t, wchar_t w, VTCALLBACK cb)
     {
         if (w >= MAXCALLBACK)
         {
@@ -151,7 +157,7 @@ struct VTPARSERImpl
         }
     }
 
-    void vtwrite(const char *s, unsigned int n)
+    void write(const char *s, unsigned int n)
     {
         wchar_t w = 0;
         while (n)
@@ -178,6 +184,7 @@ struct VTPARSERImpl
         }
     }
 
+private:
     void handlechar(wchar_t w)
     {
         if (!this->s)
@@ -209,36 +216,34 @@ struct VTPARSERImpl
         memset(this->args, 0, sizeof(this->args));
         memset(this->oscbuf, 0, sizeof(this->oscbuf));
     }
-};
 
-/**** ACTION FUNCTIONS */
+public:
+    /**** ACTION FUNCTIONS */
+    static void ignore(VTPARSERImpl *v, wchar_t w)
+    {
+        (void)v;
+        (void)w; /* avoid warnings */
+    }
+    static void collect(VTPARSERImpl *v, wchar_t w)
+    {
+        v->inter = v->inter ? v->inter : (int)w;
+    }
 
-static void ignore(VTPARSERImpl *v, wchar_t w)
-{
-    (void)v;
-    (void)w; /* avoid warnings */
-}
+    static void collectosc(VTPARSERImpl *v, wchar_t w)
+    {
+        if (v->nosc < MAXOSC)
+            v->oscbuf[v->nosc++] = w;
+    }
 
-static void collect(VTPARSERImpl *v, wchar_t w)
-{
-    v->inter = v->inter ? v->inter : (int)w;
-}
+    static void param(VTPARSERImpl *v, wchar_t w)
+    {
+        v->narg = v->narg ? v->narg : 1;
 
-static void collectosc(VTPARSERImpl *v, wchar_t w)
-{
-    if (v->nosc < MAXOSC)
-        v->oscbuf[v->nosc++] = w;
-}
-
-static void param(VTPARSERImpl *v, wchar_t w)
-{
-    v->narg = v->narg ? v->narg : 1;
-
-    if (w == L';')
-        v->args[v->narg++] = 0;
-    else if (v->narg < MAXPARAM && v->args[v->narg - 1] < 9999)
-        v->args[v->narg - 1] = v->args[v->narg - 1] * 10 + (w - 0x30);
-}
+        if (w == L';')
+            v->args[v->narg++] = 0;
+        else if (v->narg < MAXPARAM && v->args[v->narg - 1] < 9999)
+            v->args[v->narg - 1] = v->args[v->narg - 1] * 10 + (w - 0x30);
+    }
 
 #define DO(k, t, f, n, a)                                                      \
     static void do##k(VTPARSERImpl *v, wchar_t w)                              \
@@ -247,11 +252,12 @@ static void param(VTPARSERImpl *v, wchar_t w)
             f(v->p, w, v->inter, n, a, (const wchar_t *)v->oscbuf);            \
     }
 
-DO(control, w < MAXCALLBACK && v->cons[w], v->cons[w], 0, NULL)
-DO(escape, w<MAXCALLBACK && v->escs[w], v->escs[w], v->inter> 0, &v->inter)
-DO(csi, w < MAXCALLBACK && v->csis[w], v->csis[w], v->narg, v->args)
-DO(print, v->print, v->print, 0, NULL)
-DO(osc, v->osc, v->osc, v->nosc, NULL)
+    DO(control, w < MAXCALLBACK && v->cons[w], v->cons[w], 0, NULL)
+    DO(escape, w<MAXCALLBACK && v->escs[w], v->escs[w], v->inter> 0, &v->inter)
+    DO(csi, w < MAXCALLBACK && v->csis[w], v->csis[w], v->narg, v->args)
+    DO(print, v->print, v->print, 0, NULL)
+    DO(osc, v->osc, v->osc, v->nosc, NULL)
+};
 
 /**** STATE DEFINITIONS
  * This was built by consulting the excellent state chart created by
@@ -263,73 +269,76 @@ void StateMachine::MAKESTATE(STATE &state, bool entry,
                              const std::vector<ACTION> actions)
 {
     state.entry = entry;
-    state.actions.push_back({0x00, 0x00, ignore, NULL});
-    state.actions.push_back({0x7f, 0x7f, ignore, NULL});
-    state.actions.push_back({0x18, 0x18, docontrol, &ground});
-    state.actions.push_back({0x1a, 0x1a, docontrol, &ground});
-    state.actions.push_back({0x1b, 0x1b, ignore, &escape});
-    state.actions.push_back({0x01, 0x06, docontrol, NULL});
-    state.actions.push_back({0x08, 0x17, docontrol, NULL});
-    state.actions.push_back({0x19, 0x19, docontrol, NULL});
-    state.actions.push_back({0x1c, 0x1f, docontrol, NULL});
+    state.actions.push_back({0x00, 0x00, VTPARSERImpl::ignore, NULL});
+    state.actions.push_back({0x7f, 0x7f, VTPARSERImpl::ignore, NULL});
+    state.actions.push_back({0x18, 0x18, VTPARSERImpl::docontrol, &ground});
+    state.actions.push_back({0x1a, 0x1a, VTPARSERImpl::docontrol, &ground});
+    state.actions.push_back({0x1b, 0x1b, VTPARSERImpl::ignore, &escape});
+    state.actions.push_back({0x01, 0x06, VTPARSERImpl::docontrol, NULL});
+    state.actions.push_back({0x08, 0x17, VTPARSERImpl::docontrol, NULL});
+    state.actions.push_back({0x19, 0x19, VTPARSERImpl::docontrol, NULL});
+    state.actions.push_back({0x1c, 0x1f, VTPARSERImpl::docontrol, NULL});
 
     for (auto &a : actions)
     {
         state.actions.push_back(a);
     }
 
-    state.actions.push_back({0x07, 0x07, docontrol, NULL});
+    state.actions.push_back({0x07, 0x07, VTPARSERImpl::docontrol, NULL});
 }
 
 StateMachine::StateMachine()
 {
-    MAKESTATE(ground, false, {{0x20, WCHAR_MAX, doprint, NULL}});
+    MAKESTATE(ground, false, {{0x20, WCHAR_MAX, VTPARSERImpl::doprint, NULL}});
 
     MAKESTATE(escape, true,
-              {{0x21, 0x21, ignore, &osc_string},
-               {0x20, 0x2f, collect, &escape_intermediate},
-               {0x30, 0x4f, doescape, &ground},
-               {0x51, 0x57, doescape, &ground},
-               {0x59, 0x59, doescape, &ground},
-               {0x5a, 0x5a, doescape, &ground},
-               {0x5c, 0x5c, doescape, &ground},
-               {0x6b, 0x6b, ignore, &osc_string},
-               {0x60, 0x7e, doescape, &ground},
-               {0x5b, 0x5b, ignore, &csi_entry},
-               {0x5d, 0x5d, ignore, &osc_string},
-               {0x5e, 0x5e, ignore, &osc_string},
-               {0x50, 0x50, ignore, &osc_string},
-               {0x5f, 0x5f, ignore, &osc_string}});
+              {{0x21, 0x21, VTPARSERImpl::ignore, &osc_string},
+               {0x20, 0x2f, VTPARSERImpl::collect, &escape_intermediate},
+               {0x30, 0x4f, VTPARSERImpl::doescape, &ground},
+               {0x51, 0x57, VTPARSERImpl::doescape, &ground},
+               {0x59, 0x59, VTPARSERImpl::doescape, &ground},
+               {0x5a, 0x5a, VTPARSERImpl::doescape, &ground},
+               {0x5c, 0x5c, VTPARSERImpl::doescape, &ground},
+               {0x6b, 0x6b, VTPARSERImpl::ignore, &osc_string},
+               {0x60, 0x7e, VTPARSERImpl::doescape, &ground},
+               {0x5b, 0x5b, VTPARSERImpl::ignore, &csi_entry},
+               {0x5d, 0x5d, VTPARSERImpl::ignore, &osc_string},
+               {0x5e, 0x5e, VTPARSERImpl::ignore, &osc_string},
+               {0x50, 0x50, VTPARSERImpl::ignore, &osc_string},
+               {0x5f, 0x5f, VTPARSERImpl::ignore, &osc_string}});
 
     MAKESTATE(escape_intermediate, false,
-              {{0x20, 0x2f, collect, NULL}, {0x30, 0x7e, doescape, &ground}});
+              {{0x20, 0x2f, VTPARSERImpl::collect, NULL},
+               {0x30, 0x7e, VTPARSERImpl::doescape, &ground}});
 
     MAKESTATE(csi_entry, true,
-              {{0x20, 0x2f, collect, &csi_intermediate},
-               {0x3a, 0x3a, ignore, &csi_ignore},
-               {0x30, 0x39, param, &csi_param},
-               {0x3b, 0x3b, param, &csi_param},
-               {0x3c, 0x3f, collect, &csi_param},
-               {0x40, 0x7e, docsi, &ground}});
+              {{0x20, 0x2f, VTPARSERImpl::collect, &csi_intermediate},
+               {0x3a, 0x3a, VTPARSERImpl::ignore, &csi_ignore},
+               {0x30, 0x39, VTPARSERImpl::param, &csi_param},
+               {0x3b, 0x3b, VTPARSERImpl::param, &csi_param},
+               {0x3c, 0x3f, VTPARSERImpl::collect, &csi_param},
+               {0x40, 0x7e, VTPARSERImpl::docsi, &ground}});
 
     MAKESTATE(csi_ignore, false,
-              {{0x20, 0x3f, ignore, NULL}, {0x40, 0x7e, ignore, &ground}});
+              {{0x20, 0x3f, VTPARSERImpl::ignore, NULL},
+               {0x40, 0x7e, VTPARSERImpl::ignore, &ground}});
 
     MAKESTATE(csi_param, false,
-              {{0x30, 0x39, param, NULL},
-               {0x3b, 0x3b, param, NULL},
-               {0x3a, 0x3a, ignore, &csi_ignore},
-               {0x3c, 0x3f, ignore, &csi_ignore},
-               {0x20, 0x2f, collect, &csi_intermediate},
-               {0x40, 0x7e, docsi, &ground}});
+              {{0x30, 0x39, VTPARSERImpl::param, NULL},
+               {0x3b, 0x3b, VTPARSERImpl::param, NULL},
+               {0x3a, 0x3a, VTPARSERImpl::ignore, &csi_ignore},
+               {0x3c, 0x3f, VTPARSERImpl::ignore, &csi_ignore},
+               {0x20, 0x2f, VTPARSERImpl::collect, &csi_intermediate},
+               {0x40, 0x7e, VTPARSERImpl::docsi, &ground}});
 
     MAKESTATE(csi_intermediate, false,
-              {{0x20, 0x2f, collect, NULL},
-               {0x30, 0x3f, ignore, &csi_ignore},
-               {0x40, 0x7e, docsi, &ground}});
+              {{0x20, 0x2f, VTPARSERImpl::collect, NULL},
+               {0x30, 0x3f, VTPARSERImpl::ignore, &csi_ignore},
+               {0x40, 0x7e, VTPARSERImpl::docsi, &ground}});
 
     MAKESTATE(osc_string, true,
-              {{0x07, 0x07, doosc, &ground}, {0x20, 0x7f, collectosc, NULL}});
+              {{0x07, 0x07, VTPARSERImpl::doosc, &ground},
+               {0x20, 0x7f, VTPARSERImpl::collectosc, NULL}});
 }
 
 ///
@@ -337,8 +346,7 @@ StateMachine::StateMachine()
 ///
 VtParser::VtParser(void *p)
 {
-    m_impl = new VTPARSERImpl;
-    m_impl->p = p;
+    m_impl = new VTPARSERImpl(p);
 }
 
 VtParser::~VtParser()
@@ -348,10 +356,10 @@ VtParser::~VtParser()
 
 void VtParser::vtonevent(VtEvent t, wchar_t w, VTCALLBACK cb)
 {
-    m_impl->vtonevent(t, w, cb);
+    m_impl->onevent(t, w, cb);
 }
 
 void VtParser::vtwrite(const char *s, unsigned int n)
 {
-    m_impl->vtwrite(s, n);
+    m_impl->write(s, n);
 }
