@@ -267,11 +267,6 @@ void VtParser::param(VtParser *v, void *p, wchar_t w)
         v->args[v->narg - 1] = v->args[v->narg - 1] * 10 + (w - 0x30);
 }
 
-void VtParser::docontrol(VtParser *v, void *p, wchar_t w)
-{
-    if (w < MAXCALLBACK && v->m_controls[w])
-        v->m_controls[w]({p, w, v->inter, 0, NULL, (const wchar_t *)v->oscbuf});
-}
 void VtParser::doescape(VtParser *v, void *p, wchar_t w)
 {
     if (w < MAXCALLBACK && v->m_escapes[w])

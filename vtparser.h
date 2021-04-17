@@ -26,10 +26,13 @@
  */
 #pragma once
 #include "curses_term.h"
+#include <locale>
 #include <wchar.h>
+#include <functional>
+#include <unordered_map>
 #include "vtcontext.h"
 
-using VTCALLBACK = void (*)(VtContext context);
+using VTCALLBACK = std::function<void(VtContext)>;
 
 /**** DATA TYPES */
 #define MAXPARAM 16
@@ -37,6 +40,29 @@ using VTCALLBACK = void (*)(VtContext context);
 #define MAXBUF 100
 #define MAXACTIONS 128
 #define MAXCALLBACK 128
+
+// https://kmiya-culti.github.io/RLogin/ctrlcode.html
+enum class ControlCodes
+{
+    SOH = 0x01,
+    ENQ = 0x05,
+    BEL = 0x07,
+    BS = 0x08,
+    HT = 0x09,
+    LF = 0x0A,
+    VT = 0x0B,
+    FF = 0x0C,
+    CR = 0x0D,
+    SO = 0x0E,
+    SI = 0x0F,
+    DC0 = 0x10,
+    CAN = 0x18,
+    ESC = 0x1B,
+    FS = 0x1C,
+    GS = 0x1D,
+    RS = 0x1E,
+    US = 0x1F,
+};
 
 class VtParser
 {
@@ -49,7 +75,7 @@ class VtParser
     mbstate_t ms = {};
     VTCALLBACK m_print = nullptr;
     VTCALLBACK m_osc = nullptr;
-    VTCALLBACK m_controls[MAXCALLBACK] = {};
+    std::unordered_map<ControlCodes, VTCALLBACK> m_controls;
     VTCALLBACK m_escapes[MAXCALLBACK] = {};
     VTCALLBACK m_csis[MAXCALLBACK] = {};
 
@@ -63,10 +89,11 @@ public:
     {
         m_osc = cb;
     }
-    void setControl(wchar_t w, VTCALLBACK cb)
+    void setControl(ControlCodes w, VTCALLBACK cb)
     {
         m_controls[w] = cb;
     }
+
     void setEscape(wchar_t w, VTCALLBACK cb)
     {
         m_escapes[w] = cb;
@@ -88,7 +115,15 @@ public:
     static void collect(VtParser *v, void *p, wchar_t w);
     static void collectosc(VtParser *v, void *p, wchar_t w);
     static void param(VtParser *v, void *p, wchar_t w);
-    static void docontrol(VtParser *v, void *p, wchar_t w);
+    static void docontrol(VtParser *v, void *p, wchar_t w)
+    {
+        auto found = v->m_controls.find((ControlCodes)w);
+        if (found != v->m_controls.end())
+        {
+            found->second(
+                {p, w, v->inter, 0, NULL, (const wchar_t *)v->oscbuf});
+        }
+    }
     static void doescape(VtParser *v, void *p, wchar_t w);
     static void docsi(VtParser *v, void *p, wchar_t w);
     static void doprint(VtParser *v, void *p, wchar_t w);

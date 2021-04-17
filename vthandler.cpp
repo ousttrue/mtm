@@ -1,5 +1,6 @@
 #include "pair.h"
 #include "config.h"
+#include "vtcontext.h"
 #include "vtparser.h"
 #include "vthandler.h"
 #include "curses_term.h"
@@ -15,12 +16,6 @@
 inline void CALL(VTCALLBACK x, CursesTerm *term)
 {
     x({term, 0, 0, 0, NULL, NULL});
-}
-
-static void bell(VtContext context)
-{ /* Terminal bell. */
-    beep();
-    context.end();
 }
 
 static void numkp(VtContext context)
@@ -89,13 +84,6 @@ static void cuf(VtContext context)
     int py, px, y, x, my, mx, top, bot, tos;
     std::tie(py, px, y, x, my, mx, top, bot, tos) = context.get();
     wmove(term->s->win, py, MIN(x + context.P1(0), mx - 1));
-    context.end();
-}
-
-static void ack(VtContext context)
-{ /* ACK - Acknowledge Enquiry */
-    auto term = context.term();
-    term->safewrite("\006");
     context.end();
 }
 
@@ -947,16 +935,27 @@ static void so(VtContext context)
 
 static void setupevents(const std::unique_ptr<VtParser> &vp)
 {
-    vp->setControl(0x05, ack);
-    vp->setControl(0x07, bell);
-    vp->setControl(0x08, cub);
-    vp->setControl(0x09, tab);
-    vp->setControl(0x0a, pnl);
-    vp->setControl(0x0b, pnl);
-    vp->setControl(0x0c, pnl);
-    vp->setControl(0x0d, cr);
-    vp->setControl(0x0e, so);
-    vp->setControl(0x0f, so);
+    /* ACK - Acknowledge Enquiry */
+    vp->setControl(ControlCodes::ENQ, [](VtContext ctx) {
+        auto term = ctx.term();
+        term->safewrite("\006");
+        ctx.end();
+    });
+
+    /* Terminal bell. */
+    vp->setControl(ControlCodes::BEL, [](VtContext ctx) {
+        beep();
+        ctx.end();
+    });
+
+    vp->setControl(ControlCodes::BS, cub);
+    vp->setControl(ControlCodes::HT, tab);
+    vp->setControl(ControlCodes::LF, pnl);
+    vp->setControl(ControlCodes::VT, pnl);
+    vp->setControl(ControlCodes::FF, pnl);
+    vp->setControl(ControlCodes::CR, cr);
+    vp->setControl(ControlCodes::SO, so);
+    vp->setControl(ControlCodes::SI, so);
     vp->setCsi(L'A', cuu);
     vp->setCsi(L'B', cud);
     vp->setCsi(L'C', cuf);
