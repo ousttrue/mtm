@@ -3,18 +3,22 @@
 
 struct SCRN
 {
+    // cursor visibility
     int vis = 0;
+    // top of scroll
     int tos = 0;
     int off = 0;
     short fg = 0;
     short bg = 0;
 
 public:
-    bool insert = false;
-    bool oxenl = false;
+    // is there cursor end of line
     bool xenl = false;
+    // insert mode ?
+    bool insert = false;
 
 private:
+    bool oxenl = false;
     int sy = 0;
     int sx = 0;
     short sfg = 0;

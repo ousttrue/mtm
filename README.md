@@ -47,3 +47,9 @@ SplitterのLeafにTerminalを実装
 ## VtParser
 
 CussesTerm 上の pty からの出力を解釈する。
+
+# 参考
+
+* https://docs.microsoft.com/ja-jp/windows/console/console-virtual-terminal-sequences#example
+* https://vt100.net/emu/dec_ansi_parser
+* https://invisible-island.net/xterm/ctlseqs/ctlseqs.html

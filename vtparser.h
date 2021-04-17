@@ -41,7 +41,10 @@ using VTCALLBACK = std::function<void(VtContext)>;
 #define MAXACTIONS 128
 #define MAXCALLBACK 128
 
+//
 // https://kmiya-culti.github.io/RLogin/ctrlcode.html
+//
+// ascii 0x00 ~ 0x1F
 enum class ControlCodes
 {
     SOH = 0x01,
@@ -74,9 +77,12 @@ class VtParser
     int oscbuf[MAXOSC + 1] = {};
     mbstate_t ms = {};
     VTCALLBACK m_print = nullptr;
+    // Operating System Command
     VTCALLBACK m_osc = nullptr;
+    // Controll Code
     std::unordered_map<ControlCodes, VTCALLBACK> m_controls;
     VTCALLBACK m_escapes[MAXCALLBACK] = {};
+    // Control Sequence Introducer
     VTCALLBACK m_csis[MAXCALLBACK] = {};
 
 public:

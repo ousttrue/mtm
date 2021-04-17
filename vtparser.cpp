@@ -101,17 +101,26 @@ public:
         MAKESTATE(escape, true,
                   {{0x21, 0x21, VtParser::ignore, &osc_string},
                    {0x20, 0x2f, VtParser::collect, &escape_intermediate},
+
+                   // 0-9...A-O
                    {0x30, 0x4f, VtParser::doescape, &ground},
+
                    {0x51, 0x57, VtParser::doescape, &ground},
                    {0x59, 0x59, VtParser::doescape, &ground},
                    {0x5a, 0x5a, VtParser::doescape, &ground},
                    {0x5c, 0x5c, VtParser::doescape, &ground},
                    {0x6b, 0x6b, VtParser::ignore, &osc_string},
                    {0x60, 0x7e, VtParser::doescape, &ground},
+                   // [
                    {0x5b, 0x5b, VtParser::ignore, &csi_entry},
+
+                   // ]
                    {0x5d, 0x5d, VtParser::ignore, &osc_string},
+                   // ^
                    {0x5e, 0x5e, VtParser::ignore, &osc_string},
+                   // P
                    {0x50, 0x50, VtParser::ignore, &osc_string},
+                   // _
                    {0x5f, 0x5f, VtParser::ignore, &osc_string}});
 
         MAKESTATE(escape_intermediate, false,
@@ -120,10 +129,15 @@ public:
 
         MAKESTATE(csi_entry, true,
                   {{0x20, 0x2f, VtParser::collect, &csi_intermediate},
+                   // :
                    {0x3a, 0x3a, VtParser::ignore, &csi_ignore},
+                   // 0-9
                    {0x30, 0x39, VtParser::param, &csi_param},
+                   // ;
                    {0x3b, 0x3b, VtParser::param, &csi_param},
+                   // < = > ?
                    {0x3c, 0x3f, VtParser::collect, &csi_param},
+                   // @A~Za~z
                    {0x40, 0x7e, VtParser::docsi, &ground}});
 
         MAKESTATE(csi_ignore, false,
@@ -159,9 +173,13 @@ private:
         state.entry = entry;
         state.actions.push_back({0x00, 0x00, VtParser::ignore, NULL});
         state.actions.push_back({0x7f, 0x7f, VtParser::ignore, NULL});
+
         state.actions.push_back({0x18, 0x18, VtParser::docontrol, &ground});
         state.actions.push_back({0x1a, 0x1a, VtParser::docontrol, &ground});
+
+        // start escape sequence
         state.actions.push_back({0x1b, 0x1b, VtParser::ignore, &escape});
+
         state.actions.push_back({0x01, 0x06, VtParser::docontrol, NULL});
         state.actions.push_back({0x08, 0x17, VtParser::docontrol, NULL});
         state.actions.push_back({0x19, 0x19, VtParser::docontrol, NULL});
@@ -246,15 +264,21 @@ void VtParser::ignore(VtParser *v, void *p, wchar_t w)
     (void)v;
     (void)w; /* avoid warnings */
 }
+
 void VtParser::collect(VtParser *v, void *p, wchar_t w)
 {
-    v->inter = v->inter ? v->inter : (int)w;
+    if (!v->inter)
+    {
+        v->inter = w;
+    }
 }
 
 void VtParser::collectosc(VtParser *v, void *p, wchar_t w)
 {
     if (v->nosc < MAXOSC)
+    {
         v->oscbuf[v->nosc++] = w;
+    }
 }
 
 void VtParser::param(VtParser *v, void *p, wchar_t w)
@@ -276,8 +300,8 @@ void VtParser::doescape(VtParser *v, void *p, wchar_t w)
 void VtParser::docsi(VtParser *v, void *p, wchar_t w)
 {
     if (w < MAXCALLBACK && v->m_csis[w])
-        v->m_csis[w]({p, w, v->inter, v->narg, v->args,
-                     (const wchar_t *)v->oscbuf});
+        v->m_csis[w](
+            {p, w, v->inter, v->narg, v->args, (const wchar_t *)v->oscbuf});
 }
 void VtParser::doprint(VtParser *v, void *p, wchar_t w)
 {

@@ -24,12 +24,6 @@ static void numkp(VtContext context)
     context.end();
 }
 
-static void vis(VtContext context)
-{ /* Cursor visibility */
-    context.term()->s->vis = context.iw == L'6' ? 0 : 1;
-    context.end();
-}
-
 static void cup(VtContext context)
 { /* CUP - Cursor Position */
     auto term = context.term();
@@ -249,7 +243,7 @@ static void rc(VtContext context)
         return;
     }
 
-    if(!term->s->restore())
+    if (!term->s->restore())
     {
         return;
     }
@@ -940,6 +934,8 @@ static void setupevents(const std::unique_ptr<VtParser> &vp)
     vp->setControl(ControlCodes::CR, cr);
     vp->setControl(ControlCodes::SO, so);
     vp->setControl(ControlCodes::SI, so);
+
+    // 0x1B [ ...
     vp->setCsi(L'A', cuu);
     vp->setCsi(L'B', cud);
     vp->setCsi(L'C', cuf);
@@ -976,6 +972,7 @@ static void setupevents(const std::unique_ptr<VtParser> &vp)
     vp->setCsi(L's', sc);
     vp->setCsi(L'u', rc);
     vp->setCsi(L'x', decreqtparm);
+
     vp->setEscape(L'0', scs);
     vp->setEscape(L'1', scs);
     vp->setEscape(L'2', scs);
@@ -989,7 +986,13 @@ static void setupevents(const std::unique_ptr<VtParser> &vp)
     vp->setEscape(L'M', ri);
     vp->setEscape(L'Z', decid);
     vp->setEscape(L'c', ris);
-    vp->setEscape(L'p', vis);
+
+    /* Cursor visibility */
+    vp->setEscape(L'p', [](VtContext ctx) {
+        ctx.term()->s->vis = ctx.iw == L'6' ? 0 : 1;
+        ctx.end();
+    });
+
     vp->setEscape(L'=', numkp);
     vp->setEscape(L'>', numkp);
     vp->setPrint(print);
