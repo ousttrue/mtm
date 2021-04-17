@@ -15,7 +15,7 @@
 //  *      CALL(h, term)        - Call handler h with no arguments.
 inline void CALL(VTCALLBACK x, CursesTerm *term)
 {
-    x({term, 0, 0, 0, NULL, NULL});
+    x({term, 0, 0, 0, NULL});
 }
 
 static void numkp(VtContext context)
@@ -830,7 +830,7 @@ static void rep(VtContext context)
     std::tie(py, px, y, x, my, mx, top, bot, tos) = context.get();
 
     for (int i = 0; i < context.P1(0) && term->repc; i++)
-        print({context.p, term->repc, 0, 0, NULL, NULL});
+        print({context.p, term->repc, 0, 0, NULL});
     context.end();
 }
 
@@ -1001,5 +1001,5 @@ static void setupevents(const std::unique_ptr<VtParser> &vp)
 void vp_initialize(const std::unique_ptr<CursesTerm> &term)
 {
     setupevents(term->vp);
-    ris({term.get(), L'c', 0, 0, NULL, NULL});
+    ris({term.get(), L'c', 0, 0, NULL});
 }

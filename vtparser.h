@@ -128,7 +128,7 @@ public:
         if (found != v->m_controls.end())
         {
             found->second(
-                {p, w, v->inter, 0, NULL, v->m_oscbuf.data()});
+                {p, w, v->inter, 0, NULL});
         }
     }
     static void doescape(VtParser *v, void *p, wchar_t w);

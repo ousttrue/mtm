@@ -292,21 +292,20 @@ void VtParser::doescape(VtParser *v, void *p, wchar_t w)
 {
     if (w < MAXCALLBACK && v->m_escapes[w])
         v->m_escapes[w](
-            {p, w, v->inter, v->inter > 0, &v->inter, v->m_oscbuf.data()});
+            {p, w, v->inter, v->inter > 0, &v->inter});
 }
 void VtParser::docsi(VtParser *v, void *p, wchar_t w)
 {
     if (w < MAXCALLBACK && v->m_csis[w])
-        v->m_csis[w]({p, w, v->inter, v->narg, v->args, v->m_oscbuf.data()});
+        v->m_csis[w]({p, w, v->inter, v->narg, v->args});
 }
 void VtParser::doprint(VtParser *v, void *p, wchar_t w)
 {
     if (v->m_print)
-        v->m_print({p, w, v->inter, 0, NULL, v->m_oscbuf.data()});
+        v->m_print({p, w, v->inter, 0, NULL});
 }
 void VtParser::doosc(VtParser *v, void *p, wchar_t w)
 {
     if (v->m_osc)
-        v->m_osc({p, w, v->inter, (int)v->m_oscbuf.size(), NULL,
-                  v->m_oscbuf.data()});
+        v->m_osc({p, w, v->inter, (int)v->m_oscbuf.size(), NULL});
 }

@@ -8,7 +8,6 @@ struct VtContext
     wchar_t iw;
     int argc;
     int *argv;
-    const wchar_t *osc;
 
     CursesTerm *term() const
     {
