@@ -48,19 +48,33 @@
 #define MAXBUF 100
 #define MAXACTIONS 128
 
-using CB = void (*)(VTPARSERImpl *p, wchar_t w);
-
-struct ACTION
+class ACTION
 {
     wchar_t lo = 0;
     wchar_t hi = 0;
+    using CB = void (*)(VTPARSERImpl *p, wchar_t w);
     CB cb = nullptr;
     struct STATE *next = nullptr;
 
-    bool process(wchar_t w, VTPARSERImpl *vp);
-};
+public:
+    ACTION(wchar_t _lo, wchar_t _hi, CB _cb, STATE *_next)
+        : lo(_lo), hi(_hi), cb(_cb), next(_next)
+    {
+    }
+    bool process(wchar_t w, VTPARSERImpl *vp, STATE **pNext)
+    {
+        if (w < lo || w > hi)
+        {
+            // not process
+            return false;
+        }
 
-using ENTRY = void (*)(VTPARSERImpl *v);
+        // process
+        this->cb(vp, w);
+        *pNext = this->next;
+        return true;
+    }
+};
 
 struct STATE
 {
@@ -172,8 +186,18 @@ struct VTPARSERImpl
         }
         for (auto &a : this->s->actions)
         {
-            if (a.process(w, this))
+            STATE *pNext;
+            if (a.process(w, this, &pNext))
             {
+                if (pNext)
+                {
+                    this->s = pNext;
+                    if (pNext->entry)
+                    {
+                        this->reset();
+                    }
+                }
+
                 return;
             }
         }
@@ -186,25 +210,6 @@ struct VTPARSERImpl
         memset(this->oscbuf, 0, sizeof(this->oscbuf));
     }
 };
-
-bool ACTION::process(wchar_t w, VTPARSERImpl *vp)
-{
-    if (w >= this->lo && w <= this->hi)
-    {
-        this->cb(vp, w);
-        if (this->next)
-        {
-            vp->s = this->next;
-            if (this->next->entry)
-            {
-                vp->reset();
-            }
-        }
-        return true;
-    }
-
-    return false;
-}
 
 /**** ACTION FUNCTIONS */
 
