@@ -44,7 +44,6 @@
 
 /**** DATA TYPES */
 #define MAXPARAM 16
-#define MAXCALLBACK 128
 #define MAXOSC 100
 #define MAXBUF 100
 #define MAXACTIONS 128
@@ -81,6 +80,8 @@ STATE osc_string;
 
 struct VTPARSERImpl
 {
+#define MAXCALLBACK 128
+
     STATE *s = nullptr;
     int narg = 0;
     int nosc = 0;
@@ -94,6 +95,33 @@ struct VTPARSERImpl
     VTCALLBACK cons[MAXCALLBACK] = {};
     VTCALLBACK escs[MAXCALLBACK] = {};
     VTCALLBACK csis[MAXCALLBACK] = {};
+
+    void vtonevent(VtEvent t, wchar_t w, VTCALLBACK cb)
+    {
+        if (w >= MAXCALLBACK)
+        {
+            throw std::exception();
+        }
+
+        switch (t)
+        {
+        case VtEvent::CONTROL:
+            this->cons[w] = cb;
+            break;
+        case VtEvent::ESCAPE:
+            this->escs[w] = cb;
+            break;
+        case VtEvent::CSI:
+            this->csis[w] = cb;
+            break;
+        case VtEvent::PRINT:
+            this->print = cb;
+            break;
+        case VtEvent::OSC:
+            this->osc = cb;
+            break;
+        }
+    }
 
     void vtwrite(const char *s, unsigned int n)
     {
@@ -206,39 +234,6 @@ DO(csi, w < MAXCALLBACK && v->csis[w], v->csis[w], v->narg, v->args)
 DO(print, v->print, v->print, 0, NULL)
 DO(osc, v->osc, v->osc, v->nosc, NULL)
 
-/**** PUBLIC FUNCTIONS */
-VTCALLBACK
-vtonevent(VTPARSERImpl *vp, VtEvent t, wchar_t w, VTCALLBACK cb)
-{
-    VTCALLBACK o = NULL;
-    if (w < MAXCALLBACK)
-        switch (t)
-        {
-        case VtEvent::CONTROL:
-            o = vp->cons[w];
-            vp->cons[w] = cb;
-            break;
-        case VtEvent::ESCAPE:
-            o = vp->escs[w];
-            vp->escs[w] = cb;
-            break;
-        case VtEvent::CSI:
-            o = vp->csis[w];
-            vp->csis[w] = cb;
-            break;
-        case VtEvent::PRINT:
-            o = vp->print;
-            vp->print = cb;
-            break;
-        case VtEvent::OSC:
-            o = vp->osc;
-            vp->osc = cb;
-            break;
-        }
-
-    return o;
-}
-
 /**** STATE DEFINITIONS
  * This was built by consulting the excellent state chart created by
  * Paul Flo Williams: http://vt100.net/emu/dec_ansi_parser
@@ -340,7 +335,7 @@ VtParser::~VtParser()
 
 void VtParser::vtonevent(VtEvent t, wchar_t w, VTCALLBACK cb)
 {
-    ::vtonevent(m_impl, t, w, cb);
+    m_impl->vtonevent(t, w, cb);
 }
 
 void VtParser::vtwrite(const char *s, unsigned int n)
