@@ -26,7 +26,7 @@
  */
 #pragma once
 #include "curses_term.h"
-#include <locale>
+#include <vector>
 #include <wchar.h>
 #include <functional>
 #include <unordered_map>
@@ -36,7 +36,6 @@ using VTCALLBACK = std::function<void(VtContext)>;
 
 /**** DATA TYPES */
 #define MAXPARAM 16
-#define MAXOSC 100
 #define MAXBUF 100
 #define MAXACTIONS 128
 #define MAXCALLBACK 128
@@ -71,10 +70,12 @@ class VtParser
 {
     struct STATE *s = nullptr;
     int narg = 0;
-    int nosc = 0;
+
     int args[MAXPARAM] = {};
     int inter = 0;
-    int oscbuf[MAXOSC + 1] = {};
+
+    std::vector<wchar_t> m_oscbuf;
+
     mbstate_t ms = {};
     VTCALLBACK m_print = nullptr;
     // Operating System Command
@@ -127,7 +128,7 @@ public:
         if (found != v->m_controls.end())
         {
             found->second(
-                {p, w, v->inter, 0, NULL, (const wchar_t *)v->oscbuf});
+                {p, w, v->inter, 0, NULL, v->m_oscbuf.data()});
         }
     }
     static void doescape(VtParser *v, void *p, wchar_t w);

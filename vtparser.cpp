@@ -253,9 +253,9 @@ void VtParser::handlechar(void *p, wchar_t w)
 
 void VtParser::reset()
 {
-    this->inter = this->narg = this->nosc = 0;
+    this->inter = this->narg = 0;
     memset(this->args, 0, sizeof(this->args));
-    memset(this->oscbuf, 0, sizeof(this->oscbuf));
+    m_oscbuf.clear();
 }
 
 /**** ACTION FUNCTIONS */
@@ -275,10 +275,7 @@ void VtParser::collect(VtParser *v, void *p, wchar_t w)
 
 void VtParser::collectosc(VtParser *v, void *p, wchar_t w)
 {
-    if (v->nosc < MAXOSC)
-    {
-        v->oscbuf[v->nosc++] = w;
-    }
+    v->m_oscbuf.push_back(w);
 }
 
 void VtParser::param(VtParser *v, void *p, wchar_t w)
@@ -294,22 +291,22 @@ void VtParser::param(VtParser *v, void *p, wchar_t w)
 void VtParser::doescape(VtParser *v, void *p, wchar_t w)
 {
     if (w < MAXCALLBACK && v->m_escapes[w])
-        v->m_escapes[w]({p, w, v->inter, v->inter > 0, &v->inter,
-                         (const wchar_t *)v->oscbuf});
+        v->m_escapes[w](
+            {p, w, v->inter, v->inter > 0, &v->inter, v->m_oscbuf.data()});
 }
 void VtParser::docsi(VtParser *v, void *p, wchar_t w)
 {
     if (w < MAXCALLBACK && v->m_csis[w])
-        v->m_csis[w](
-            {p, w, v->inter, v->narg, v->args, (const wchar_t *)v->oscbuf});
+        v->m_csis[w]({p, w, v->inter, v->narg, v->args, v->m_oscbuf.data()});
 }
 void VtParser::doprint(VtParser *v, void *p, wchar_t w)
 {
     if (v->m_print)
-        v->m_print({p, w, v->inter, 0, NULL, (const wchar_t *)v->oscbuf});
+        v->m_print({p, w, v->inter, 0, NULL, v->m_oscbuf.data()});
 }
 void VtParser::doosc(VtParser *v, void *p, wchar_t w)
 {
     if (v->m_osc)
-        v->m_osc({p, w, v->inter, v->nosc, NULL, (const wchar_t *)v->oscbuf});
+        v->m_osc({p, w, v->inter, (int)v->m_oscbuf.size(), NULL,
+                  v->m_oscbuf.data()});
 }

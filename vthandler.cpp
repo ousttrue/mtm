@@ -187,7 +187,7 @@ static void tab(VtContext context)
         switch (context.w)
         {
         case L'I':
-            ht({term, 0, 0, 0, nullptr, nullptr});
+            ht({term, 0, 0, 0, nullptr});
             break;
         case L'\t':
             CALL(ht, term);
@@ -336,7 +336,7 @@ static void ed(VtContext context)
             wclrtoeol(win);
         }
         wmove(win, py, x);
-        el({context.p, context.w, context.iw, 1, &o, NULL});
+        el({context.p, context.w, context.iw, 1, &o});
         break;
     }
     wmove(win, py, px);
