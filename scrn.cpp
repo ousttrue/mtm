@@ -2,6 +2,8 @@
 #include "scrn.h"
 #include "minmax.h"
 
+#include "pair.h"
+
 void SCRN::scrollbottom()
 {
     this->off = this->tos;
@@ -38,4 +40,36 @@ void SCRN::setAttr()
 {
     /* get attrs and color pair  */
     wattr_set(win, this->sattr, this->sp, NULL);
+}
+
+void SCRN::save()
+{
+    int py, px;
+    getyx(this->win, py, px);
+    this->sx = px; /* save X position            */
+    this->sy = py; /* save Y position            */
+    this->getAttr();
+    this->sfg = this->fg;     /* save foreground color      */
+    this->sbg = this->bg;     /* save background color      */
+    this->oxenl = this->xenl; /* save xenl state            */
+    this->saved = true;    /* save data is valid         */
+}
+
+bool SCRN::restore()
+{
+    if (!this->saved)
+        return false;
+    wmove(this->win, this->sy, this->sx); /* get old position          */
+    this->setAttr();
+    this->fg = this->sfg;     /* get foreground color      */
+    this->bg = this->sbg;     /* get background color      */
+    this->xenl = this->oxenl; /* get xenl state            */
+
+    /* restore colors */
+    int cp = mtm_alloc_pair(this->fg, this->bg);
+    wcolor_set(this->win, cp, NULL);
+    cchar_t c;
+    setcchar(&c, L" ", A_NORMAL, cp, NULL);
+    wbkgrndset(this->win, &c);
+    return true;
 }

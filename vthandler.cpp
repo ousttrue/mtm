@@ -233,15 +233,11 @@ static void sc(VtContext context)
 { /* SC - Save Cursor */
     auto term = context.term();
     auto s = term->s;
-    int py, px, y, x, my, mx, top, bot, tos;
-    std::tie(py, px, y, x, my, mx, top, bot, tos) = context.get();
-    s->sx = px; /* save X position            */
-    s->sy = py; /* save Y position            */
-    s->getAttr();
-    s->sfg = s->fg;     /* save foreground color      */
-    s->sbg = s->bg;     /* save background color      */
-    s->oxenl = s->xenl; /* save xenl state            */
-    s->saved = true;    /* save data is valid         */
+    s->save();
+
+    // int py, px, y, x, my, mx, top, bot, tos;
+    // std::tie(py, px, y, x, my, mx, top, bot, tos) = context.get();
+
     term->sgc = term->gc;
     term->sgs = term->gs; /* save character sets        */
     context.end();
@@ -255,23 +251,14 @@ static void rc(VtContext context)
         CALL(decaln, term);
         return;
     }
-    auto s = term->s;
-    if (!s->saved)
+
+    if(!term->s->restore())
+    {
         return;
-    wmove(s->win, s->sy, s->sx); /* get old position          */
-    s->setAttr();
-    s->fg = s->sfg;     /* get foreground color      */
-    s->bg = s->sbg;     /* get background color      */
-    s->xenl = s->oxenl; /* get xenl state            */
+    }
     term->gc = term->sgc;
     term->gs = term->sgs; /* save character sets        */
 
-    /* restore colors */
-    int cp = mtm_alloc_pair(s->fg, s->bg);
-    wcolor_set(s->win, cp, NULL);
-    cchar_t c;
-    setcchar(&c, L" ", A_NORMAL, cp, NULL);
-    wbkgrndset(s->win, &c);
     context.end();
 }
 
