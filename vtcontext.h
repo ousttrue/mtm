@@ -10,6 +10,13 @@ struct VtContext
     int *argv;
     const wchar_t *osc;
 
+    CursesTerm *term() const
+    {
+        return (CursesTerm *)p;
+    }
+
+    void end();
+
     std::tuple<int, int, int, int, int, int, int, int, int> get() const;
 
     int PD(int x, int d) const
