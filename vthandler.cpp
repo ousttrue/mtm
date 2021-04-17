@@ -19,8 +19,8 @@
  * code is shared among all these functions, and is factored out into the
  * macros below:
  *      PD(n, d)       - Parameter n, with default d.
- *      P0(n)          - Parameter n, default 0.
- *      P1(n)          - Parameter n, default 1.
+ *      context.P0(n)          - Parameter n, default 0.
+ *      context.P1(n)          - Parameter n, default 1.
  *      CALL(h)        - Call handler h with no arguments.
  *      SENDN(n, s, c) - Write string c bytes of s to n.
  *      n->term->safewrite( s)     - Write string s to node n's host.
@@ -37,9 +37,6 @@
  * The funny names for handlers are from their ANSI/ECMA/DEC mnemonics.
  */
 
-#define PD(x, d) (context.argc < (x) || !context.argv ? (d) : context.argv[(x)])
-#define P0(x) PD(x, 0)
-#define P1(x) (!P0(x) ? 1 : P0(x))
 #define CALL(x) (x)({n, 0, 0, 0, NULL, NULL})
 
 #define COMMONVARS                                                             \
@@ -71,29 +68,29 @@ ENDHANDLER
 
 HANDLER(cup) /* CUP - Cursor Position */
 s->xenl = false;
-wmove(win, tos + (n->term->decom ? top : 0) + P1(0) - 1, P1(1) - 1);
+wmove(win, tos + (n->term->decom ? top : 0) + context.P1(0) - 1, context.P1(1) - 1);
 ENDHANDLER
 
 HANDLER(dch) /* DCH - Delete Character */
-for (int i = 0; i < P1(0); i++)
+for (int i = 0; i < context.P1(0); i++)
     wdelch(win);
 ENDHANDLER
 
 HANDLER(ich) /* ICH - Insert Character */
-for (int i = 0; i < P1(0); i++)
+for (int i = 0; i < context.P1(0); i++)
     wins_nwstr(win, L" ", 1);
 ENDHANDLER
 
 HANDLER(cuu) /* CUU - Cursor Up */
-wmove(win, MAX(py - P1(0), tos + top), x);
+wmove(win, MAX(py - context.P1(0), tos + top), x);
 ENDHANDLER
 
 HANDLER(cud) /* CUD - Cursor Down */
-wmove(win, MIN(py + P1(0), tos + bot - 1), x);
+wmove(win, MIN(py + context.P1(0), tos + bot - 1), x);
 ENDHANDLER
 
 HANDLER(cuf) /* CUF - Cursor Forward */
-wmove(win, py, MIN(x + P1(0), mx - 1));
+wmove(win, py, MIN(x + context.P1(0), mx - 1));
 ENDHANDLER
 
 HANDLER(ack) /* ACK - Acknowledge Enquiry */
@@ -120,19 +117,19 @@ else if (context.w == L'Z')
 ENDHANDLER
 
 HANDLER(hpa) /* HPA - Cursor Horizontal Absolute */
-wmove(win, py, MIN(P1(0) - 1, mx - 1));
+wmove(win, py, MIN(context.P1(0) - 1, mx - 1));
 ENDHANDLER
 
 HANDLER(hpr) /* HPR - Cursor Horizontal Relative */
-wmove(win, py, MIN(px + P1(0), mx - 1));
+wmove(win, py, MIN(px + context.P1(0), mx - 1));
 ENDHANDLER
 
 HANDLER(vpa) /* VPA - Cursor Vertical Absolute */
-wmove(win, MIN(tos + bot - 1, MAX(tos + top, tos + P1(0) - 1)), x);
+wmove(win, MIN(tos + bot - 1, MAX(tos + top, tos + context.P1(0) - 1)), x);
 ENDHANDLER
 
 HANDLER(vpr) /* VPR - Cursor Vertical Relative */
-wmove(win, MIN(tos + bot - 1, MAX(tos + top, py + P1(0))), x);
+wmove(win, MIN(tos + bot - 1, MAX(tos + top, py + context.P1(0))), x);
 ENDHANDLER
 
 HANDLER(cbt) /* CBT - Cursor Backwards Tab */
@@ -154,7 +151,7 @@ wmove(win, py, mx - 1);
 ENDHANDLER
 
 HANDLER(tab) /* Tab forwards or backwards */
-for (int i = 0; i < P1(0); i++)
+for (int i = 0; i < context.P1(0); i++)
     switch (context.w)
     {
     case L'I':
@@ -180,7 +177,7 @@ wmove(win, py, px);
 ENDHANDLER
 
 HANDLER(su) /* SU - Scroll Up/Down */
-wscrl(win, (context.w == L'T' || context.w == L'^') ? -P1(0) : P1(0));
+wscrl(win, (context.w == L'T' || context.w == L'^') ? -context.P1(0) : context.P1(0));
 ENDHANDLER
 
 HANDLER(sc) /* SC - Save Cursor */
@@ -220,7 +217,7 @@ wbkgrndset(win, &c);
 ENDHANDLER
 
 HANDLER(tbc) /* TBC - Tabulation Clear */
-switch (P0(0))
+switch (context.P0(0))
 {
 case 0:
     n->term->TabClear(x);
@@ -234,13 +231,13 @@ ENDHANDLER
 
 HANDLER(cub) /* CUB - Cursor Backward */
 s->xenl = false;
-wmove(win, py, MAX(x - P1(0), 0));
+wmove(win, py, MAX(x - context.P1(0), 0));
 ENDHANDLER
 
 HANDLER(el) /* EL - Erase in Line */
 cchar_t b;
 setcchar(&b, L" ", A_NORMAL, mtm_alloc_pair(s->fg, s->bg), NULL);
-switch (P0(0))
+switch (context.P0(0))
 {
 case 0:
     wclrtoeol(win);
@@ -259,7 +256,7 @@ ENDHANDLER
 
 HANDLER(ed) /* ED - Erase in Display */
 int o = 1;
-switch (P0(0))
+switch (context.P0(0))
 {
 case 0:
     wclrtobot(win);
@@ -287,14 +284,14 @@ ENDHANDLER
 HANDLER(ech) /* ECH - Erase Character */
 cchar_t c;
 setcchar(&c, L" ", A_NORMAL, mtm_alloc_pair(s->fg, s->bg), NULL);
-for (int i = 0; i < P1(0); i++)
+for (int i = 0; i < context.P1(0); i++)
     mvwadd_wchnstr(win, py, x + i, &c, 1);
 wmove(win, py, px);
 ENDHANDLER
 
 HANDLER(dsr) /* DSR - Device Status Report */
 char buf[100] = {0};
-if (P0(0) == 6)
+if (context.P0(0) == 6)
     snprintf(buf, sizeof(buf) - 1, "\033[%d;%dR",
              (n->term->decom ? y - top : y) + 1, x + 1);
 else
@@ -305,7 +302,7 @@ ENDHANDLER
 HANDLER(idl) /* IL or DL - Insert/Delete Line */
 /* we don't use insdelln here because it inserts above and not below,
  * and has a few other edge cases... */
-int otop = 0, obot = 0, p1 = MIN(P1(0), (my - 1) - y);
+int otop = 0, obot = 0, p1 = MIN(context.P1(0), (my - 1) - y);
 wgetscrreg(win, &otop, &obot);
 wsetscrreg(win, py, obot);
 wscrl(win, context.w == L'L' ? -p1 : p1);
@@ -314,12 +311,12 @@ wmove(win, py, 0);
 ENDHANDLER
 
 HANDLER(csr) /* CSR - Change Scrolling Region */
-if (wsetscrreg(win, tos + P1(0) - 1, tos + PD(1, my) - 1) == OK)
+if (wsetscrreg(win, tos + context.P1(0) - 1, tos + context.PD(1, my) - 1) == OK)
     CALL(cup);
 ENDHANDLER
 
 HANDLER(decreqtparm) /* DECREQTPARM - Request Device Parameters */
-n->term->safewrite(P0(0) ? "\033[3;1;2;120;1;0x" : "\033[2;1;2;120;128;1;0x");
+n->term->safewrite(context.P0(0) ? "\033[3;1;2;120;1;0x" : "\033[2;1;2;120;128;1;0x");
 ENDHANDLER
 
 HANDLER(sgr0) /* Reset SGR to default */
@@ -344,7 +341,7 @@ ENDHANDLER
 HANDLER(mode) /* Set or Reset Mode */
 bool set = (context.w == L'h');
 for (int i = 0; i < context.argc; i++)
-    switch (P0(i))
+    switch (context.P0(i))
     {
     case 1:
         n->term->pnm = set;
@@ -393,7 +390,7 @@ if (!context.argc)
 
 short bg = s->bg, fg = s->fg;
 for (int i = 0; i < context.argc; i++)
-    switch (P0(i))
+    switch (context.P0(i))
     {
     case 0:
         CALL(sgr0);
@@ -462,7 +459,7 @@ for (int i = 0; i < context.argc; i++)
         doc = do8;
         break;
     case 38:
-        fg = P0(i + 1) == 5 ? P0(i + 2) : s->fg;
+        fg = context.P0(i + 1) == 5 ? context.P0(i + 2) : s->fg;
         i += 2;
         doc = do256;
         break;
@@ -503,7 +500,7 @@ for (int i = 0; i < context.argc; i++)
         doc = do8;
         break;
     case 48:
-        bg = P0(i + 1) == 5 ? P0(i + 2) : s->bg;
+        bg = context.P0(i + 1) == 5 ? context.P0(i + 2) : s->bg;
         i += 2;
         doc = do256;
         break;
@@ -613,11 +610,11 @@ CALL((n->term->lnm ? nel : ind));
 ENDHANDLER
 
 HANDLER(cpl) /* CPL - Cursor Previous Line */
-wmove(win, MAX(tos + top, py - P1(0)), 0);
+wmove(win, MAX(tos + top, py - context.P1(0)), 0);
 ENDHANDLER
 
 HANDLER(cnl) /* CNL - Cursor Next Line */
-wmove(win, MIN(tos + bot - 1, py + P1(0)), 0);
+wmove(win, MIN(tos + bot - 1, py + context.P1(0)), 0);
 ENDHANDLER
 
 HANDLER(print) /* Print a character to the terminal */
@@ -651,7 +648,7 @@ n->term->gc = n->term->gs;
 } /* no ENDHANDLER because we don't want to reset repc */
 
 HANDLER(rep) /* REP - Repeat Character */
-for (int i = 0; i < P1(0) && n->term->repc; i++)
+for (int i = 0; i < context.P1(0) && n->term->repc; i++)
     print({context.p, n->term->repc, 0, 0, NULL, NULL});
 ENDHANDLER
 
