@@ -11,37 +11,11 @@
 #include <unistd.h>
 #include <signal.h>
 
-/*** TERMINAL EMULATION HANDLERS
- * These functions implement the various terminal commands activated by
- * escape sequences and printing to the terminal. Large amounts of boilerplate
- * code is shared among all these functions, and is factored out into the
- * macros below:
- *      PD(n, d)       - Parameter n, with default d.
- *      context.P0(n)          - Parameter n, default 0.
- *      context.P1(n)          - Parameter n, default 1.
- *      CALL(h)        - Call handler h with no arguments.
- *      SENDN(n, s, c) - Write string c bytes of s to n.
- *      term->safewrite( s)     - Write string s to node n's host.
- *      (END)HANDLER   - Declare/end a handler function
- * The funny names for handlers are from their ANSI/ECMA/DEC mnemonics.
- */
-
-#define CALL(x) (x)({term, 0, 0, 0, NULL, NULL})
-
-// #define COMMONVARS                                                             \
-//     auto term = (CursesTerm *)context.p;                                               \
-//     auto s = term->s;                                                       \
-//     WINDOW *win = s->win;                                                      \
-//     int py, px, y, x, my, mx, top, bot, tos;                                   \
-//     std::tie(py, px, y, x, my, mx, top, bot, tos) = context.get();
-
-// #define static void name(VtContext context){                                                          \
-//     static void name(VtContext context)                                        \
-//     {                                                                          \
-//         COMMONVARS
-// #define context.end(); }                                                             \
-//     term->repc = 0;                                                         \
-//     } /* control sequences aren't repeated */
+//  *      CALL(h, term)        - Call handler h with no arguments.
+inline void CALL(VTCALLBACK x, CursesTerm *term)
+{
+    x({term, 0, 0, 0, NULL, NULL});
+}
 
 static void bell(VtContext context)
 { /* Terminal bell. */
@@ -234,10 +208,10 @@ static void tab(VtContext context)
             ht({term, 0, 0, 0, nullptr, nullptr});
             break;
         case L'\t':
-            CALL(ht);
+            CALL(ht, term);
             break;
         case L'Z':
-            CALL(cbt);
+            CALL(cbt, term);
             break;
         }
     context.end();
@@ -290,7 +264,7 @@ static void rc(VtContext context)
     auto term = context.term();
     if (context.iw == L'#')
     {
-        CALL(decaln);
+        CALL(decaln, term);
         return;
     }
     auto s = term->s;
@@ -462,7 +436,7 @@ static void csr(VtContext context)
     std::tie(py, px, y, x, my, mx, top, bot, tos) = context.get();
     if (wsetscrreg(win, tos + context.P1(0) - 1, tos + context.PD(1, my) - 1) ==
         OK)
-        CALL(cup);
+        CALL(cup, term);
     context.end();
 }
 
@@ -497,17 +471,17 @@ static void cls(VtContext context)
     auto term = context.term();
     auto s = term->s;
     auto win = s->win;
-    CALL(cup);
+    CALL(cup, term);
     wclrtobot(win);
-    CALL(cup);
+    CALL(cup, term);
     context.end();
 }
 
 static void ris(VtContext context)
 { /* RIS - Reset to Initial State */
     auto term = context.term();
-    CALL(cls);
-    CALL(sgr0);
+    CALL(cls, term);
+    CALL(sgr0, term);
     term->reset();
     context.end();
 }
@@ -525,14 +499,14 @@ static void mode(VtContext context)
             term->pnm = set;
             break;
         case 3:
-            CALL(cls);
+            CALL(cls, term);
             break;
         case 4:
             s->insert = set;
             break;
         case 6:
             term->decom = set;
-            CALL(cup);
+            CALL(cup, term);
             break;
         case 7:
             term->am = set;
@@ -547,15 +521,15 @@ static void mode(VtContext context)
             s->vis = set ? 1 : 2;
             break;
         case 1048:
-            CALL((set ? sc : rc));
+            CALL((set ? sc : rc), term);
             break;
         case 1049:
-            CALL((set ? sc : rc)); /* fall-through */
+            CALL((set ? sc : rc), term); /* fall-through */
         case 47:
         case 1047:
             if (term->alternate_screen_buffer_mode(set))
             {
-                CALL(cls);
+                CALL(cls, term);
             }
             break;
         }
@@ -571,14 +545,14 @@ static void sgr(VtContext context)
     bool doc = false, do8 = COLORS >= 8, do16 = COLORS >= 16,
          do256 = COLORS >= 256;
     if (!context.argc)
-        CALL(sgr0);
+        CALL(sgr0, term);
 
     short bg = s->bg, fg = s->fg;
     for (int i = 0; i < context.argc; i++)
         switch (context.P0(i))
         {
         case 0:
-            CALL(sgr0);
+            CALL(sgr0, term);
             break;
         case 1:
             wattron(win, A_BOLD);
@@ -806,8 +780,8 @@ static void nel(VtContext context)
     auto term = context.term();
     auto s = term->s;
     auto win = s->win;
-    CALL(cr);
-    CALL(ind);
+    CALL(cr, term);
+    CALL(ind, term);
     context.end();
 }
 
@@ -816,7 +790,7 @@ static void pnl(VtContext context)
     auto term = context.term();
     auto s = term->s;
     auto win = s->win;
-    CALL((term->lnm ? nel : ind));
+    CALL((term->lnm ? nel : ind), term);
     context.end();
 }
 
@@ -856,13 +830,13 @@ static void print(VtContext context)
         return;
 
     if (s->insert)
-        CALL(ich);
+        CALL(ich, term);
 
     if (s->xenl)
     {
         s->xenl = false;
         if (term->am)
-            CALL(nel);
+            CALL(nel, term);
         getyx(win, y, x);
         y -= tos;
     }

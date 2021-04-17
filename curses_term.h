@@ -47,7 +47,10 @@ public:
     bool TryGetForwardTab(int x, int *out);
     void TabClear(int x);
     void TabClearAll();
+
+    // SENDN(n, s, c) - Write string c bytes of s to n.
     void safewrite(const char *b, size_t n); /* Write, checking for errors. */
+    // safewrite( s)     - Write string s to node n's host.
     void safewrite(const char *s);
 };
 

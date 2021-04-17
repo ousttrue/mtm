@@ -4,7 +4,8 @@
 #include "scrn.h"
 #include <curses.h>
 
-void VtContext::end()
+// (END)HANDLER   - Declare/end a handler function
+ void VtContext::end()
 {
     auto term = (CursesTerm *)this->p;
     term->repc = 0;
