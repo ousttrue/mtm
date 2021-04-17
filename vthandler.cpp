@@ -37,45 +37,24 @@
  * The funny names for handlers are from their ANSI/ECMA/DEC mnemonics.
  */
 
-#define PD(x, d) (argc < (x) || !argv ? (d) : argv[(x)])
+#define PD(x, d) (context.argc < (x) || !context.argv ? (d) : context.argv[(x)])
 #define P0(x) PD(x, 0)
 #define P1(x) (!P0(x) ? 1 : P0(x))
-#define CALL(x) (x)(n, 0, 0, 0, NULL, NULL)
+#define CALL(x) (x)({n, 0, 0, 0, NULL, NULL})
 
 #define COMMONVARS                                                             \
-    NODE *n = (NODE *)p;                                                       \
-    auto s = n->term->s;                                                         \
+    NODE *n = (NODE *)context.p;                                               \
+    auto s = n->term->s;                                                       \
     WINDOW *win = s->win;                                                      \
-    int py, px, y, x, my, mx, top = 0, bot = 0, tos = s->tos;                  \
-    (void)p;                                                                   \
-    (void)w;                                                                   \
-    (void)iw;                                                                  \
-    (void)argc;                                                                \
-    (void)argv;                                                                \
-    (void)win;                                                                 \
-    (void)y;                                                                   \
-    (void)x;                                                                   \
-    (void)my;                                                                  \
-    (void)mx;                                                                  \
-    (void)osc;                                                                 \
-    (void)tos;                                                                 \
-    getyx(win, py, px);                                                        \
-    y = py - s->tos;                                                           \
-    x = px;                                                                    \
-    getmaxyx(win, my, mx);                                                     \
-    my -= s->tos;                                                              \
-    wgetscrreg(win, &top, &bot);                                               \
-    bot++;                                                                     \
-    bot -= s->tos;                                                             \
-    top = top <= tos ? 0 : top - tos;
+    int py, px, y, x, my, mx, top, bot, tos;                                   \
+    std::tie(py, px, y, x, my, mx, top, bot, tos) = context.get();
 
 #define HANDLER(name)                                                          \
-    static void name(void *p, wchar_t w, wchar_t iw, int argc, int *argv,      \
-                     const wchar_t *osc)                                       \
+    static void name(VtContext context)                                        \
     {                                                                          \
         COMMONVARS
 #define ENDHANDLER                                                             \
-    n->term->repc = 0;                                                           \
+    n->term->repc = 0;                                                         \
     } /* control sequences aren't repeated */
 
 HANDLER(bell) /* Terminal bell. */
@@ -83,11 +62,11 @@ beep();
 ENDHANDLER
 
 HANDLER(numkp) /* Application/Numeric Keypad Mode */
-n->term->pnm = (w == L'=');
+n->term->pnm = (context.w == L'=');
 ENDHANDLER
 
 HANDLER(vis) /* Cursor visibility */
-s->vis = iw == L'6' ? 0 : 1;
+s->vis = context.iw == L'6' ? 0 : 1;
 ENDHANDLER
 
 HANDLER(cup) /* CUP - Cursor Position */
@@ -134,9 +113,9 @@ wsetscrreg(win, otop, obot);
 ENDHANDLER
 
 HANDLER(decid) /* DECID - Send Terminal Identification */
-if (w == L'c')
-    n->term->safewrite(iw == L'>' ? "\033[>1;10;0c" : "\033[?1;2c");
-else if (w == L'Z')
+if (context.w == L'c')
+    n->term->safewrite(context.iw == L'>' ? "\033[>1;10;0c" : "\033[?1;2c");
+else if (context.w == L'Z')
     n->term->safewrite("\033[?6c");
 ENDHANDLER
 
@@ -176,7 +155,7 @@ ENDHANDLER
 
 HANDLER(tab) /* Tab forwards or backwards */
 for (int i = 0; i < P1(0); i++)
-    switch (w)
+    switch (context.w)
     {
     case L'I':
         CALL(ht);
@@ -201,7 +180,7 @@ wmove(win, py, px);
 ENDHANDLER
 
 HANDLER(su) /* SU - Scroll Up/Down */
-wscrl(win, (w == L'T' || w == L'^') ? -P1(0) : P1(0));
+wscrl(win, (context.w == L'T' || context.w == L'^') ? -P1(0) : P1(0));
 ENDHANDLER
 
 HANDLER(sc) /* SC - Save Cursor */
@@ -217,7 +196,7 @@ n->term->sgs = n->term->gs; /* save character sets        */
 ENDHANDLER
 
 HANDLER(rc) /* RC - Restore Cursor */
-if (iw == L'#')
+if (context.iw == L'#')
 {
     CALL(decaln);
     return;
@@ -299,7 +278,7 @@ case 1:
         wclrtoeol(win);
     }
     wmove(win, py, x);
-    el(p, w, iw, 1, &o, NULL);
+    el({context.p, context.w, context.iw, 1, &o, NULL});
     break;
 }
 wmove(win, py, px);
@@ -329,7 +308,7 @@ HANDLER(idl) /* IL or DL - Insert/Delete Line */
 int otop = 0, obot = 0, p1 = MIN(P1(0), (my - 1) - y);
 wgetscrreg(win, &otop, &obot);
 wsetscrreg(win, py, obot);
-wscrl(win, w == L'L' ? -p1 : p1);
+wscrl(win, context.w == L'L' ? -p1 : p1);
 wsetscrreg(win, otop, obot);
 wmove(win, py, 0);
 ENDHANDLER
@@ -363,8 +342,8 @@ n->term->reset();
 ENDHANDLER
 
 HANDLER(mode) /* Set or Reset Mode */
-bool set = (w == L'h');
-for (int i = 0; i < argc; i++)
+bool set = (context.w == L'h');
+for (int i = 0; i < context.argc; i++)
     switch (P0(i))
     {
     case 1:
@@ -409,11 +388,11 @@ ENDHANDLER
 
 HANDLER(sgr) /* SGR - Select Graphic Rendition */
 bool doc = false, do8 = COLORS >= 8, do16 = COLORS >= 16, do256 = COLORS >= 256;
-if (!argc)
+if (!context.argc)
     CALL(sgr0);
 
 short bg = s->bg, fg = s->fg;
-for (int i = 0; i < argc; i++)
+for (int i = 0; i < context.argc; i++)
     switch (P0(i))
     {
     case 0:
@@ -642,7 +621,7 @@ wmove(win, MIN(tos + bot - 1, py + P1(0)), 0);
 ENDHANDLER
 
 HANDLER(print) /* Print a character to the terminal */
-if (wcwidth(w) < 0)
+if (wcwidth(context.w) < 0)
     return;
 
 if (s->insert)
@@ -657,28 +636,28 @@ if (s->xenl)
     y -= tos;
 }
 
-if (w < MAXMAP && n->term->gc[w])
-    w = n->term->gc[w];
-n->term->repc = w;
+if (context.w < MAXMAP && n->term->gc[context.w])
+    context.w = n->term->gc[context.w];
+n->term->repc = context.w;
 
-if (x == mx - wcwidth(w))
+if (x == mx - wcwidth(context.w))
 {
     s->xenl = true;
-    wins_nwstr(win, &w, 1);
+    wins_nwstr(win, &context.w, 1);
 }
 else
-    waddnwstr(win, &w, 1);
+    waddnwstr(win, &context.w, 1);
 n->term->gc = n->term->gs;
 } /* no ENDHANDLER because we don't want to reset repc */
 
 HANDLER(rep) /* REP - Repeat Character */
 for (int i = 0; i < P1(0) && n->term->repc; i++)
-    print(p, n->term->repc, 0, 0, NULL, NULL);
+    print({context.p, n->term->repc, 0, 0, NULL, NULL});
 ENDHANDLER
 
 HANDLER(scs) /* Select Character Set */
 wchar_t **t = NULL;
-switch (iw)
+switch (context.iw)
 {
 case L'(':
     t = &n->term->g0;
@@ -696,7 +675,7 @@ default:
     return;
     break;
 }
-switch (w)
+switch (context.w)
 {
 case L'A':
     *t = CSET_UK;
@@ -717,20 +696,20 @@ case L'2':
 ENDHANDLER
 
 HANDLER(so) /* Switch Out/In Character Set */
-if (w == 0x0e)
+if (context.w == 0x0e)
     n->term->gs = n->term->gc = n->term->g1; /* locking shift */
-else if (w == 0xf)
+else if (context.w == 0xf)
     n->term->gs = n->term->gc = n->term->g0; /* locking shift */
-else if (w == L'n')
+else if (context.w == L'n')
     n->term->gs = n->term->gc = n->term->g2; /* locking shift */
-else if (w == L'o')
+else if (context.w == L'o')
     n->term->gs = n->term->gc = n->term->g3; /* locking shift */
-else if (w == L'N')
+else if (context.w == L'N')
 {
     n->term->gs = n->term->gc; /* non-locking shift */
     n->term->gc = n->term->g2;
 }
-else if (w == L'O')
+else if (context.w == L'O')
 {
     n->term->gs = n->term->gc; /* non-locking shift */
     n->term->gc = n->term->g3;
@@ -807,5 +786,5 @@ static void setupevents(const std::unique_ptr<VtParser> &vp)
 void vp_initialize(const std::unique_ptr<VtParser> &vp, void *p)
 {
     setupevents(vp);
-    ris(p, L'c', 0, 0, NULL, NULL);
+    ris({p, L'c', 0, 0, NULL, NULL});
 }

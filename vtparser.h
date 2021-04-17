@@ -25,10 +25,11 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #pragma once
+#include "curses_term.h"
 #include <wchar.h>
+#include "vtcontext.h"
 
-using VTCALLBACK = void (*)(void *p, wchar_t w, wchar_t iw, int argc, int *argv,
-                            const wchar_t *osc);
+using VTCALLBACK = void (*)(VtContext context);
 
 /**** DATA TYPES */
 #define MAXPARAM 16

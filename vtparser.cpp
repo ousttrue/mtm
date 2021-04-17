@@ -270,27 +270,27 @@ void VtParser::param(VtParser *v, void *p, wchar_t w)
 void VtParser::docontrol(VtParser *v, void *p, wchar_t w)
 {
     if (w < MAXCALLBACK && v->m_controls[w])
-        v->m_controls[w](p, w, v->inter, 0, NULL, (const wchar_t *)v->oscbuf);
+        v->m_controls[w]({p, w, v->inter, 0, NULL, (const wchar_t *)v->oscbuf});
 }
 void VtParser::doescape(VtParser *v, void *p, wchar_t w)
 {
     if (w < MAXCALLBACK && v->m_escapes[w])
-        v->m_escapes[w](p, w, v->inter, v->inter > 0, &v->inter,
-                        (const wchar_t *)v->oscbuf);
+        v->m_escapes[w]({p, w, v->inter, v->inter > 0, &v->inter,
+                         (const wchar_t *)v->oscbuf});
 }
 void VtParser::docsi(VtParser *v, void *p, wchar_t w)
 {
     if (w < MAXCALLBACK && v->m_csis[w])
-        v->m_csis[w](p, w, v->inter, v->narg, v->args,
-                     (const wchar_t *)v->oscbuf);
+        v->m_csis[w]({p, w, v->inter, v->narg, v->args,
+                     (const wchar_t *)v->oscbuf});
 }
 void VtParser::doprint(VtParser *v, void *p, wchar_t w)
 {
     if (v->m_print)
-        v->m_print(p, w, v->inter, 0, NULL, (const wchar_t *)v->oscbuf);
+        v->m_print({p, w, v->inter, 0, NULL, (const wchar_t *)v->oscbuf});
 }
 void VtParser::doosc(VtParser *v, void *p, wchar_t w)
 {
     if (v->m_osc)
-        v->m_osc(p, w, v->inter, v->nosc, NULL, (const wchar_t *)v->oscbuf);
+        v->m_osc({p, w, v->inter, v->nosc, NULL, (const wchar_t *)v->oscbuf});
 }
