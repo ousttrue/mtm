@@ -13,7 +13,7 @@
 #include "vtparser.h"
 #include "config.h"
 
-VTScreen::VTScreen(const Rect &rect, void *p) : m_rect(rect)
+CursesTerm::CursesTerm(const Rect &rect, void *p) : m_rect(rect)
 {
     for (int i = 0; i < m_rect.w; i++)
     {
@@ -45,7 +45,7 @@ VTScreen::VTScreen(const Rect &rect, void *p) : m_rect(rect)
     this->vp = std::make_unique<VtParser>(p);
 }
 
-VTScreen::~VTScreen()
+CursesTerm::~CursesTerm()
 {
     if (this->pri->win)
         delwin(this->pri->win);
@@ -57,7 +57,7 @@ VTScreen::~VTScreen()
     }
 }
 
-void VTScreen::reshapeview(int d, int ow,
+void CursesTerm::reshapeview(int d, int ow,
                            const Rect &rect) /* Reshape a view. */
 {
     m_rect = rect;
@@ -89,14 +89,14 @@ void VTScreen::reshapeview(int d, int ow,
     ioctl(this->pt, TIOCSWINSZ, &ws);
 }
 
-void VTScreen::draw(const Rect &rect)
+void CursesTerm::draw(const Rect &rect)
 {
     m_rect = rect;
     pnoutrefresh(this->s->win, this->s->off, 0, m_rect.y, m_rect.x,
                  m_rect.y + m_rect.h - 1, m_rect.x + m_rect.w - 1);
 }
 
-bool VTScreen::process()
+bool CursesTerm::process()
 {
     if (this->pt > 0 && selector::isSet(this->pt))
     {
@@ -115,19 +115,19 @@ bool VTScreen::process()
     return true;
 }
 
-bool VTScreen::handleUserInput()
+bool CursesTerm::handleUserInput()
 {
     wint_t w = 0;
     int r = wget_wch(this->s->win, &w);
     return handlechar(r, w);
 }
 
-void VTScreen::fixCursor()
+void CursesTerm::fixCursor()
 {
     this->s->fixcursor(m_rect.h);
 }
 
-void VTScreen::reset()
+void CursesTerm::reset()
 {
     this->gs = this->gc = this->g0 = CSET_US;
     this->g1 = CSET_GRAPH;
@@ -144,7 +144,7 @@ void VTScreen::reset()
         this->m_tabs[i] = (i % 8 == 0);
 }
 
-bool VTScreen::alternate_screen_buffer_mode(bool set)
+bool CursesTerm::alternate_screen_buffer_mode(bool set)
 {
     if (set && this->s != this->alt)
     {
@@ -192,13 +192,13 @@ int fork_setup(int *pt, const Rect &rect)
     return pid;
 }
 
-void VTScreen::HorizontalTabSet(int x)
+void CursesTerm::HorizontalTabSet(int x)
 {
     if (x < m_tabs.size() && x > 0)
         m_tabs[x] = true;
 }
 
-bool VTScreen::TryGetBackwardTab(int x, int *out)
+bool CursesTerm::TryGetBackwardTab(int x, int *out)
 {
     for (int i = x - 1; i < m_tabs.size() && i >= 0; i--)
         if (m_tabs[i])
@@ -210,7 +210,7 @@ bool VTScreen::TryGetBackwardTab(int x, int *out)
     return false;
 }
 
-bool VTScreen::TryGetForwardTab(int x, int *out)
+bool CursesTerm::TryGetForwardTab(int x, int *out)
 {
     for (int i = x + 1; i < m_rect.w && i < m_tabs.size(); i++)
         if (m_tabs[i])
@@ -222,12 +222,12 @@ bool VTScreen::TryGetForwardTab(int x, int *out)
     return false;
 }
 
-void VTScreen::TabClear(int x)
+void CursesTerm::TabClear(int x)
 {
     m_tabs[x < m_tabs.size() ? x : 0] = false;
 }
 
-void VTScreen::TabClearAll()
+void CursesTerm::TabClearAll()
 {
     for (int i = 0; i < m_tabs.size(); ++i)
     {
@@ -235,7 +235,7 @@ void VTScreen::TabClearAll()
     }
 }
 
-void VTScreen::safewrite(const char *b,
+void CursesTerm::safewrite(const char *b,
                          size_t n) /* Write, checking for errors. */
 {
     size_t w = 0;
@@ -250,7 +250,7 @@ void VTScreen::safewrite(const char *b,
     }
 }
 
-void VTScreen::safewrite(const char *s)
+void CursesTerm::safewrite(const char *s)
 {
     safewrite(s, strlen(s));
 }

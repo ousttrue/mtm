@@ -23,7 +23,7 @@
  *      P1(n)          - Parameter n, default 1.
  *      CALL(h)        - Call handler h with no arguments.
  *      SENDN(n, s, c) - Write string c bytes of s to n.
- *      n->vt->safewrite( s)     - Write string s to node n's host.
+ *      n->term->safewrite( s)     - Write string s to node n's host.
  *      (END)HANDLER   - Declare/end a handler function
  *      COMMONVARS     - All of the common variables for a handler.
  *                       x, y     - cursor position
@@ -44,7 +44,7 @@
 
 #define COMMONVARS                                                             \
     NODE *n = (NODE *)p;                                                       \
-    auto s = n->vt->s;                                                         \
+    auto s = n->term->s;                                                         \
     WINDOW *win = s->win;                                                      \
     int py, px, y, x, my, mx, top = 0, bot = 0, tos = s->tos;                  \
     (void)p;                                                                   \
@@ -75,7 +75,7 @@
     {                                                                          \
         COMMONVARS
 #define ENDHANDLER                                                             \
-    n->vt->repc = 0;                                                           \
+    n->term->repc = 0;                                                           \
     } /* control sequences aren't repeated */
 
 HANDLER(bell) /* Terminal bell. */
@@ -83,7 +83,7 @@ beep();
 ENDHANDLER
 
 HANDLER(numkp) /* Application/Numeric Keypad Mode */
-n->vt->pnm = (w == L'=');
+n->term->pnm = (w == L'=');
 ENDHANDLER
 
 HANDLER(vis) /* Cursor visibility */
@@ -92,7 +92,7 @@ ENDHANDLER
 
 HANDLER(cup) /* CUP - Cursor Position */
 s->xenl = false;
-wmove(win, tos + (n->vt->decom ? top : 0) + P1(0) - 1, P1(1) - 1);
+wmove(win, tos + (n->term->decom ? top : 0) + P1(0) - 1, P1(1) - 1);
 ENDHANDLER
 
 HANDLER(dch) /* DCH - Delete Character */
@@ -118,11 +118,11 @@ wmove(win, py, MIN(x + P1(0), mx - 1));
 ENDHANDLER
 
 HANDLER(ack) /* ACK - Acknowledge Enquiry */
-n->vt->safewrite("\006");
+n->term->safewrite("\006");
 ENDHANDLER
 
 HANDLER(hts) /* HTS - Horizontal Tab Set */
-n->vt->HorizontalTabSet(x);
+n->term->HorizontalTabSet(x);
 ENDHANDLER
 
 HANDLER(ri) /* RI - Reverse Index */
@@ -135,9 +135,9 @@ ENDHANDLER
 
 HANDLER(decid) /* DECID - Send Terminal Identification */
 if (w == L'c')
-    n->vt->safewrite(iw == L'>' ? "\033[>1;10;0c" : "\033[?1;2c");
+    n->term->safewrite(iw == L'>' ? "\033[>1;10;0c" : "\033[?1;2c");
 else if (w == L'Z')
-    n->vt->safewrite("\033[?6c");
+    n->term->safewrite("\033[?6c");
 ENDHANDLER
 
 HANDLER(hpa) /* HPA - Cursor Horizontal Absolute */
@@ -158,7 +158,7 @@ ENDHANDLER
 
 HANDLER(cbt) /* CBT - Cursor Backwards Tab */
 int i;
-if (n->vt->TryGetBackwardTab(x, &i))
+if (n->term->TryGetBackwardTab(x, &i))
 {
     wmove(win, py, i);
 }
@@ -167,7 +167,7 @@ ENDHANDLER
 
 HANDLER(ht) /* HT - Horizontal Tab */
 int i;
-if (n->vt->TryGetForwardTab(x, &i))
+if (n->term->TryGetForwardTab(x, &i))
 {
     wmove(win, py, i);
 }
@@ -212,8 +212,8 @@ s->sfg = s->fg;     /* save foreground color      */
 s->sbg = s->bg;     /* save background color      */
 s->oxenl = s->xenl; /* save xenl state            */
 s->saved = true;    /* save data is valid         */
-n->vt->sgc = n->vt->gc;
-n->vt->sgs = n->vt->gs; /* save character sets        */
+n->term->sgc = n->term->gc;
+n->term->sgs = n->term->gs; /* save character sets        */
 ENDHANDLER
 
 HANDLER(rc) /* RC - Restore Cursor */
@@ -229,8 +229,8 @@ s->setAttr();
 s->fg = s->sfg;     /* get foreground color      */
 s->bg = s->sbg;     /* get background color      */
 s->xenl = s->oxenl; /* get xenl state            */
-n->vt->gc = n->vt->sgc;
-n->vt->gs = n->vt->sgs; /* save character sets        */
+n->term->gc = n->term->sgc;
+n->term->gs = n->term->sgs; /* save character sets        */
 
 /* restore colors */
 int cp = mtm_alloc_pair(s->fg, s->bg);
@@ -244,11 +244,11 @@ HANDLER(tbc) /* TBC - Tabulation Clear */
 switch (P0(0))
 {
 case 0:
-    n->vt->TabClear(x);
+    n->term->TabClear(x);
     break;
 
 case 3:
-    n->vt->TabClearAll();
+    n->term->TabClearAll();
     break;
 }
 ENDHANDLER
@@ -317,10 +317,10 @@ HANDLER(dsr) /* DSR - Device Status Report */
 char buf[100] = {0};
 if (P0(0) == 6)
     snprintf(buf, sizeof(buf) - 1, "\033[%d;%dR",
-             (n->vt->decom ? y - top : y) + 1, x + 1);
+             (n->term->decom ? y - top : y) + 1, x + 1);
 else
     snprintf(buf, sizeof(buf) - 1, "\033[0n");
-n->vt->safewrite(buf);
+n->term->safewrite(buf);
 ENDHANDLER
 
 HANDLER(idl) /* IL or DL - Insert/Delete Line */
@@ -340,7 +340,7 @@ if (wsetscrreg(win, tos + P1(0) - 1, tos + PD(1, my) - 1) == OK)
 ENDHANDLER
 
 HANDLER(decreqtparm) /* DECREQTPARM - Request Device Parameters */
-n->vt->safewrite(P0(0) ? "\033[3;1;2;120;1;0x" : "\033[2;1;2;120;128;1;0x");
+n->term->safewrite(P0(0) ? "\033[3;1;2;120;1;0x" : "\033[2;1;2;120;128;1;0x");
 ENDHANDLER
 
 HANDLER(sgr0) /* Reset SGR to default */
@@ -359,7 +359,7 @@ ENDHANDLER
 HANDLER(ris) /* RIS - Reset to Initial State */
 CALL(cls);
 CALL(sgr0);
-n->vt->reset();
+n->term->reset();
 ENDHANDLER
 
 HANDLER(mode) /* Set or Reset Mode */
@@ -368,7 +368,7 @@ for (int i = 0; i < argc; i++)
     switch (P0(i))
     {
     case 1:
-        n->vt->pnm = set;
+        n->term->pnm = set;
         break;
     case 3:
         CALL(cls);
@@ -377,14 +377,14 @@ for (int i = 0; i < argc; i++)
         s->insert = set;
         break;
     case 6:
-        n->vt->decom = set;
+        n->term->decom = set;
         CALL(cup);
         break;
     case 7:
-        n->vt->am = set;
+        n->term->am = set;
         break;
     case 20:
-        n->vt->lnm = set;
+        n->term->lnm = set;
         break;
     case 25:
         s->vis = set ? 1 : 0;
@@ -399,7 +399,7 @@ for (int i = 0; i < argc; i++)
         CALL((set ? sc : rc)); /* fall-through */
     case 47:
     case 1047:
-        if (n->vt->alternate_screen_buffer_mode(set))
+        if (n->term->alternate_screen_buffer_mode(set))
         {
             CALL(cls);
         }
@@ -630,7 +630,7 @@ CALL(ind);
 ENDHANDLER
 
 HANDLER(pnl) /* NL - Newline */
-CALL((n->vt->lnm ? nel : ind));
+CALL((n->term->lnm ? nel : ind));
 ENDHANDLER
 
 HANDLER(cpl) /* CPL - Cursor Previous Line */
@@ -651,15 +651,15 @@ if (s->insert)
 if (s->xenl)
 {
     s->xenl = false;
-    if (n->vt->am)
+    if (n->term->am)
         CALL(nel);
     getyx(win, y, x);
     y -= tos;
 }
 
-if (w < MAXMAP && n->vt->gc[w])
-    w = n->vt->gc[w];
-n->vt->repc = w;
+if (w < MAXMAP && n->term->gc[w])
+    w = n->term->gc[w];
+n->term->repc = w;
 
 if (x == mx - wcwidth(w))
 {
@@ -668,12 +668,12 @@ if (x == mx - wcwidth(w))
 }
 else
     waddnwstr(win, &w, 1);
-n->vt->gc = n->vt->gs;
+n->term->gc = n->term->gs;
 } /* no ENDHANDLER because we don't want to reset repc */
 
 HANDLER(rep) /* REP - Repeat Character */
-for (int i = 0; i < P1(0) && n->vt->repc; i++)
-    print(p, n->vt->repc, 0, 0, NULL, NULL);
+for (int i = 0; i < P1(0) && n->term->repc; i++)
+    print(p, n->term->repc, 0, 0, NULL, NULL);
 ENDHANDLER
 
 HANDLER(scs) /* Select Character Set */
@@ -681,16 +681,16 @@ wchar_t **t = NULL;
 switch (iw)
 {
 case L'(':
-    t = &n->vt->g0;
+    t = &n->term->g0;
     break;
 case L')':
-    t = &n->vt->g1;
+    t = &n->term->g1;
     break;
 case L'*':
-    t = &n->vt->g2;
+    t = &n->term->g2;
     break;
 case L'+':
-    t = &n->vt->g3;
+    t = &n->term->g3;
     break;
 default:
     return;
@@ -718,22 +718,22 @@ ENDHANDLER
 
 HANDLER(so) /* Switch Out/In Character Set */
 if (w == 0x0e)
-    n->vt->gs = n->vt->gc = n->vt->g1; /* locking shift */
+    n->term->gs = n->term->gc = n->term->g1; /* locking shift */
 else if (w == 0xf)
-    n->vt->gs = n->vt->gc = n->vt->g0; /* locking shift */
+    n->term->gs = n->term->gc = n->term->g0; /* locking shift */
 else if (w == L'n')
-    n->vt->gs = n->vt->gc = n->vt->g2; /* locking shift */
+    n->term->gs = n->term->gc = n->term->g2; /* locking shift */
 else if (w == L'o')
-    n->vt->gs = n->vt->gc = n->vt->g3; /* locking shift */
+    n->term->gs = n->term->gc = n->term->g3; /* locking shift */
 else if (w == L'N')
 {
-    n->vt->gs = n->vt->gc; /* non-locking shift */
-    n->vt->gc = n->vt->g2;
+    n->term->gs = n->term->gc; /* non-locking shift */
+    n->term->gc = n->term->g2;
 }
 else if (w == L'O')
 {
-    n->vt->gs = n->vt->gc; /* non-locking shift */
-    n->vt->gc = n->vt->g3;
+    n->term->gs = n->term->gc; /* non-locking shift */
+    n->term->gc = n->term->g3;
 }
 ENDHANDLER
 
@@ -807,8 +807,8 @@ static void setupevents(const std::unique_ptr<VtParser> &vp)
 void sendarrow(const std::shared_ptr<NODE> &n, const char *k)
 {
     char buf[100] = {0};
-    snprintf(buf, sizeof(buf) - 1, "\033%s%s", n->vt->pnm ? "O" : "[", k);
-    n->vt->safewrite(buf);
+    snprintf(buf, sizeof(buf) - 1, "\033%s%s", n->term->pnm ? "O" : "[", k);
+    n->term->safewrite(buf);
 }
 
 bool handlechar(int r, int k) /* Handle a single input character. */
@@ -819,8 +819,8 @@ bool handlechar(int r, int k) /* Handle a single input character. */
 #define KERR(i) (r == ERR && (i) == k)
 #define KEY(i) (r == OK && (i) == k)
 #define CODE(i) (r == KEY_CODE_YES && (i) == k)
-#define INSCR (n->vt->s->tos != n->vt->s->off)
-#define SB n->vt->s->scrollbottom()
+#define INSCR (n->term->s->tos != n->term->s->off)
+#define SB n->term->s->scrollbottom()
 #define DO(s, t, a)                                                            \
     if (s == cmd && (t))                                                       \
     {                                                                          \
@@ -832,37 +832,37 @@ bool handlechar(int r, int k) /* Handle a single input character. */
     DO(cmd, KERR(k), return false)
     DO(cmd, CODE(KEY_RESIZE), root->reshape(Rect(0, 0, LINES, COLS)); SB)
     DO(false, KEY(global::get_commandKey()), return cmd = true)
-    DO(false, KEY(0), n->vt->safewrite("\000", 1); SB)
-    DO(false, KEY(L'\n'), n->vt->safewrite("\n"); SB)
-    DO(false, KEY(L'\r'), n->vt->safewrite(n->vt->lnm ? "\r\n" : "\r"); SB)
-    DO(false, SCROLLUP && INSCR, n->vt->s->scrollback(n->m_rect.h))
-    DO(false, SCROLLDOWN && INSCR, n->vt->s->scrollforward(n->m_rect.h))
-    DO(false, RECENTER && INSCR, n->vt->s->scrollbottom())
-    DO(false, CODE(KEY_ENTER), n->vt->safewrite(n->vt->lnm ? "\r\n" : "\r"); SB)
+    DO(false, KEY(0), n->term->safewrite("\000", 1); SB)
+    DO(false, KEY(L'\n'), n->term->safewrite("\n"); SB)
+    DO(false, KEY(L'\r'), n->term->safewrite(n->term->lnm ? "\r\n" : "\r"); SB)
+    DO(false, SCROLLUP && INSCR, n->term->s->scrollback(n->m_rect.h))
+    DO(false, SCROLLDOWN && INSCR, n->term->s->scrollforward(n->m_rect.h))
+    DO(false, RECENTER && INSCR, n->term->s->scrollbottom())
+    DO(false, CODE(KEY_ENTER), n->term->safewrite(n->term->lnm ? "\r\n" : "\r"); SB)
     DO(false, CODE(KEY_UP), sendarrow(n, "A"); SB);
     DO(false, CODE(KEY_DOWN), sendarrow(n, "B"); SB);
     DO(false, CODE(KEY_RIGHT), sendarrow(n, "C"); SB);
     DO(false, CODE(KEY_LEFT), sendarrow(n, "D"); SB);
-    DO(false, CODE(KEY_HOME), n->vt->safewrite("\033[1~"); SB)
-    DO(false, CODE(KEY_END), n->vt->safewrite("\033[4~"); SB)
-    DO(false, CODE(KEY_PPAGE), n->vt->safewrite("\033[5~"); SB)
-    DO(false, CODE(KEY_NPAGE), n->vt->safewrite("\033[6~"); SB)
-    DO(false, CODE(KEY_BACKSPACE), n->vt->safewrite("\177"); SB)
-    DO(false, CODE(KEY_DC), n->vt->safewrite("\033[3~"); SB)
-    DO(false, CODE(KEY_IC), n->vt->safewrite("\033[2~"); SB)
-    DO(false, CODE(KEY_BTAB), n->vt->safewrite("\033[Z"); SB)
-    DO(false, CODE(KEY_F(1)), n->vt->safewrite("\033OP"); SB)
-    DO(false, CODE(KEY_F(2)), n->vt->safewrite("\033OQ"); SB)
-    DO(false, CODE(KEY_F(3)), n->vt->safewrite("\033OR"); SB)
-    DO(false, CODE(KEY_F(4)), n->vt->safewrite("\033OS"); SB)
-    DO(false, CODE(KEY_F(5)), n->vt->safewrite("\033[15~"); SB)
-    DO(false, CODE(KEY_F(6)), n->vt->safewrite("\033[17~"); SB)
-    DO(false, CODE(KEY_F(7)), n->vt->safewrite("\033[18~"); SB)
-    DO(false, CODE(KEY_F(8)), n->vt->safewrite("\033[19~"); SB)
-    DO(false, CODE(KEY_F(9)), n->vt->safewrite("\033[20~"); SB)
-    DO(false, CODE(KEY_F(10)), n->vt->safewrite("\033[21~"); SB)
-    DO(false, CODE(KEY_F(11)), n->vt->safewrite("\033[23~"); SB)
-    DO(false, CODE(KEY_F(12)), n->vt->safewrite("\033[24~"); SB)
+    DO(false, CODE(KEY_HOME), n->term->safewrite("\033[1~"); SB)
+    DO(false, CODE(KEY_END), n->term->safewrite("\033[4~"); SB)
+    DO(false, CODE(KEY_PPAGE), n->term->safewrite("\033[5~"); SB)
+    DO(false, CODE(KEY_NPAGE), n->term->safewrite("\033[6~"); SB)
+    DO(false, CODE(KEY_BACKSPACE), n->term->safewrite("\177"); SB)
+    DO(false, CODE(KEY_DC), n->term->safewrite("\033[3~"); SB)
+    DO(false, CODE(KEY_IC), n->term->safewrite("\033[2~"); SB)
+    DO(false, CODE(KEY_BTAB), n->term->safewrite("\033[Z"); SB)
+    DO(false, CODE(KEY_F(1)), n->term->safewrite("\033OP"); SB)
+    DO(false, CODE(KEY_F(2)), n->term->safewrite("\033OQ"); SB)
+    DO(false, CODE(KEY_F(3)), n->term->safewrite("\033OR"); SB)
+    DO(false, CODE(KEY_F(4)), n->term->safewrite("\033OS"); SB)
+    DO(false, CODE(KEY_F(5)), n->term->safewrite("\033[15~"); SB)
+    DO(false, CODE(KEY_F(6)), n->term->safewrite("\033[17~"); SB)
+    DO(false, CODE(KEY_F(7)), n->term->safewrite("\033[18~"); SB)
+    DO(false, CODE(KEY_F(8)), n->term->safewrite("\033[19~"); SB)
+    DO(false, CODE(KEY_F(9)), n->term->safewrite("\033[20~"); SB)
+    DO(false, CODE(KEY_F(10)), n->term->safewrite("\033[21~"); SB)
+    DO(false, CODE(KEY_F(11)), n->term->safewrite("\033[23~"); SB)
+    DO(false, CODE(KEY_F(12)), n->term->safewrite("\033[24~"); SB)
     DO(true, MOVE_UP, focus(root->findnode(n->m_rect.above())))
     DO(true, MOVE_DOWN, focus(root->findnode(n->m_rect.below())))
     DO(true, MOVE_LEFT, focus(root->findnode(n->m_rect.left())))
@@ -872,15 +872,15 @@ bool handlechar(int r, int k) /* Handle a single input character. */
     DO(true, VSPLIT, split(n, VERTICAL))
     DO(true, DELETE_NODE, deletenode(n))
     DO(true, REDRAW, touchwin(stdscr); root->draw(); redrawwin(stdscr))
-    DO(true, SCROLLUP, n->vt->s->scrollback(n->m_rect.h))
-    DO(true, SCROLLDOWN, n->vt->s->scrollforward(n->m_rect.h))
-    DO(true, RECENTER, n->vt->s->scrollbottom())
-    DO(true, KEY(global::get_commandKey()), n->vt->safewrite(cmdstr, 1));
+    DO(true, SCROLLUP, n->term->s->scrollback(n->m_rect.h))
+    DO(true, SCROLLDOWN, n->term->s->scrollforward(n->m_rect.h))
+    DO(true, RECENTER, n->term->s->scrollbottom())
+    DO(true, KEY(global::get_commandKey()), n->term->safewrite(cmdstr, 1));
     char c[MB_LEN_MAX + 1] = {0};
     if (wctomb(c, k) > 0)
     {
-        n->vt->s->scrollbottom();
-        n->vt->safewrite(c);
+        n->term->s->scrollbottom();
+        n->term->safewrite(c);
     }
     return cmd = false, true;
 }

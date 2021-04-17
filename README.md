@@ -7,7 +7,7 @@
 * shared_ptr を導入して NODE の管理を簡略化
 * WIP: select, NODE管理, view(curses), vtparser が疎結合になるように改造
 
-# 構造
+# 概要
 
 ```
 root(HORIZONTAL)
@@ -33,3 +33,17 @@ view   view
 |VTParser| update visual
 +--------+
 ```
+
+# データ構造
+
+## Node
+
+縦横のSplitterの木構造
+
+## CursesTerm
+
+SplitterのLeafにTerminalを実装
+
+## VtParser
+
+CussesTerm 上の pty からの出力を解釈する。

@@ -5,7 +5,7 @@
 
 struct SCRN;
 class VtParser;
-struct VTScreen
+struct CursesTerm
 {
     int pt = -1;
     Rect m_rect;
@@ -32,8 +32,8 @@ public:
     wchar_t *sgs = nullptr;
     std::unique_ptr<VtParser> vp;
 
-    VTScreen(const Rect &rect, void *p);
-    ~VTScreen();
+    CursesTerm(const Rect &rect, void *p);
+    ~CursesTerm();
     void reshapeview(int d, int ow, const Rect &rect);
     void draw(const Rect &rect);
     bool process();

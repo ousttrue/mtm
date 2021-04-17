@@ -10,7 +10,7 @@ enum Node
     VIEW
 };
 
-struct VTScreen;
+struct CursesTerm;
 
 struct NODE : std::enable_shared_from_this<NODE>
 {
@@ -30,7 +30,7 @@ public:
     std::shared_ptr<NODE> c1;
     std::shared_ptr<NODE> c2;
 
-    std::unique_ptr<VTScreen> vt;
+    std::unique_ptr<CursesTerm> term;
 
 public:
     NODE(Node t, const std::shared_ptr<NODE> &p, const Rect &rect);

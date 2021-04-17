@@ -25,7 +25,7 @@ NODE::~NODE()
 
 void NODE::reshape(const Rect &rect) /* Reshape a node. */
 {
-    if (m_rect == rect && this->vt)
+    if (m_rect == rect && this->term)
         return;
 
     int d = m_rect.h - rect.h;
@@ -37,8 +37,8 @@ void NODE::reshape(const Rect &rect) /* Reshape a node. */
         MAX(rect.w, 1),
     };
 
-    if (this->vt)
-        this->vt->reshapeview(d, ow, m_rect);
+    if (this->term)
+        this->term->reshapeview(d, ow, m_rect);
     else
         reshapechildren();
     this->draw();
@@ -64,8 +64,8 @@ void NODE::reshapechildren() /* Reshape all children of a view. */
 
 void NODE::draw() const /* Draw a node. */
 {
-    if (this->vt)
-        this->vt->draw(m_rect);
+    if (this->term)
+        this->term->draw(m_rect);
     else
         drawchildren();
 }
@@ -115,10 +115,10 @@ void focus(const std::shared_ptr<NODE> &n) /* Focus a node. */
 std::shared_ptr<NODE> newview(const Rect &rect) /* Open a new view. */
 {
     auto n = std::make_shared<NODE>(VIEW, nullptr, rect);
-    n->vt = std::make_unique<VTScreen>(rect, n.get());
+    n->term = std::make_unique<CursesTerm>(rect, n.get());
 
-    vp_initialize(n->vt->vp, n.get());
-    auto pid = fork_setup(&n->vt->pt, rect);
+    vp_initialize(n->term->vp, n.get());
+    auto pid = fork_setup(&n->term->pt, rect);
     if (pid < 0)
     {
         // error
@@ -132,7 +132,7 @@ std::shared_ptr<NODE> newview(const Rect &rect) /* Open a new view. */
     }
 
     // setup selector
-    selector::set(n->vt->pt);
+    selector::set(n->term->pt);
 
     return n;
 }
@@ -233,9 +233,9 @@ void NODE::processVT() /* Recursively check all ptty's for input. */
         this->c2->processVT();
     }
 
-    if (this->vt)
+    if (this->term)
     {
-        if (!vt->process())
+        if (!term->process())
         {
             deletenode(shared_from_this());
         }
