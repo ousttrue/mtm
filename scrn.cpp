@@ -73,3 +73,9 @@ bool SCRN::restore()
     wbkgrndset(this->win, &c);
     return true;
 }
+
+void SCRN::reset()
+{
+    auto s = this;
+    s->insert = s->oxenl = s->xenl =  false;
+}

@@ -235,9 +235,6 @@ static void sc(VtContext context)
     auto s = term->s;
     s->save();
 
-    // int py, px, y, x, my, mx, top, bot, tos;
-    // std::tie(py, px, y, x, my, mx, top, bot, tos) = context.get();
-
     term->sgc = term->gc;
     term->sgs = term->gs; /* save character sets        */
     context.end();

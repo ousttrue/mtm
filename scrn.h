@@ -35,4 +35,5 @@ public:
     void setAttr();
     void save();
     bool restore();
+    void reset();
 };

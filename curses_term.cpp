@@ -215,7 +215,9 @@ void CursesTerm::reset()
     this->g1 = CSET_GRAPH;
     this->g2 = CSET_US;
     this->g3 = CSET_GRAPH;
-    this->decom = s->insert = s->oxenl = s->xenl = this->lnm = false;
+    this->decom = false;
+    this->lnm = false;
+    this->s->reset();
     this->am = true;
     this->pnm = false;
     this->pri->vis = this->alt->vis = 1;
