@@ -2,11 +2,6 @@
 #include <memory>
 #include "rect.h"
 
-inline int CTL(int x)
-{
-    return ((x)&0x1f);
-}
-
 class NODE;
 namespace global
 {

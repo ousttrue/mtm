@@ -8,6 +8,11 @@
 #include <string>
 #include "pair.h"
 
+inline int CTL(int x)
+{
+    return ((x)&0x1f);
+}
+
 namespace global
 {
 std::string g_term;
@@ -42,7 +47,7 @@ static int g_commandkey = CTL(COMMAND_KEY);
 
 void set_commandkey(int k)
 {
-    g_commandkey = k;
+    g_commandkey = CTL(k);
 }
 
 int get_commandKey()
