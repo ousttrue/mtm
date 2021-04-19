@@ -6,7 +6,6 @@
 #include "vthandler.h"
 #include <curses.h>
 
-
 NODE::NODE(Node t, const std::shared_ptr<NODE> &p, const Rect &rect)
     : m_rect(rect)
 {
@@ -76,7 +75,8 @@ void NODE::drawchildren() const /* Draw all children of n. */
     this->c2->draw();
 }
 
-std::shared_ptr<NODE> NODE::findnode(const YX &p) /* Find the node enclosing y,x. */
+std::shared_ptr<NODE>
+NODE::findnode(const YX &p) /* Find the node enclosing y,x. */
 {
     if (m_rect.contains(p))
     {
@@ -88,7 +88,6 @@ std::shared_ptr<NODE> NODE::findnode(const YX &p) /* Find the node enclosing y,x
     }
     return NULL;
 }
-
 
 std::shared_ptr<NODE> newview(const Rect &rect) /* Open a new view. */
 {
@@ -215,4 +214,30 @@ void NODE::processVT() /* Recursively check all ptty's for input. */
             deletenode(shared_from_this());
         }
     }
+}
+
+std::shared_ptr<NODE> NODE::findViewNode()
+{
+    if (isView())
+    {
+        return shared_from_this();
+    }
+
+    if (c1)
+    {
+        if (auto found = c1->findViewNode())
+        {
+            return found;
+        }
+    }
+
+    if (c2)
+    {
+        if (auto found = c2->findViewNode())
+        {
+            return found;
+        }
+    }
+
+    return nullptr;
 }

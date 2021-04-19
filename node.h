@@ -41,6 +41,8 @@ public:
     void drawchildren() const;
     std::shared_ptr<NODE> findnode(const YX &yx);
     void processVT();
+
+    std::shared_ptr<NODE> findViewNode();
 };
 
 void focus(const std::shared_ptr<NODE> &n);

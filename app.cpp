@@ -105,14 +105,11 @@ public:
             return;
         }
 
-        if (n->isView())
+        auto view = n->findViewNode();
+        if(view)
         {
             m_lastfocused = m_focused;
-            m_focused = n;
-        }
-        else
-        {
-            focus(n->c1 ? n->c1 : n->c2);
+            m_focused = view;
         }
     }
     std::shared_ptr<NODE> focus() const
