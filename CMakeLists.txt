@@ -11,7 +11,7 @@ add_executable(${PROJECT_NAME}
     selector.cpp
     node.cpp
     scrn.cpp
-    global.cpp
+    app.cpp
     vtcontext.cpp
 )
 

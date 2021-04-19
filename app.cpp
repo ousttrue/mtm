@@ -1,4 +1,4 @@
-#include "global.h"
+#include "app.h"
 #include <cstring>
 #include <curses.h>
 #include <string>

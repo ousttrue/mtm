@@ -1,6 +1,6 @@
 #include "mtm.h"
 #include "vthandler.h"
-#include "global.h"
+#include "app.h"
 #include <signal.h>
 #include <unistd.h>
 

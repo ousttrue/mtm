@@ -3,7 +3,7 @@
 #include "minmax.h"
 #include "selector.h"
 #include "vthandler.h"
-#include "global.h"
+#include "app.h"
 #include <climits>
 #include <cstring>
 #include <curses.h>
