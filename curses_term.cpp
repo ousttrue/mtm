@@ -2,7 +2,6 @@
 #include "scrn.h"
 #include "minmax.h"
 #include "selector.h"
-#include "vthandler.h"
 #include "app.h"
 #include <climits>
 #include <cstring>
@@ -114,94 +113,6 @@ bool CursesTerm::process()
     }
 
     return true;
-}
-
-#include "node.h"
-
-void sendarrow(const std::shared_ptr<NODE> &n, const char *k)
-{
-    char buf[100] = {0};
-    snprintf(buf, sizeof(buf) - 1, "\033%s%s", n->term->pnm ? "O" : "[", k);
-    n->term->safewrite(buf);
-}
-
-bool CursesTerm::handleUserInput()
-{
-    wint_t k = 0;
-    int r = wget_wch(this->s->win, &k);
-
-    // return handlechar(r, w);
-    const char cmdstr[] = {(char)global::get_commandKey(), 0};
-    static bool cmd = false;
-    auto n = global::focus();
-#define KERR(i) (r == ERR && (i) == k)
-#define KEY(i) (r == OK && (i) == k)
-#define CODE(i) (r == KEY_CODE_YES && (i) == k)
-#define INSCR (n->term->s->tos != n->term->s->off)
-#define SB n->term->s->scrollbottom()
-#define DO(s, t, a)                                                            \
-    if (s == cmd && (t))                                                       \
-    {                                                                          \
-        a;                                                                     \
-        cmd = false;                                                           \
-        return true;                                                           \
-    }
-
-    DO(cmd, KERR(k), return false)
-    DO(cmd, CODE(KEY_RESIZE), global::reshape(0, 0, LINES, COLS); SB)
-    DO(false, KEY(global::get_commandKey()), return cmd = true)
-    DO(false, KEY(0), n->term->safewrite("\000", 1); SB)
-    DO(false, KEY(L'\n'), n->term->safewrite("\n"); SB)
-    DO(false, KEY(L'\r'), n->term->safewrite(n->term->lnm ? "\r\n" : "\r"); SB)
-    DO(false, SCROLLUP && INSCR, n->term->s->scrollback(n->m_rect.h))
-    DO(false, SCROLLDOWN && INSCR, n->term->s->scrollforward(n->m_rect.h))
-    DO(false, RECENTER && INSCR, n->term->s->scrollbottom())
-    DO(false, CODE(KEY_ENTER), n->term->safewrite(n->term->lnm ? "\r\n" : "\r");
-       SB)
-    DO(false, CODE(KEY_UP), sendarrow(n, "A"); SB);
-    DO(false, CODE(KEY_DOWN), sendarrow(n, "B"); SB);
-    DO(false, CODE(KEY_RIGHT), sendarrow(n, "C"); SB);
-    DO(false, CODE(KEY_LEFT), sendarrow(n, "D"); SB);
-    DO(false, CODE(KEY_HOME), n->term->safewrite("\033[1~"); SB)
-    DO(false, CODE(KEY_END), n->term->safewrite("\033[4~"); SB)
-    DO(false, CODE(KEY_PPAGE), n->term->safewrite("\033[5~"); SB)
-    DO(false, CODE(KEY_NPAGE), n->term->safewrite("\033[6~"); SB)
-    DO(false, CODE(KEY_BACKSPACE), n->term->safewrite("\177"); SB)
-    DO(false, CODE(KEY_DC), n->term->safewrite("\033[3~"); SB)
-    DO(false, CODE(KEY_IC), n->term->safewrite("\033[2~"); SB)
-    DO(false, CODE(KEY_BTAB), n->term->safewrite("\033[Z"); SB)
-    DO(false, CODE(KEY_F(1)), n->term->safewrite("\033OP"); SB)
-    DO(false, CODE(KEY_F(2)), n->term->safewrite("\033OQ"); SB)
-    DO(false, CODE(KEY_F(3)), n->term->safewrite("\033OR"); SB)
-    DO(false, CODE(KEY_F(4)), n->term->safewrite("\033OS"); SB)
-    DO(false, CODE(KEY_F(5)), n->term->safewrite("\033[15~"); SB)
-    DO(false, CODE(KEY_F(6)), n->term->safewrite("\033[17~"); SB)
-    DO(false, CODE(KEY_F(7)), n->term->safewrite("\033[18~"); SB)
-    DO(false, CODE(KEY_F(8)), n->term->safewrite("\033[19~"); SB)
-    DO(false, CODE(KEY_F(9)), n->term->safewrite("\033[20~"); SB)
-    DO(false, CODE(KEY_F(10)), n->term->safewrite("\033[21~"); SB)
-    DO(false, CODE(KEY_F(11)), n->term->safewrite("\033[23~"); SB)
-    DO(false, CODE(KEY_F(12)), n->term->safewrite("\033[24~"); SB)
-    DO(true, MOVE_UP, global::focus(n->m_rect.above()))
-    DO(true, MOVE_DOWN, global::focus(n->m_rect.below()))
-    DO(true, MOVE_LEFT, global::focus(n->m_rect.left()))
-    DO(true, MOVE_RIGHT, global::focus(n->m_rect.right()))
-    DO(true, MOVE_OTHER, global::focus_last())
-    DO(true, HSPLIT, split(n, HORIZONTAL))
-    DO(true, VSPLIT, split(n, VERTICAL))
-    DO(true, DELETE_NODE, deletenode(n))
-    DO(true, REDRAW, touchwin(stdscr); global::draw(); redrawwin(stdscr))
-    DO(true, SCROLLUP, n->term->s->scrollback(n->m_rect.h))
-    DO(true, SCROLLDOWN, n->term->s->scrollforward(n->m_rect.h))
-    DO(true, RECENTER, n->term->s->scrollbottom())
-    DO(true, KEY(global::get_commandKey()), n->term->safewrite(cmdstr, 1));
-    char c[MB_LEN_MAX + 1] = {0};
-    if (wctomb(c, k) > 0)
-    {
-        n->term->s->scrollbottom();
-        n->term->safewrite(c);
-    }
-    return cmd = false, true;
 }
 
 void CursesTerm::fixCursor()

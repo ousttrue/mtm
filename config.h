@@ -32,27 +32,8 @@
  */
 #define SCROLLBACK 1000
 
-/* The change focus keys. */
-#define MOVE_UP         CODE(KEY_UP)
-#define MOVE_DOWN       CODE(KEY_DOWN)
-#define MOVE_RIGHT      CODE(KEY_RIGHT)
-#define MOVE_LEFT       CODE(KEY_LEFT)
-#define MOVE_OTHER      KEY(L'o')
 
-/* The split terminal keys. */
-#define HSPLIT KEY(L'h')
-#define VSPLIT KEY(L'v')
 
-/* The delete terminal key. */
-#define DELETE_NODE KEY(L'w')
-
-/* The force redraw key. */
-#define REDRAW KEY(L'l')
-
-/* The scrollback keys. */
-#define SCROLLUP CODE(KEY_PPAGE)
-#define SCROLLDOWN CODE(KEY_NPAGE)
-#define RECENTER CODE(KEY_END)
 
 /* The path for the wide-character curses library. */
 #ifndef NCURSESW_INCLUDE_H
