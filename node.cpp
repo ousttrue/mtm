@@ -1,26 +1,18 @@
 #include "node.h"
+#include "app.h"
 #include "minmax.h"
 #include "selector.h"
 #include "curses_term.h"
 #include "vthandler.h"
 #include <curses.h>
 
-std::shared_ptr<NODE> root;
-std::weak_ptr<NODE> focused;
-std::weak_ptr<NODE> lastfocused;
-
 NODE::NODE(Node t, const std::shared_ptr<NODE> &p, const Rect &rect)
-    : m_rect(rect)
+    : m_type(t), m_parent(p), m_rect(rect)
 {
-    this->t = t;
-    this->p = p;
 }
 
 NODE::~NODE()
 {
-    if (auto l = lastfocused.lock())
-        if (l.get() == this)
-            lastfocused.reset();
 }
 
 void NODE::reshape(const Rect &rect) /* Reshape a node. */
@@ -46,19 +38,19 @@ void NODE::reshape(const Rect &rect) /* Reshape a node. */
 
 void NODE::reshapechildren() /* Reshape all children of a view. */
 {
-    if (this->t == HORIZONTAL)
+    if (this->m_type == HORIZONTAL)
     {
         Rect left, right;
         std::tie(left, right) = m_rect.splitHorizontal();
-        this->c1->reshape(left);
-        this->c2->reshape(right);
+        this->m_child1->reshape(left);
+        this->m_child2->reshape(right);
     }
-    else if (this->t == VERTICAL)
+    else if (this->m_type == VERTICAL)
     {
         Rect top, bottom;
         std::tie(top, bottom) = m_rect.splitVertical();
-        this->c1->reshape(top);
-        this->c1->reshape(bottom);
+        this->m_child1->reshape(top);
+        this->m_child1->reshape(bottom);
     }
 }
 
@@ -72,44 +64,27 @@ void NODE::draw() const /* Draw a node. */
 
 void NODE::drawchildren() const /* Draw all children of n. */
 {
-    this->c1->draw();
-    if (this->t == HORIZONTAL)
+    this->m_child1->draw();
+    if (this->m_type == HORIZONTAL)
         mvvline(m_rect.y, m_rect.x + m_rect.w / 2, ACS_VLINE, m_rect.h);
     else
         mvhline(m_rect.y + m_rect.h / 2, m_rect.x, ACS_HLINE, m_rect.w);
     wnoutrefresh(stdscr);
-    this->c2->draw();
+    this->m_child2->draw();
 }
 
-std::shared_ptr<NODE> NODE::findnode(const YX &p) /* Find the node enclosing y,x. */
+std::shared_ptr<NODE>
+NODE::findnode(const YX &p) /* Find the node enclosing y,x. */
 {
     if (m_rect.contains(p))
     {
-        if (this->c1 && this->c1->m_rect.contains(p))
-            return this->c1->findnode(p);
-        if (this->c2 && this->c2->m_rect.contains(p))
-            return this->c2->findnode(p);
+        if (this->m_child1 && this->m_child1->m_rect.contains(p))
+            return this->m_child1->findnode(p);
+        if (this->m_child2 && this->m_child2->m_rect.contains(p))
+            return this->m_child2->findnode(p);
         return shared_from_this();
     }
     return NULL;
-}
-
-void focus(const std::shared_ptr<NODE> &n) /* Focus a node. */
-{
-    if (!n)
-    {
-        return;
-    }
-
-    if (n->isView())
-    {
-        lastfocused = focused;
-        focused = n;
-    }
-    else
-    {
-        focus(n->c1 ? n->c1 : n->c2);
-    }
 }
 
 std::shared_ptr<NODE> newview(const Rect &rect) /* Open a new view. */
@@ -141,20 +116,23 @@ static void replacechild(std::shared_ptr<NODE> n,
                          const std::shared_ptr<NODE> &c1,
                          const std::shared_ptr<NODE> &c2)
 {
-    c2->p = n;
+    // c2->p = n;
     if (!n)
     {
-        root = c2;
-        c2->reshape(Rect(0, 0, LINES, COLS));
+        global::root(c2);
     }
-    else if (n->c1 == c1)
-        n->c1 = c2;
-    else if (n->c2 == c1)
-        n->c2 = c2;
+    else if (n->child1() == c1)
+    {
+        n->child1(c2);
+    }
+    else if (n->child2() == c1)
+    {
+        n->child2(c2);
+    }
 
     if (!n)
     {
-        n = root;
+        n = global::root();
     }
     n->reshape(n->m_rect);
     n->draw();
@@ -164,24 +142,21 @@ static void
 removechild(const std::shared_ptr<NODE> &p,
             const std::shared_ptr<NODE> &c) /* Replace p with other child. */
 {
-    replacechild(p->p.lock(), p, c == p->c1 ? p->c2 : p->c1);
+    replacechild(p->parent(), p, c == p->child1() ? p->child2() : p->child1());
 }
 
 void deletenode(const std::shared_ptr<NODE> &n) /* Delete a node. */
 {
-    auto p = n->p.lock();
+    auto p = n->parent();
     if (!p)
     {
-        if (root)
-        {
-            root = nullptr;
-        }
+        global::quit();
         return;
     }
 
-    if (n == focused.lock())
+    if (n == global::focus())
     {
-        focus(p->c1 == n ? p->c2 : p->c1);
+        global::focus(p->child1() == n ? p->child2() : p->child1());
     }
     removechild(p, n);
 }
@@ -192,9 +167,8 @@ newcontainer(Node t, const std::shared_ptr<NODE> &p, const Rect &rect,
              const std::shared_ptr<NODE> &c2) /* Create a new container */
 {
     auto n = std::make_shared<NODE>(t, p, rect);
-    n->c1 = c1;
-    n->c2 = c2;
-    c1->p = c2->p = n;
+    n->child1(c1);
+    n->child2(c2);
     n->reshapechildren();
     return n;
 }
@@ -203,34 +177,34 @@ void split(const std::shared_ptr<NODE> &n, const Node t) /* Split a node. */
 {
     int nh = t == VERTICAL ? (n->m_rect.h - 1) / 2 : n->m_rect.h;
     int nw = t == HORIZONTAL ? (n->m_rect.w) / 2 : n->m_rect.w;
-    auto p = n->p.lock();
+    auto p = n->parent();
     auto v = newview(Rect(0, 0, MAX(0, nh), MAX(0, nw)));
     if (!v)
     {
         return;
     }
 
-    auto c = newcontainer(t, n->p.lock(), n->m_rect, n, v);
+    auto c = newcontainer(t, n->parent(), n->m_rect, n, v);
     if (!c)
     {
         return;
     }
 
     replacechild(p, n, c);
-    focus(v);
-    (p ? p : root)->draw();
+    global::focus(v);
+    (p ? p : global::root())->draw();
 }
 
 void NODE::processVT() /* Recursively check all ptty's for input. */
 {
-    if (this->c1)
+    if (this->m_child1)
     {
-        this->c1->processVT();
+        this->m_child1->processVT();
     }
 
-    if (this->c2)
+    if (this->m_child2)
     {
-        this->c2->processVT();
+        this->m_child2->processVT();
     }
 
     if (this->term)
@@ -240,4 +214,30 @@ void NODE::processVT() /* Recursively check all ptty's for input. */
             deletenode(shared_from_this());
         }
     }
+}
+
+std::shared_ptr<NODE> NODE::findViewNode()
+{
+    if (isView())
+    {
+        return shared_from_this();
+    }
+
+    if (m_child1)
+    {
+        if (auto found = m_child1->findViewNode())
+        {
+            return found;
+        }
+    }
+
+    if (m_child2)
+    {
+        if (auto found = m_child2->findViewNode())
+        {
+            return found;
+        }
+    }
+
+    return nullptr;
 }

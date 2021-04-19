@@ -12,40 +12,56 @@ enum Node
 
 struct CursesTerm;
 
-struct NODE : std::enable_shared_from_this<NODE>
+class NODE : public std::enable_shared_from_this<NODE>
 {
-private:
-    Node t;
+    Node m_type;
+    std::weak_ptr<NODE> m_parent;
+    std::shared_ptr<NODE> m_child1;
+    std::shared_ptr<NODE> m_child2;
 
 public:
+    Rect m_rect;
+    std::unique_ptr<CursesTerm> term;
+    NODE(Node type, const std::shared_ptr<NODE> &parent, const Rect &rect);
+    ~NODE();
     bool isView() const
     {
-        return t == VIEW;
+        return m_type == VIEW;
     }
-
-    Rect m_rect;
-
-    // node tree
-    std::weak_ptr<NODE> p;
-    std::shared_ptr<NODE> c1;
-    std::shared_ptr<NODE> c2;
-
-    std::unique_ptr<CursesTerm> term;
-
-public:
-    NODE(Node t, const std::shared_ptr<NODE> &p, const Rect &rect);
-    ~NODE();
     void reshape(const Rect &rect);
     void reshapechildren();
     void draw() const;
     void drawchildren() const;
     std::shared_ptr<NODE> findnode(const YX &yx);
     void processVT();
+
+    std::shared_ptr<NODE> child1() const
+    {
+        return m_child1;
+    }
+    void child1(const std::shared_ptr<NODE> &node)
+    {
+        m_child1 = node;
+    }
+    std::shared_ptr<NODE> child2() const
+    {
+        return m_child2;
+    }
+    void child2(const std::shared_ptr<NODE> &node)
+    {
+        m_child2 = node;
+    }
+    std::shared_ptr<NODE> parent() const
+    {
+        return m_parent.lock();
+    }
+    void parent(const std::shared_ptr<NODE> &node)
+    {
+        m_parent = node;
+    }
+    std::shared_ptr<NODE> findViewNode();
 };
 
-extern std::shared_ptr<NODE> root;
-extern std::weak_ptr<NODE> focused;
-extern std::weak_ptr<NODE> lastfocused;
 void focus(const std::shared_ptr<NODE> &n);
 void deletenode(const std::shared_ptr<NODE> &n);
 std::shared_ptr<NODE> newview(const Rect &rect);

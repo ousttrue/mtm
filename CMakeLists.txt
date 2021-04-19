@@ -2,7 +2,6 @@ project(mtm)
 cmake_minimum_required(VERSION 3.10)
 
 add_executable(${PROJECT_NAME}
-    mtm.cpp
     pair.cpp
     vtparser.cpp
     vthandler.cpp
@@ -11,7 +10,7 @@ add_executable(${PROJECT_NAME}
     selector.cpp
     node.cpp
     scrn.cpp
-    global.cpp
+    app.cpp
     vtcontext.cpp
 )
 

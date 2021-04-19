@@ -3,7 +3,7 @@
 #include "minmax.h"
 #include "selector.h"
 #include "vthandler.h"
-#include "global.h"
+#include "app.h"
 #include <climits>
 #include <cstring>
 #include <curses.h>
@@ -133,7 +133,7 @@ bool CursesTerm::handleUserInput()
     // return handlechar(r, w);
     const char cmdstr[] = {(char)global::get_commandKey(), 0};
     static bool cmd = false;
-    auto n = focused.lock();
+    auto n = global::focus();
 #define KERR(i) (r == ERR && (i) == k)
 #define KEY(i) (r == OK && (i) == k)
 #define CODE(i) (r == KEY_CODE_YES && (i) == k)
@@ -148,7 +148,7 @@ bool CursesTerm::handleUserInput()
     }
 
     DO(cmd, KERR(k), return false)
-    DO(cmd, CODE(KEY_RESIZE), root->reshape(Rect(0, 0, LINES, COLS)); SB)
+    DO(cmd, CODE(KEY_RESIZE), global::reshape(0, 0, LINES, COLS); SB)
     DO(false, KEY(global::get_commandKey()), return cmd = true)
     DO(false, KEY(0), n->term->safewrite("\000", 1); SB)
     DO(false, KEY(L'\n'), n->term->safewrite("\n"); SB)
@@ -182,15 +182,15 @@ bool CursesTerm::handleUserInput()
     DO(false, CODE(KEY_F(10)), n->term->safewrite("\033[21~"); SB)
     DO(false, CODE(KEY_F(11)), n->term->safewrite("\033[23~"); SB)
     DO(false, CODE(KEY_F(12)), n->term->safewrite("\033[24~"); SB)
-    DO(true, MOVE_UP, focus(root->findnode(n->m_rect.above())))
-    DO(true, MOVE_DOWN, focus(root->findnode(n->m_rect.below())))
-    DO(true, MOVE_LEFT, focus(root->findnode(n->m_rect.left())))
-    DO(true, MOVE_RIGHT, focus(root->findnode(n->m_rect.right())))
-    DO(true, MOVE_OTHER, focus(lastfocused.lock()))
+    DO(true, MOVE_UP, global::focus(n->m_rect.above()))
+    DO(true, MOVE_DOWN, global::focus(n->m_rect.below()))
+    DO(true, MOVE_LEFT, global::focus(n->m_rect.left()))
+    DO(true, MOVE_RIGHT, global::focus(n->m_rect.right()))
+    DO(true, MOVE_OTHER, global::focus_last())
     DO(true, HSPLIT, split(n, HORIZONTAL))
     DO(true, VSPLIT, split(n, VERTICAL))
     DO(true, DELETE_NODE, deletenode(n))
-    DO(true, REDRAW, touchwin(stdscr); root->draw(); redrawwin(stdscr))
+    DO(true, REDRAW, touchwin(stdscr); global::draw(); redrawwin(stdscr))
     DO(true, SCROLLUP, n->term->s->scrollback(n->m_rect.h))
     DO(true, SCROLLDOWN, n->term->s->scrollforward(n->m_rect.h))
     DO(true, RECENTER, n->term->s->scrollbottom())
