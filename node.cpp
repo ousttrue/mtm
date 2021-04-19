@@ -7,10 +7,8 @@
 #include <curses.h>
 
 NODE::NODE(Node t, const std::shared_ptr<NODE> &p, const Rect &rect)
-    : m_rect(rect)
+    : m_type(t), m_parent(p), m_rect(rect)
 {
-    this->t = t;
-    this->p = p;
 }
 
 NODE::~NODE()
@@ -40,19 +38,19 @@ void NODE::reshape(const Rect &rect) /* Reshape a node. */
 
 void NODE::reshapechildren() /* Reshape all children of a view. */
 {
-    if (this->t == HORIZONTAL)
+    if (this->m_type == HORIZONTAL)
     {
         Rect left, right;
         std::tie(left, right) = m_rect.splitHorizontal();
-        this->c1->reshape(left);
-        this->c2->reshape(right);
+        this->m_child1->reshape(left);
+        this->m_child2->reshape(right);
     }
-    else if (this->t == VERTICAL)
+    else if (this->m_type == VERTICAL)
     {
         Rect top, bottom;
         std::tie(top, bottom) = m_rect.splitVertical();
-        this->c1->reshape(top);
-        this->c1->reshape(bottom);
+        this->m_child1->reshape(top);
+        this->m_child1->reshape(bottom);
     }
 }
 
@@ -66,13 +64,13 @@ void NODE::draw() const /* Draw a node. */
 
 void NODE::drawchildren() const /* Draw all children of n. */
 {
-    this->c1->draw();
-    if (this->t == HORIZONTAL)
+    this->m_child1->draw();
+    if (this->m_type == HORIZONTAL)
         mvvline(m_rect.y, m_rect.x + m_rect.w / 2, ACS_VLINE, m_rect.h);
     else
         mvhline(m_rect.y + m_rect.h / 2, m_rect.x, ACS_HLINE, m_rect.w);
     wnoutrefresh(stdscr);
-    this->c2->draw();
+    this->m_child2->draw();
 }
 
 std::shared_ptr<NODE>
@@ -80,10 +78,10 @@ NODE::findnode(const YX &p) /* Find the node enclosing y,x. */
 {
     if (m_rect.contains(p))
     {
-        if (this->c1 && this->c1->m_rect.contains(p))
-            return this->c1->findnode(p);
-        if (this->c2 && this->c2->m_rect.contains(p))
-            return this->c2->findnode(p);
+        if (this->m_child1 && this->m_child1->m_rect.contains(p))
+            return this->m_child1->findnode(p);
+        if (this->m_child2 && this->m_child2->m_rect.contains(p))
+            return this->m_child2->findnode(p);
         return shared_from_this();
     }
     return NULL;
@@ -199,14 +197,14 @@ void split(const std::shared_ptr<NODE> &n, const Node t) /* Split a node. */
 
 void NODE::processVT() /* Recursively check all ptty's for input. */
 {
-    if (this->c1)
+    if (this->m_child1)
     {
-        this->c1->processVT();
+        this->m_child1->processVT();
     }
 
-    if (this->c2)
+    if (this->m_child2)
     {
-        this->c2->processVT();
+        this->m_child2->processVT();
     }
 
     if (this->term)
@@ -225,17 +223,17 @@ std::shared_ptr<NODE> NODE::findViewNode()
         return shared_from_this();
     }
 
-    if (c1)
+    if (m_child1)
     {
-        if (auto found = c1->findViewNode())
+        if (auto found = m_child1->findViewNode())
         {
             return found;
         }
     }
 
-    if (c2)
+    if (m_child2)
     {
-        if (auto found = c2->findViewNode())
+        if (auto found = m_child2->findViewNode())
         {
             return found;
         }
