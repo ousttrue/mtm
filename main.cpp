@@ -1,5 +1,3 @@
-#include "mtm.h"
-#include "vthandler.h"
 #include "app.h"
 #include <signal.h>
 #include <unistd.h>
@@ -33,6 +31,5 @@ int main(int argc, char **argv)
 
     global::set_term(term);
     global::set_commandkey(commandkey);
-    auto app = mtm::create();
-    return app->run();
+    return global::run();
 }

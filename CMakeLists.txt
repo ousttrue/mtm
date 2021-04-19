@@ -2,7 +2,6 @@ project(mtm)
 cmake_minimum_required(VERSION 3.10)
 
 add_executable(${PROJECT_NAME}
-    mtm.cpp
     pair.cpp
     vtparser.cpp
     vthandler.cpp

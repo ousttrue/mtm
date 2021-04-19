@@ -1,13 +1,11 @@
 #include "node.h"
+#include "app.h"
 #include "minmax.h"
 #include "selector.h"
 #include "curses_term.h"
 #include "vthandler.h"
 #include <curses.h>
 
-std::shared_ptr<NODE> root;
-std::weak_ptr<NODE> focused;
-std::weak_ptr<NODE> lastfocused;
 
 NODE::NODE(Node t, const std::shared_ptr<NODE> &p, const Rect &rect)
     : m_rect(rect)
@@ -18,9 +16,6 @@ NODE::NODE(Node t, const std::shared_ptr<NODE> &p, const Rect &rect)
 
 NODE::~NODE()
 {
-    if (auto l = lastfocused.lock())
-        if (l.get() == this)
-            lastfocused.reset();
 }
 
 void NODE::reshape(const Rect &rect) /* Reshape a node. */
@@ -94,23 +89,6 @@ std::shared_ptr<NODE> NODE::findnode(const YX &p) /* Find the node enclosing y,x
     return NULL;
 }
 
-void focus(const std::shared_ptr<NODE> &n) /* Focus a node. */
-{
-    if (!n)
-    {
-        return;
-    }
-
-    if (n->isView())
-    {
-        lastfocused = focused;
-        focused = n;
-    }
-    else
-    {
-        focus(n->c1 ? n->c1 : n->c2);
-    }
-}
 
 std::shared_ptr<NODE> newview(const Rect &rect) /* Open a new view. */
 {
@@ -144,7 +122,7 @@ static void replacechild(std::shared_ptr<NODE> n,
     c2->p = n;
     if (!n)
     {
-        root = c2;
+        global::root(c2);
         c2->reshape(Rect(0, 0, LINES, COLS));
     }
     else if (n->c1 == c1)
@@ -154,7 +132,7 @@ static void replacechild(std::shared_ptr<NODE> n,
 
     if (!n)
     {
-        n = root;
+        n = global::root();
     }
     n->reshape(n->m_rect);
     n->draw();
@@ -172,16 +150,13 @@ void deletenode(const std::shared_ptr<NODE> &n) /* Delete a node. */
     auto p = n->p.lock();
     if (!p)
     {
-        if (root)
-        {
-            root = nullptr;
-        }
+        global::quit();
         return;
     }
 
-    if (n == focused.lock())
+    if (n == global::focus())
     {
-        focus(p->c1 == n ? p->c2 : p->c1);
+        global::focus(p->c1 == n ? p->c2 : p->c1);
     }
     removechild(p, n);
 }
@@ -217,8 +192,8 @@ void split(const std::shared_ptr<NODE> &n, const Node t) /* Split a node. */
     }
 
     replacechild(p, n, c);
-    focus(v);
-    (p ? p : root)->draw();
+    global::focus(v);
+    (p ? p : global::root())->draw();
 }
 
 void NODE::processVT() /* Recursively check all ptty's for input. */
