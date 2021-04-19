@@ -92,6 +92,11 @@ public:
     void root(const std::shared_ptr<NODE> &node)
     {
         m_root = node;
+        if (node)
+        {
+            node->parent(nullptr);
+            node->reshape(Rect(0, 0, LINES, COLS));
+        }
     }
     std::shared_ptr<NODE> root() const
     {
@@ -106,7 +111,7 @@ public:
         }
 
         auto view = n->findViewNode();
-        if(view)
+        if (view)
         {
             m_lastfocused = m_focused;
             m_focused = view;
@@ -126,7 +131,6 @@ public:
 
     int run()
     {
-
         //
         // main loop
         //

@@ -118,16 +118,19 @@ static void replacechild(std::shared_ptr<NODE> n,
                          const std::shared_ptr<NODE> &c1,
                          const std::shared_ptr<NODE> &c2)
 {
-    c2->p = n;
+    // c2->p = n;
     if (!n)
     {
         global::root(c2);
-        c2->reshape(Rect(0, 0, LINES, COLS));
     }
-    else if (n->c1 == c1)
-        n->c1 = c2;
-    else if (n->c2 == c1)
-        n->c2 = c2;
+    else if (n->child1() == c1)
+    {
+        n->child1(c2);
+    }
+    else if (n->child2() == c1)
+    {
+        n->child2(c2);
+    }
 
     if (!n)
     {
@@ -141,12 +144,12 @@ static void
 removechild(const std::shared_ptr<NODE> &p,
             const std::shared_ptr<NODE> &c) /* Replace p with other child. */
 {
-    replacechild(p->p.lock(), p, c == p->c1 ? p->c2 : p->c1);
+    replacechild(p->parent(), p, c == p->child1() ? p->child2() : p->child1());
 }
 
 void deletenode(const std::shared_ptr<NODE> &n) /* Delete a node. */
 {
-    auto p = n->p.lock();
+    auto p = n->parent();
     if (!p)
     {
         global::quit();
@@ -155,7 +158,7 @@ void deletenode(const std::shared_ptr<NODE> &n) /* Delete a node. */
 
     if (n == global::focus())
     {
-        global::focus(p->c1 == n ? p->c2 : p->c1);
+        global::focus(p->child1() == n ? p->child2() : p->child1());
     }
     removechild(p, n);
 }
@@ -166,9 +169,8 @@ newcontainer(Node t, const std::shared_ptr<NODE> &p, const Rect &rect,
              const std::shared_ptr<NODE> &c2) /* Create a new container */
 {
     auto n = std::make_shared<NODE>(t, p, rect);
-    n->c1 = c1;
-    n->c2 = c2;
-    c1->p = c2->p = n;
+    n->child1(c1);
+    n->child2(c2);
     n->reshapechildren();
     return n;
 }
@@ -177,14 +179,14 @@ void split(const std::shared_ptr<NODE> &n, const Node t) /* Split a node. */
 {
     int nh = t == VERTICAL ? (n->m_rect.h - 1) / 2 : n->m_rect.h;
     int nw = t == HORIZONTAL ? (n->m_rect.w) / 2 : n->m_rect.w;
-    auto p = n->p.lock();
+    auto p = n->parent();
     auto v = newview(Rect(0, 0, MAX(0, nh), MAX(0, nw)));
     if (!v)
     {
         return;
     }
 
-    auto c = newcontainer(t, n->p.lock(), n->m_rect, n, v);
+    auto c = newcontainer(t, n->parent(), n->m_rect, n, v);
     if (!c)
     {
         return;
