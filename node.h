@@ -70,6 +70,9 @@ public:
         m_parent = node;
     }
     std::shared_ptr<NODE> findViewNode();
+
+    void replacechild(const std::shared_ptr<NODE> &c1,
+                      const std::shared_ptr<NODE> &c2);
 };
 
 void focus(const std::shared_ptr<NODE> &n);

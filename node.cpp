@@ -85,24 +85,23 @@ NODE::findnode(const YX &p) /* Find the node enclosing y,x. */
     return NULL;
 }
 
-static void replacechild(std::shared_ptr<NODE> n,
-                         const std::shared_ptr<NODE> &c1,
-                         const std::shared_ptr<NODE> &c2)
+void NODE::replacechild(const std::shared_ptr<NODE> &c1,
+                        const std::shared_ptr<NODE> &c2)
 {
-    if (n->child1() == c1)
+    if (this->child1() == c1)
     {
-        n->child1(c2);
+        this->child1(c2);
     }
-    else if (n->child2() == c1)
+    else if (this->child2() == c1)
     {
-        n->child2(c2);
+        this->child2(c2);
     }
     else
     {
         throw std::exception();
     }
-    n->reshape(n->m_rect);
-    n->draw();
+    this->reshape(this->m_rect);
+    this->draw();
 }
 
 static void
@@ -113,7 +112,7 @@ removechild(const std::shared_ptr<NODE> &p,
     auto other = c == p->child1() ? p->child2() : p->child1();
     if (parent)
     {
-        replacechild(parent, p, other);
+        parent->replacechild(p, other);
     }
     else
     {
@@ -167,7 +166,7 @@ void split(const std::shared_ptr<NODE> &n, const Node t) /* Split a node. */
     auto c = newcontainer(t, n->m_rect, n, v);
     if (p)
     {
-        replacechild(p, n, c);
+        p->replacechild(n, c);
     }
     else
     {
