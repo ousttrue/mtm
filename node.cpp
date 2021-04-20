@@ -5,8 +5,7 @@
 #include "curses_term.h"
 #include <curses.h>
 
-NODE::NODE(Node t, const std::shared_ptr<NODE> &p, const Rect &rect)
-    : m_type(t), m_parent(p), m_rect(rect)
+NODE::NODE(Node t, const Rect &rect) : m_type(t), m_rect(rect)
 {
 }
 
@@ -90,11 +89,7 @@ static void replacechild(std::shared_ptr<NODE> n,
                          const std::shared_ptr<NODE> &c1,
                          const std::shared_ptr<NODE> &c2)
 {
-    if (!n)
-    {
-        global::root(c2);
-    }
-    else if (n->child1() == c1)
+    if (n->child1() == c1)
     {
         n->child1(c2);
     }
@@ -102,10 +97,9 @@ static void replacechild(std::shared_ptr<NODE> n,
     {
         n->child2(c2);
     }
-
-    if (!n)
+    else
     {
-        n = global::root();
+        throw std::exception();
     }
     n->reshape(n->m_rect);
     n->draw();
@@ -115,7 +109,16 @@ static void
 removechild(const std::shared_ptr<NODE> &p,
             const std::shared_ptr<NODE> &c) /* Replace p with other child. */
 {
-    replacechild(p->parent(), p, c == p->child1() ? p->child2() : p->child1());
+    auto parent = p->parent();
+    auto other = c == p->child1() ? p->child2() : p->child1();
+    if (parent)
+    {
+        replacechild(parent, p, other);
+    }
+    else
+    {
+        global::root(other);
+    }
 }
 
 void deletenode(const std::shared_ptr<NODE> &n) /* Delete a node. */
@@ -131,39 +134,47 @@ void deletenode(const std::shared_ptr<NODE> &n) /* Delete a node. */
     {
         global::focus(p->child1() == n ? p->child2() : p->child1());
     }
+
     removechild(p, n);
 }
 
 static std::shared_ptr<NODE>
-newcontainer(Node t, const std::shared_ptr<NODE> &p, const Rect &rect,
-             const std::shared_ptr<NODE> &c1,
+newcontainer(Node t, const Rect &rect, const std::shared_ptr<NODE> &c1,
              const std::shared_ptr<NODE> &c2) /* Create a new container */
 {
-    auto n = std::make_shared<NODE>(t, p, rect);
+    auto n = std::make_shared<NODE>(t, rect);
     n->child1(c1);
     n->child2(c2);
     n->reshapechildren();
     return n;
 }
 
+//
+// c
+// nv
+//
 void split(const std::shared_ptr<NODE> &n, const Node t) /* Split a node. */
 {
+    // new view
     int nh = t == VERTICAL ? (n->m_rect.h - 1) / 2 : n->m_rect.h;
     int nw = t == HORIZONTAL ? (n->m_rect.w) / 2 : n->m_rect.w;
-    auto p = n->parent();
-
     auto rect = Rect(0, 0, MAX(0, nh), MAX(0, nw));
-    auto v = std::make_shared<NODE>(VIEW, nullptr, rect);
-
+    auto v = std::make_shared<NODE>(VIEW, rect);
     v->term = new_term(rect);
 
-    auto c = newcontainer(t, n->parent(), n->m_rect, n, v);
-    if (!c)
+    // split
+    auto p = n->parent();
+    auto c = newcontainer(t, n->m_rect, n, v);
+    if (p)
     {
-        return;
+        replacechild(p, n, c);
     }
-
-    replacechild(p, n, c);
+    else
+    {
+        global::root(c);
+        // c->reshape(c->m_rect);
+        // c->draw();
+    }
     global::focus(v);
     (p ? p : global::root())->draw();
 }

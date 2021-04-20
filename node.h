@@ -22,7 +22,7 @@ class NODE : public std::enable_shared_from_this<NODE>
 public:
     Rect m_rect;
     std::unique_ptr<CursesTerm> term;
-    NODE(Node type, const std::shared_ptr<NODE> &parent, const Rect &rect);
+    NODE(Node type, const Rect &rect);
     ~NODE();
     bool isView() const
     {
@@ -41,6 +41,10 @@ public:
     }
     void child1(const std::shared_ptr<NODE> &node)
     {
+        if (this == node.get())
+        {
+            throw std::exception();
+        }
         m_child1 = node;
         node->m_parent = shared_from_this();
     }
@@ -50,6 +54,10 @@ public:
     }
     void child2(const std::shared_ptr<NODE> &node)
     {
+        if (this == node.get())
+        {
+            throw std::exception();
+        }
         m_child2 = node;
         node->m_parent = shared_from_this();
     }

@@ -104,7 +104,7 @@ public:
         start_pairs();
 
         auto rect = Rect(0, 0, LINES, COLS);
-        m_root = std::make_shared<NODE>(Node::VIEW, nullptr, rect);
+        m_root = std::make_shared<NODE>(Node::VIEW, rect);
         m_root->term = new_term(rect);
         focus(m_root);
     }
