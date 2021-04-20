@@ -90,7 +90,6 @@ static void replacechild(std::shared_ptr<NODE> n,
                          const std::shared_ptr<NODE> &c1,
                          const std::shared_ptr<NODE> &c2)
 {
-    // c2->p = n;
     if (!n)
     {
         global::root(c2);

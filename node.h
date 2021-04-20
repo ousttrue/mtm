@@ -42,6 +42,7 @@ public:
     void child1(const std::shared_ptr<NODE> &node)
     {
         m_child1 = node;
+        node->m_parent = shared_from_this();
     }
     std::shared_ptr<NODE> child2() const
     {
@@ -50,6 +51,7 @@ public:
     void child2(const std::shared_ptr<NODE> &node)
     {
         m_child2 = node;
+        node->m_parent = shared_from_this();
     }
     std::shared_ptr<NODE> parent() const
     {
