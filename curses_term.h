@@ -54,4 +54,4 @@ public:
     void safewrite(const char *s);
 };
 
-int fork_setup(int *pt, const Rect &rect);
+std::unique_ptr<CursesTerm> new_term(const Rect &rect);

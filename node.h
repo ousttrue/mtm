@@ -65,5 +65,3 @@ public:
 void focus(const std::shared_ptr<NODE> &n);
 void deletenode(const std::shared_ptr<NODE> &n);
 void split(const std::shared_ptr<NODE> &n, const Node t);
-
-std::unique_ptr<CursesTerm> new_term(const Rect &rect);

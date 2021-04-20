@@ -3,7 +3,6 @@
 #include "minmax.h"
 #include "selector.h"
 #include "curses_term.h"
-#include "vthandler.h"
 #include <curses.h>
 
 NODE::NODE(Node t, const std::shared_ptr<NODE> &p, const Rect &rect)
@@ -85,31 +84,6 @@ NODE::findnode(const YX &p) /* Find the node enclosing y,x. */
         return shared_from_this();
     }
     return NULL;
-}
-
-std::unique_ptr<CursesTerm> new_term(const Rect &rect) /* Open a new view. */
-{
-    auto term = std::make_unique<CursesTerm>(rect);
-
-    vp_initialize(term);
-    auto pid = fork_setup(&term->pt, rect);
-    if (pid < 0)
-    {
-        // error
-        perror("forkpty");
-        return nullptr;
-    }
-    else if (pid == 0)
-    {
-        // child process. not reach here
-        return NULL;
-    }
-    else
-    {
-        // setup selector
-        selector::set(term->pt);
-        return term;
-    }
 }
 
 static void replacechild(std::shared_ptr<NODE> n,

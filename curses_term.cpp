@@ -12,6 +12,7 @@
 #include <signal.h>
 #include "vtparser.h"
 #include "config.h"
+#include "vthandler.h"
 
 CursesTerm::CursesTerm(const Rect &rect) : m_rect(rect)
 {
@@ -164,29 +165,6 @@ static const char *getshell(void) /* Get the user's preferred shell. */
     return "/bin/sh";
 }
 
-int fork_setup(int *pt, const Rect &rect)
-{
-    struct winsize ws = {.ws_row = (unsigned short)rect.h,
-                         .ws_col = (unsigned short)rect.w};
-    pid_t pid = forkpty(pt, NULL, NULL, &ws);
-    if (pid == 0)
-    {
-        //
-        // new process
-        //
-        char buf[100] = {0};
-        snprintf(buf, sizeof(buf) - 1, "%lu", (unsigned long)getppid());
-        setsid();
-        setenv("MTM", buf, 1);
-        setenv("TERM", global::get_term(), 1);
-        signal(SIGCHLD, SIG_DFL);
-        execl(getshell(), getshell(), NULL);
-
-        // not reach here
-    }
-    return pid;
-}
-
 void CursesTerm::HorizontalTabSet(int x)
 {
     if (x < m_tabs.size() && x > 0)
@@ -248,4 +226,52 @@ void CursesTerm::safewrite(const char *b,
 void CursesTerm::safewrite(const char *s)
 {
     safewrite(s, strlen(s));
+}
+
+static int fork_setup(int *pt, const Rect &rect)
+{
+    struct winsize ws = {.ws_row = (unsigned short)rect.h,
+                         .ws_col = (unsigned short)rect.w};
+    pid_t pid = forkpty(pt, NULL, NULL, &ws);
+    if (pid == 0)
+    {
+        //
+        // new process
+        //
+        char buf[100] = {0};
+        snprintf(buf, sizeof(buf) - 1, "%lu", (unsigned long)getppid());
+        setsid();
+        setenv("MTM", buf, 1);
+        setenv("TERM", global::get_term(), 1);
+        signal(SIGCHLD, SIG_DFL);
+        execl(getshell(), getshell(), NULL);
+
+        // not reach here
+    }
+    return pid;
+}
+
+std::unique_ptr<CursesTerm> new_term(const Rect &rect) /* Open a new view. */
+{
+    auto term = std::make_unique<CursesTerm>(rect);
+
+    vp_initialize(term);
+    auto pid = fork_setup(&term->pt, rect);
+    if (pid < 0)
+    {
+        // error
+        perror("forkpty");
+        return nullptr;
+    }
+    else if (pid == 0)
+    {
+        // child process. not reach here
+        return NULL;
+    }
+    else
+    {
+        // setup selector
+        selector::set(term->pt);
+        return term;
+    }
 }
