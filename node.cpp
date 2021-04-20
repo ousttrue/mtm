@@ -87,13 +87,12 @@ NODE::findnode(const YX &p) /* Find the node enclosing y,x. */
     return NULL;
 }
 
-std::shared_ptr<NODE> newview(const Rect &rect) /* Open a new view. */
+std::unique_ptr<CursesTerm> new_term(const Rect &rect) /* Open a new view. */
 {
-    auto n = std::make_shared<NODE>(VIEW, nullptr, rect);
-    n->term = std::make_unique<CursesTerm>(rect);
+    auto term = std::make_unique<CursesTerm>(rect);
 
-    vp_initialize(n->term);
-    auto pid = fork_setup(&n->term->pt, rect);
+    vp_initialize(term);
+    auto pid = fork_setup(&term->pt, rect);
     if (pid < 0)
     {
         // error
@@ -102,14 +101,15 @@ std::shared_ptr<NODE> newview(const Rect &rect) /* Open a new view. */
     }
     else if (pid == 0)
     {
-        // child process
+        // child process. not reach here
         return NULL;
     }
-
-    // setup selector
-    selector::set(n->term->pt);
-
-    return n;
+    else
+    {
+        // setup selector
+        selector::set(term->pt);
+        return term;
+    }
 }
 
 static void replacechild(std::shared_ptr<NODE> n,
@@ -178,11 +178,11 @@ void split(const std::shared_ptr<NODE> &n, const Node t) /* Split a node. */
     int nh = t == VERTICAL ? (n->m_rect.h - 1) / 2 : n->m_rect.h;
     int nw = t == HORIZONTAL ? (n->m_rect.w) / 2 : n->m_rect.w;
     auto p = n->parent();
-    auto v = newview(Rect(0, 0, MAX(0, nh), MAX(0, nw)));
-    if (!v)
-    {
-        return;
-    }
+
+    auto rect = Rect(0, 0, MAX(0, nh), MAX(0, nw));
+    auto v = std::make_shared<NODE>(VIEW, nullptr, rect);
+
+    v->term = new_term(rect);
 
     auto c = newcontainer(t, n->parent(), n->m_rect, n, v);
     if (!c)

@@ -103,7 +103,9 @@ public:
         use_default_colors();
         start_pairs();
 
-        m_root = newview(Rect(0, 0, LINES, COLS));
+        auto rect = Rect(0, 0, LINES, COLS);
+        m_root = std::make_shared<NODE>(Node::VIEW, nullptr, rect);
+        m_root->term = new_term(rect);
         focus(m_root);
     }
 
