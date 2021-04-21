@@ -3,6 +3,7 @@
 #include "scrn.h"
 #include "selector.h"
 #include "curses_term.h"
+#include <bits/types/wint_t.h>
 #include <climits>
 #include <cstring>
 #include <exception>
@@ -147,15 +148,9 @@ public:
 
     bool cmd = false;
 
-    bool handleUserInput(const std::shared_ptr<NODE> &n,
-                         const std::unique_ptr<CursesTerm> &term)
+    void handleUserInput(const std::shared_ptr<NODE> &n,
+                         const std::unique_ptr<CursesTerm> &term, int r, wint_t k)
     {
-        wint_t k = 0;
-        int r = wget_wch(term->s->win, &k);
-        if (r == ERR)
-        {
-            return false;
-        }
 
 #define KEY(i) (r == OK && (i) == k)
 #define CODE(i) (r == KEY_CODE_YES && (i) == k)
@@ -165,7 +160,7 @@ public:
     {                                                                          \
         a;                                                                     \
         cmd = false;                                                           \
-        return true;                                                           \
+        return;                                                           \
     }
 
         DO(CODE(KEY_RESIZE), global::reshape(0, 0, LINES, COLS);
@@ -192,7 +187,7 @@ public:
         else
         {
 
-            DO(KEY(global::get_commandKey()), return cmd = true)
+            DO(KEY(global::get_commandKey()), cmd = true; return)
             DO(KEY(0), term->safewrite("\000", 1); term->s->scrollbottom())
             DO(KEY(L'\n'), term->safewrite("\n"); term->s->scrollbottom())
             DO(KEY(L'\r'), term->safewrite(term->lnm ? "\r\n" : "\r");
@@ -254,7 +249,7 @@ public:
             term->s->scrollbottom();
             term->safewrite(c);
         }
-        return cmd = false, true;
+        cmd = false;
     }
 
     int run()
@@ -273,10 +268,15 @@ public:
                     auto focus = m_focused.lock();
                     if (focus)
                     {
-                        if (!handleUserInput(focus, focus->term))
+                        auto &term = focus->term;
+                        wint_t k = 0;
+                        int r = wget_wch(term->s->win, &k);
+                        if (r == ERR)
                         {
                             break;
                         }
+
+                        handleUserInput(focus, term, r, k);
                     }
                 }
             }
