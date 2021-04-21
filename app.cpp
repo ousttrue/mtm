@@ -123,7 +123,6 @@ public:
         m_root = node;
         if (node)
         {
-            node->parent(nullptr);
             node->reshape(Rect(0, 0, LINES, COLS));
         }
     }

@@ -65,10 +65,6 @@ public:
     {
         return m_parent.lock();
     }
-    void parent(const std::shared_ptr<NODE> &node)
-    {
-        m_parent = node;
-    }
     std::shared_ptr<NODE> findViewNode();
     void split(bool isHorizontal);
 
