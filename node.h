@@ -41,10 +41,6 @@ private:
     void deletenode(const std::shared_ptr<NODE> &n);
 
 public:
-    std::shared_ptr<NODE> child1() const
-    {
-        return m_child1;
-    }
     void child1(const std::shared_ptr<NODE> &node)
     {
         if (this == node.get())
@@ -53,10 +49,6 @@ public:
         }
         m_child1 = node;
         node->m_parent = shared_from_this();
-    }
-    std::shared_ptr<NODE> child2() const
-    {
-        return m_child2;
     }
     void child2(const std::shared_ptr<NODE> &node)
     {

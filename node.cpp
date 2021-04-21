@@ -105,11 +105,11 @@ NODE::findnode(const YX &p) /* Find the node enclosing y,x. */
 void NODE::replacechild(const std::shared_ptr<NODE> &c1,
                         const std::shared_ptr<NODE> &c2)
 {
-    if (this->child1() == c1)
+    if (this->m_child1 == c1)
     {
         this->child1(c2);
     }
-    else if (this->child2() == c1)
+    else if (this->m_child2 == c1)
     {
         this->child2(c2);
     }
@@ -189,7 +189,7 @@ void NODE::processVT() /* Recursively check all ptty's for input. */
 
 void NODE::deletenode(const std::shared_ptr<NODE> &n) /* Delete a node. */
 {
-    auto other = n == this->child1() ? this->child2() : this->child1();
+    auto other = n == this->m_child1 ? this->m_child2 : this->m_child1;
     if (n == global::focus())
     {
         global::focus(other);
