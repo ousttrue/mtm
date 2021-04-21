@@ -54,6 +54,9 @@ public:
     void safewrite(const char *b, size_t n); /* Write, checking for errors. */
     // safewrite( s)     - Write string s to node n's host.
     void safewrite(const char *s);
+
+    bool INSCR()const;
+
 };
 
 std::unique_ptr<CursesTerm> new_term(const Rect &rect);

@@ -40,4 +40,8 @@ public:
     void save();
     bool restore();
     void reset();
+    bool INSCR() const
+    {
+        return tos != off;
+    }
 };

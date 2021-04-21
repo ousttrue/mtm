@@ -60,16 +60,6 @@ int get_commandKey()
 //
 // Node manipulation
 //
-
-#define MOVE_OTHER KEY(L'o')
-/* The split terminal keys. */
-#define HSPLIT KEY(L'h')
-#define VSPLIT KEY(L'v')
-/* The delete terminal key. */
-#define DELETE_NODE KEY(L'w')
-/* The force redraw key. */
-#define REDRAW KEY(L'l')
-
 static void sendarrow(const std::shared_ptr<NODE> &n, const char *k)
 {
     char buf[100] = {0};
@@ -169,7 +159,6 @@ public:
 
 #define KEY(i) (r == OK && (i) == k)
 #define CODE(i) (r == KEY_CODE_YES && (i) == k)
-#define INSCR (n->term->s->tos != n->term->s->off)
 
 #define DO(s, t, a)                                                            \
     if (s == cmd && (t))                                                       \
@@ -184,9 +173,9 @@ public:
         DO(false, KEY(0), term->safewrite("\000", 1); term->s->scrollbottom())
         DO(false, KEY(L'\n'), term->safewrite("\n"); term->s->scrollbottom())
         DO(false, KEY(L'\r'), term->safewrite(term->lnm ? "\r\n" : "\r"); term->s->scrollbottom())
-        DO(false, CODE(KEY_PPAGE) && INSCR, term->scrollback())
-        DO(false, CODE(KEY_NPAGE) && INSCR, term->scrollforward())
-        DO(false, CODE(KEY_END) && INSCR, term->s->scrollbottom())
+        DO(false, CODE(KEY_PPAGE) && term->s->INSCR(), term->scrollback())
+        DO(false, CODE(KEY_NPAGE) && term->s->INSCR(), term->scrollforward())
+        DO(false, CODE(KEY_END) && term->s->INSCR(), term->s->scrollbottom())
         DO(false, CODE(KEY_ENTER), term->safewrite(term->lnm ? "\r\n" : "\r");
            term->s->scrollbottom())
         DO(false, CODE(KEY_UP), sendarrow(n, "A"); term->s->scrollbottom());
@@ -217,11 +206,11 @@ public:
         DO(true, CODE(KEY_DOWN), global::focus(term->m_rect.below()))
         DO(true, CODE(KEY_LEFT), global::focus(term->m_rect.left()))
         DO(true, CODE(KEY_RIGHT), global::focus(term->m_rect.right()))
-        DO(true, MOVE_OTHER, global::focus_last())
-        DO(true, HSPLIT, n->split(true))
-        DO(true, VSPLIT, n->split(false))
-        DO(true, DELETE_NODE, n->closed = true)
-        DO(true, REDRAW, touchwin(stdscr); global::draw(); redrawwin(stdscr))
+        DO(true, KEY(L'o'), global::focus_last())
+        DO(true, KEY(L'h'), n->split(true))
+        DO(true, KEY(L'v'), n->split(false))
+        DO(true, KEY(L'w'), n->closed = true)
+        DO(true, KEY(L'l'), touchwin(stdscr); global::draw(); redrawwin(stdscr))
         DO(true, CODE(KEY_PPAGE), term->scrollback())
         DO(true, CODE(KEY_NPAGE), term->scrollforward())
         DO(true, CODE(KEY_END), term->s->scrollbottom())
