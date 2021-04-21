@@ -157,16 +157,10 @@ public:
         }
     }
 
-    bool handleUserInput()
+    bool handleUserInput(const std::shared_ptr<NODE> &n, const std::unique_ptr<CursesTerm> &term)
     {
-        auto n = m_focused.lock();
-        if (!n)
-        {
-            return false;
-        }
-
         wint_t k = 0;
-        int r = wget_wch(n->term->s->win, &k);
+        int r = wget_wch(term->s->win, &k);
         if(r==ERR)
         {
             return false;
@@ -188,58 +182,58 @@ public:
 
         DO(cmd, CODE(KEY_RESIZE), global::reshape(0, 0, LINES, COLS); SB)
         DO(false, KEY(global::get_commandKey()), return cmd = true)
-        DO(false, KEY(0), n->term->safewrite("\000", 1); SB)
-        DO(false, KEY(L'\n'), n->term->safewrite("\n"); SB)
-        DO(false, KEY(L'\r'), n->term->safewrite(n->term->lnm ? "\r\n" : "\r");
+        DO(false, KEY(0), term->safewrite("\000", 1); SB)
+        DO(false, KEY(L'\n'), term->safewrite("\n"); SB)
+        DO(false, KEY(L'\r'), term->safewrite(term->lnm ? "\r\n" : "\r");
            SB)
-        DO(false, SCROLLUP && INSCR, n->term->scrollback())
-        DO(false, SCROLLDOWN && INSCR, n->term->scrollforward())
-        DO(false, RECENTER && INSCR, n->term->s->scrollbottom())
+        DO(false, SCROLLUP && INSCR, term->scrollback())
+        DO(false, SCROLLDOWN && INSCR, term->scrollforward())
+        DO(false, RECENTER && INSCR, term->s->scrollbottom())
         DO(false, CODE(KEY_ENTER),
-           n->term->safewrite(n->term->lnm ? "\r\n" : "\r");
+           term->safewrite(term->lnm ? "\r\n" : "\r");
            SB)
         DO(false, CODE(KEY_UP), sendarrow(n, "A"); SB);
         DO(false, CODE(KEY_DOWN), sendarrow(n, "B"); SB);
         DO(false, CODE(KEY_RIGHT), sendarrow(n, "C"); SB);
         DO(false, CODE(KEY_LEFT), sendarrow(n, "D"); SB);
-        DO(false, CODE(KEY_HOME), n->term->safewrite("\033[1~"); SB)
-        DO(false, CODE(KEY_END), n->term->safewrite("\033[4~"); SB)
-        DO(false, CODE(KEY_PPAGE), n->term->safewrite("\033[5~"); SB)
-        DO(false, CODE(KEY_NPAGE), n->term->safewrite("\033[6~"); SB)
-        DO(false, CODE(KEY_BACKSPACE), n->term->safewrite("\177"); SB)
-        DO(false, CODE(KEY_DC), n->term->safewrite("\033[3~"); SB)
-        DO(false, CODE(KEY_IC), n->term->safewrite("\033[2~"); SB)
-        DO(false, CODE(KEY_BTAB), n->term->safewrite("\033[Z"); SB)
-        DO(false, CODE(KEY_F(1)), n->term->safewrite("\033OP"); SB)
-        DO(false, CODE(KEY_F(2)), n->term->safewrite("\033OQ"); SB)
-        DO(false, CODE(KEY_F(3)), n->term->safewrite("\033OR"); SB)
-        DO(false, CODE(KEY_F(4)), n->term->safewrite("\033OS"); SB)
-        DO(false, CODE(KEY_F(5)), n->term->safewrite("\033[15~"); SB)
-        DO(false, CODE(KEY_F(6)), n->term->safewrite("\033[17~"); SB)
-        DO(false, CODE(KEY_F(7)), n->term->safewrite("\033[18~"); SB)
-        DO(false, CODE(KEY_F(8)), n->term->safewrite("\033[19~"); SB)
-        DO(false, CODE(KEY_F(9)), n->term->safewrite("\033[20~"); SB)
-        DO(false, CODE(KEY_F(10)), n->term->safewrite("\033[21~"); SB)
-        DO(false, CODE(KEY_F(11)), n->term->safewrite("\033[23~"); SB)
-        DO(false, CODE(KEY_F(12)), n->term->safewrite("\033[24~"); SB)
-        DO(true, MOVE_UP, global::focus(n->term->m_rect.above()))
-        DO(true, MOVE_DOWN, global::focus(n->term->m_rect.below()))
-        DO(true, MOVE_LEFT, global::focus(n->term->m_rect.left()))
-        DO(true, MOVE_RIGHT, global::focus(n->term->m_rect.right()))
+        DO(false, CODE(KEY_HOME), term->safewrite("\033[1~"); SB)
+        DO(false, CODE(KEY_END), term->safewrite("\033[4~"); SB)
+        DO(false, CODE(KEY_PPAGE), term->safewrite("\033[5~"); SB)
+        DO(false, CODE(KEY_NPAGE), term->safewrite("\033[6~"); SB)
+        DO(false, CODE(KEY_BACKSPACE), term->safewrite("\177"); SB)
+        DO(false, CODE(KEY_DC), term->safewrite("\033[3~"); SB)
+        DO(false, CODE(KEY_IC), term->safewrite("\033[2~"); SB)
+        DO(false, CODE(KEY_BTAB), term->safewrite("\033[Z"); SB)
+        DO(false, CODE(KEY_F(1)), term->safewrite("\033OP"); SB)
+        DO(false, CODE(KEY_F(2)), term->safewrite("\033OQ"); SB)
+        DO(false, CODE(KEY_F(3)), term->safewrite("\033OR"); SB)
+        DO(false, CODE(KEY_F(4)), term->safewrite("\033OS"); SB)
+        DO(false, CODE(KEY_F(5)), term->safewrite("\033[15~"); SB)
+        DO(false, CODE(KEY_F(6)), term->safewrite("\033[17~"); SB)
+        DO(false, CODE(KEY_F(7)), term->safewrite("\033[18~"); SB)
+        DO(false, CODE(KEY_F(8)), term->safewrite("\033[19~"); SB)
+        DO(false, CODE(KEY_F(9)), term->safewrite("\033[20~"); SB)
+        DO(false, CODE(KEY_F(10)), term->safewrite("\033[21~"); SB)
+        DO(false, CODE(KEY_F(11)), term->safewrite("\033[23~"); SB)
+        DO(false, CODE(KEY_F(12)), term->safewrite("\033[24~"); SB)
+        DO(true, MOVE_UP, global::focus(term->m_rect.above()))
+        DO(true, MOVE_DOWN, global::focus(term->m_rect.below()))
+        DO(true, MOVE_LEFT, global::focus(term->m_rect.left()))
+        DO(true, MOVE_RIGHT, global::focus(term->m_rect.right()))
         DO(true, MOVE_OTHER, global::focus_last())
         DO(true, HSPLIT, n->split(true))
         DO(true, VSPLIT, n->split(false))
         DO(true, DELETE_NODE, n->closed = true)
         DO(true, REDRAW, touchwin(stdscr); global::draw(); redrawwin(stdscr))
-        DO(true, SCROLLUP, n->term->scrollback())
-        DO(true, SCROLLDOWN, n->term->scrollforward())
-        DO(true, RECENTER, n->term->s->scrollbottom())
-        DO(true, KEY(global::get_commandKey()), n->term->safewrite(cmdstr, 1));
+        DO(true, SCROLLUP, term->scrollback())
+        DO(true, SCROLLDOWN, term->scrollforward())
+        DO(true, RECENTER, term->s->scrollbottom())
+        DO(true, KEY(global::get_commandKey()), term->safewrite(cmdstr, 1));
         char c[MB_LEN_MAX + 1] = {0};
         if (wctomb(c, k) > 0)
         {
-            n->term->s->scrollbottom();
-            n->term->safewrite(c);
+            term->s->scrollbottom();
+            term->safewrite(c);
         }
         return cmd = false, true;
     }
@@ -255,8 +249,17 @@ public:
             // process all user input
             //
             {
-                while (handleUserInput())
-                    ;
+                while (true)
+                {
+                    auto focus = m_focused.lock();
+                    if(focus)
+                    {
+                        if(!handleUserInput(focus, focus->term))
+                        {
+                            break;
+                        }
+                    }
+                }
             }
 
             //
