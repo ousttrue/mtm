@@ -167,11 +167,13 @@ public:
 
         wint_t k = 0;
         int r = wget_wch(n->term->s->win, &k);
+        if(r==ERR)
+        {
+            return false;
+        }
 
-        // return handlechar(r, w);
         const char cmdstr[] = {(char)global::get_commandKey(), 0};
         static bool cmd = false;
-#define KERR(i) (r == ERR && (i) == k)
 #define KEY(i) (r == OK && (i) == k)
 #define CODE(i) (r == KEY_CODE_YES && (i) == k)
 #define INSCR (n->term->s->tos != n->term->s->off)
@@ -184,7 +186,6 @@ public:
         return true;                                                           \
     }
 
-        DO(cmd, KERR(k), return false)
         DO(cmd, CODE(KEY_RESIZE), global::reshape(0, 0, LINES, COLS); SB)
         DO(false, KEY(global::get_commandKey()), return cmd = true)
         DO(false, KEY(0), n->term->safewrite("\000", 1); SB)
