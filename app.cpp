@@ -149,7 +149,8 @@ public:
     bool cmd = false;
 
     void handleUserInput(const std::shared_ptr<NODE> &n,
-                         const std::unique_ptr<CursesTerm> &term, int r, wint_t k)
+                         const std::unique_ptr<CursesTerm> &term, int r,
+                         wint_t k)
     {
 
 #define KEY(i) (r == OK && (i) == k)
@@ -160,7 +161,7 @@ public:
     {                                                                          \
         a;                                                                     \
         cmd = false;                                                           \
-        return;                                                           \
+        return;                                                                \
     }
 
         DO(CODE(KEY_RESIZE), global::reshape(0, 0, LINES, COLS);
@@ -186,8 +187,11 @@ public:
         }
         else
         {
-
-            DO(KEY(global::get_commandKey()), cmd = true; return)
+            if (KEY(global::get_commandKey()))
+            {
+                cmd = true;
+                return;
+            }
             DO(KEY(0), term->safewrite("\000", 1); term->s->scrollbottom())
             DO(KEY(L'\n'), term->safewrite("\n"); term->s->scrollbottom())
             DO(KEY(L'\r'), term->safewrite(term->lnm ? "\r\n" : "\r");
