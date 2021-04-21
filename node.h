@@ -28,19 +28,19 @@ public:
 
     NODE(const Rect &rect);
     ~NODE();
-    void reshape(const Rect &rect);
-    void reshapechildren();
+
     void draw() const;
-    void drawchildren() const;
-    std::shared_ptr<NODE> findnode(const YX &yx);
     void process();
+    std::shared_ptr<NODE> findnode(const YX &yx);
+    void reshape(const Rect &rect);
 
 private:
+    void reshapechildren();
+    void drawchildren() const;
     void processVT();
     void deleteClosed();
     void deletenode(const std::shared_ptr<NODE> &n);
 
-public:
     void child1(const std::shared_ptr<NODE> &node)
     {
         if (this == node.get())
@@ -59,6 +59,8 @@ public:
         m_child2 = node;
         node->m_parent = shared_from_this();
     }
+
+public:
     std::shared_ptr<NODE> parent() const
     {
         return m_parent.lock();
@@ -68,10 +70,12 @@ public:
         m_parent = node;
     }
     std::shared_ptr<NODE> findViewNode();
+    void split(bool isHorizontal);
 
+private:
     void replacechild(const std::shared_ptr<NODE> &c1,
                       const std::shared_ptr<NODE> &c2);
+
 };
 
 void focus(const std::shared_ptr<NODE> &n);
-void split(const std::shared_ptr<NODE> &n, bool isHorizontal);

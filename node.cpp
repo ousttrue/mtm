@@ -121,36 +121,28 @@ void NODE::replacechild(const std::shared_ptr<NODE> &c1,
     this->draw();
 }
 
-static std::shared_ptr<NODE>
-newcontainer(const Rect &rect, bool isHorizontal,
-             const std::shared_ptr<NODE> &c1,
-             const std::shared_ptr<NODE> &c2) /* Create a new container */
-{
-    auto n = std::make_shared<NODE>(rect);
-    n->child1(c1);
-    n->child2(c2);
-    n->splitter.isHorizontal = isHorizontal;
-    n->reshapechildren();
-    return n;
-}
-
 //
 // c
 // nv
 //
-void split(const std::shared_ptr<NODE> &n,
-           bool isHorizontal) /* Split a node. */
+void NODE::split(bool isHorizontal) /* Split a node. */
 {
-    auto rect = n->splitter.viewRect(n->m_rect);
+    auto rect = this->splitter.viewRect(this->m_rect);
     auto v = std::make_shared<NODE>(rect);
     v->term = new_term(rect);
 
     // split
-    auto p = n->parent();
-    auto c = newcontainer(n->m_rect, isHorizontal, n, v);
+    auto p = this->parent();
+
+    auto c = std::make_shared<NODE>(this->m_rect);
+    c->child1(shared_from_this());
+    c->child2(v);
+    c->splitter.isHorizontal = isHorizontal;
+    c->reshapechildren();
+
     if (p)
     {
-        p->replacechild(n, c);
+        p->replacechild(shared_from_this(), c);
     }
     else
     {
