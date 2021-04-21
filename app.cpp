@@ -157,21 +157,29 @@ public:
         }
     }
 
-    bool handleUserInput(const std::shared_ptr<NODE> &n, const std::unique_ptr<CursesTerm> &term)
+    enum Command
+    {
+        ON,
+        OFF,
+        ANY,
+    };
+
+    bool cmd = false;
+
+    bool handleUserInput(const std::shared_ptr<NODE> &n,
+                         const std::unique_ptr<CursesTerm> &term)
     {
         wint_t k = 0;
         int r = wget_wch(term->s->win, &k);
-        if(r==ERR)
+        if (r == ERR)
         {
             return false;
         }
 
-        const char cmdstr[] = {(char)global::get_commandKey(), 0};
-        static bool cmd = false;
 #define KEY(i) (r == OK && (i) == k)
 #define CODE(i) (r == KEY_CODE_YES && (i) == k)
 #define INSCR (n->term->s->tos != n->term->s->off)
-#define SB n->term->s->scrollbottom()
+
 #define DO(s, t, a)                                                            \
     if (s == cmd && (t))                                                       \
     {                                                                          \
@@ -180,42 +188,40 @@ public:
         return true;                                                           \
     }
 
-        DO(cmd, CODE(KEY_RESIZE), global::reshape(0, 0, LINES, COLS); SB)
+        DO(cmd, CODE(KEY_RESIZE), global::reshape(0, 0, LINES, COLS); term->s->scrollbottom())
         DO(false, KEY(global::get_commandKey()), return cmd = true)
-        DO(false, KEY(0), term->safewrite("\000", 1); SB)
-        DO(false, KEY(L'\n'), term->safewrite("\n"); SB)
-        DO(false, KEY(L'\r'), term->safewrite(term->lnm ? "\r\n" : "\r");
-           SB)
+        DO(false, KEY(0), term->safewrite("\000", 1); term->s->scrollbottom())
+        DO(false, KEY(L'\n'), term->safewrite("\n"); term->s->scrollbottom())
+        DO(false, KEY(L'\r'), term->safewrite(term->lnm ? "\r\n" : "\r"); term->s->scrollbottom())
         DO(false, SCROLLUP && INSCR, term->scrollback())
         DO(false, SCROLLDOWN && INSCR, term->scrollforward())
         DO(false, RECENTER && INSCR, term->s->scrollbottom())
-        DO(false, CODE(KEY_ENTER),
-           term->safewrite(term->lnm ? "\r\n" : "\r");
-           SB)
-        DO(false, CODE(KEY_UP), sendarrow(n, "A"); SB);
-        DO(false, CODE(KEY_DOWN), sendarrow(n, "B"); SB);
-        DO(false, CODE(KEY_RIGHT), sendarrow(n, "C"); SB);
-        DO(false, CODE(KEY_LEFT), sendarrow(n, "D"); SB);
-        DO(false, CODE(KEY_HOME), term->safewrite("\033[1~"); SB)
-        DO(false, CODE(KEY_END), term->safewrite("\033[4~"); SB)
-        DO(false, CODE(KEY_PPAGE), term->safewrite("\033[5~"); SB)
-        DO(false, CODE(KEY_NPAGE), term->safewrite("\033[6~"); SB)
-        DO(false, CODE(KEY_BACKSPACE), term->safewrite("\177"); SB)
-        DO(false, CODE(KEY_DC), term->safewrite("\033[3~"); SB)
-        DO(false, CODE(KEY_IC), term->safewrite("\033[2~"); SB)
-        DO(false, CODE(KEY_BTAB), term->safewrite("\033[Z"); SB)
-        DO(false, CODE(KEY_F(1)), term->safewrite("\033OP"); SB)
-        DO(false, CODE(KEY_F(2)), term->safewrite("\033OQ"); SB)
-        DO(false, CODE(KEY_F(3)), term->safewrite("\033OR"); SB)
-        DO(false, CODE(KEY_F(4)), term->safewrite("\033OS"); SB)
-        DO(false, CODE(KEY_F(5)), term->safewrite("\033[15~"); SB)
-        DO(false, CODE(KEY_F(6)), term->safewrite("\033[17~"); SB)
-        DO(false, CODE(KEY_F(7)), term->safewrite("\033[18~"); SB)
-        DO(false, CODE(KEY_F(8)), term->safewrite("\033[19~"); SB)
-        DO(false, CODE(KEY_F(9)), term->safewrite("\033[20~"); SB)
-        DO(false, CODE(KEY_F(10)), term->safewrite("\033[21~"); SB)
-        DO(false, CODE(KEY_F(11)), term->safewrite("\033[23~"); SB)
-        DO(false, CODE(KEY_F(12)), term->safewrite("\033[24~"); SB)
+        DO(false, CODE(KEY_ENTER), term->safewrite(term->lnm ? "\r\n" : "\r");
+           term->s->scrollbottom())
+        DO(false, CODE(KEY_UP), sendarrow(n, "A"); term->s->scrollbottom());
+        DO(false, CODE(KEY_DOWN), sendarrow(n, "B"); term->s->scrollbottom());
+        DO(false, CODE(KEY_RIGHT), sendarrow(n, "C"); term->s->scrollbottom());
+        DO(false, CODE(KEY_LEFT), sendarrow(n, "D"); term->s->scrollbottom());
+        DO(false, CODE(KEY_HOME), term->safewrite("\033[1~"); term->s->scrollbottom())
+        DO(false, CODE(KEY_END), term->safewrite("\033[4~"); term->s->scrollbottom())
+        DO(false, CODE(KEY_PPAGE), term->safewrite("\033[5~"); term->s->scrollbottom())
+        DO(false, CODE(KEY_NPAGE), term->safewrite("\033[6~"); term->s->scrollbottom())
+        DO(false, CODE(KEY_BACKSPACE), term->safewrite("\177"); term->s->scrollbottom())
+        DO(false, CODE(KEY_DC), term->safewrite("\033[3~"); term->s->scrollbottom())
+        DO(false, CODE(KEY_IC), term->safewrite("\033[2~"); term->s->scrollbottom())
+        DO(false, CODE(KEY_BTAB), term->safewrite("\033[Z"); term->s->scrollbottom())
+        DO(false, CODE(KEY_F(1)), term->safewrite("\033OP"); term->s->scrollbottom())
+        DO(false, CODE(KEY_F(2)), term->safewrite("\033OQ"); term->s->scrollbottom())
+        DO(false, CODE(KEY_F(3)), term->safewrite("\033OR"); term->s->scrollbottom())
+        DO(false, CODE(KEY_F(4)), term->safewrite("\033OS"); term->s->scrollbottom())
+        DO(false, CODE(KEY_F(5)), term->safewrite("\033[15~"); term->s->scrollbottom())
+        DO(false, CODE(KEY_F(6)), term->safewrite("\033[17~"); term->s->scrollbottom())
+        DO(false, CODE(KEY_F(7)), term->safewrite("\033[18~"); term->s->scrollbottom())
+        DO(false, CODE(KEY_F(8)), term->safewrite("\033[19~"); term->s->scrollbottom())
+        DO(false, CODE(KEY_F(9)), term->safewrite("\033[20~"); term->s->scrollbottom())
+        DO(false, CODE(KEY_F(10)), term->safewrite("\033[21~"); term->s->scrollbottom())
+        DO(false, CODE(KEY_F(11)), term->safewrite("\033[23~"); term->s->scrollbottom())
+        DO(false, CODE(KEY_F(12)), term->safewrite("\033[24~"); term->s->scrollbottom())
         DO(true, MOVE_UP, global::focus(term->m_rect.above()))
         DO(true, MOVE_DOWN, global::focus(term->m_rect.below()))
         DO(true, MOVE_LEFT, global::focus(term->m_rect.left()))
@@ -228,6 +234,7 @@ public:
         DO(true, SCROLLUP, term->scrollback())
         DO(true, SCROLLDOWN, term->scrollforward())
         DO(true, RECENTER, term->s->scrollbottom())
+        const char cmdstr[] = {(char)global::get_commandKey(), 0};
         DO(true, KEY(global::get_commandKey()), term->safewrite(cmdstr, 1));
         char c[MB_LEN_MAX + 1] = {0};
         if (wctomb(c, k) > 0)
@@ -252,9 +259,9 @@ public:
                 while (true)
                 {
                     auto focus = m_focused.lock();
-                    if(focus)
+                    if (focus)
                     {
-                        if(!handleUserInput(focus, focus->term))
+                        if (!handleUserInput(focus, focus->term))
                         {
                             break;
                         }
