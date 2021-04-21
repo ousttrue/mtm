@@ -160,62 +160,94 @@ public:
 #define KEY(i) (r == OK && (i) == k)
 #define CODE(i) (r == KEY_CODE_YES && (i) == k)
 
-#define DO(s, t, a)                                                            \
-    if (s == cmd && (t))                                                       \
+#define DO(t, a)                                                               \
+    if (t)                                                                     \
     {                                                                          \
         a;                                                                     \
         cmd = false;                                                           \
         return true;                                                           \
     }
 
-        DO(cmd, CODE(KEY_RESIZE), global::reshape(0, 0, LINES, COLS); term->s->scrollbottom())
-        DO(false, KEY(global::get_commandKey()), return cmd = true)
-        DO(false, KEY(0), term->safewrite("\000", 1); term->s->scrollbottom())
-        DO(false, KEY(L'\n'), term->safewrite("\n"); term->s->scrollbottom())
-        DO(false, KEY(L'\r'), term->safewrite(term->lnm ? "\r\n" : "\r"); term->s->scrollbottom())
-        DO(false, CODE(KEY_PPAGE) && term->s->INSCR(), term->scrollback())
-        DO(false, CODE(KEY_NPAGE) && term->s->INSCR(), term->scrollforward())
-        DO(false, CODE(KEY_END) && term->s->INSCR(), term->s->scrollbottom())
-        DO(false, CODE(KEY_ENTER), term->safewrite(term->lnm ? "\r\n" : "\r");
+        DO(CODE(KEY_RESIZE), global::reshape(0, 0, LINES, COLS);
            term->s->scrollbottom())
-        DO(false, CODE(KEY_UP), sendarrow(n, "A"); term->s->scrollbottom());
-        DO(false, CODE(KEY_DOWN), sendarrow(n, "B"); term->s->scrollbottom());
-        DO(false, CODE(KEY_RIGHT), sendarrow(n, "C"); term->s->scrollbottom());
-        DO(false, CODE(KEY_LEFT), sendarrow(n, "D"); term->s->scrollbottom());
-        DO(false, CODE(KEY_HOME), term->safewrite("\033[1~"); term->s->scrollbottom())
-        DO(false, CODE(KEY_END), term->safewrite("\033[4~"); term->s->scrollbottom())
-        DO(false, CODE(KEY_PPAGE), term->safewrite("\033[5~"); term->s->scrollbottom())
-        DO(false, CODE(KEY_NPAGE), term->safewrite("\033[6~"); term->s->scrollbottom())
-        DO(false, CODE(KEY_BACKSPACE), term->safewrite("\177"); term->s->scrollbottom())
-        DO(false, CODE(KEY_DC), term->safewrite("\033[3~"); term->s->scrollbottom())
-        DO(false, CODE(KEY_IC), term->safewrite("\033[2~"); term->s->scrollbottom())
-        DO(false, CODE(KEY_BTAB), term->safewrite("\033[Z"); term->s->scrollbottom())
-        DO(false, CODE(KEY_F(1)), term->safewrite("\033OP"); term->s->scrollbottom())
-        DO(false, CODE(KEY_F(2)), term->safewrite("\033OQ"); term->s->scrollbottom())
-        DO(false, CODE(KEY_F(3)), term->safewrite("\033OR"); term->s->scrollbottom())
-        DO(false, CODE(KEY_F(4)), term->safewrite("\033OS"); term->s->scrollbottom())
-        DO(false, CODE(KEY_F(5)), term->safewrite("\033[15~"); term->s->scrollbottom())
-        DO(false, CODE(KEY_F(6)), term->safewrite("\033[17~"); term->s->scrollbottom())
-        DO(false, CODE(KEY_F(7)), term->safewrite("\033[18~"); term->s->scrollbottom())
-        DO(false, CODE(KEY_F(8)), term->safewrite("\033[19~"); term->s->scrollbottom())
-        DO(false, CODE(KEY_F(9)), term->safewrite("\033[20~"); term->s->scrollbottom())
-        DO(false, CODE(KEY_F(10)), term->safewrite("\033[21~"); term->s->scrollbottom())
-        DO(false, CODE(KEY_F(11)), term->safewrite("\033[23~"); term->s->scrollbottom())
-        DO(false, CODE(KEY_F(12)), term->safewrite("\033[24~"); term->s->scrollbottom())
-        DO(true, CODE(KEY_UP), global::focus(term->m_rect.above()))
-        DO(true, CODE(KEY_DOWN), global::focus(term->m_rect.below()))
-        DO(true, CODE(KEY_LEFT), global::focus(term->m_rect.left()))
-        DO(true, CODE(KEY_RIGHT), global::focus(term->m_rect.right()))
-        DO(true, KEY(L'o'), global::focus_last())
-        DO(true, KEY(L'h'), n->split(true))
-        DO(true, KEY(L'v'), n->split(false))
-        DO(true, KEY(L'w'), n->closed = true)
-        DO(true, KEY(L'l'), touchwin(stdscr); global::draw(); redrawwin(stdscr))
-        DO(true, CODE(KEY_PPAGE), term->scrollback())
-        DO(true, CODE(KEY_NPAGE), term->scrollforward())
-        DO(true, CODE(KEY_END), term->s->scrollbottom())
-        const char cmdstr[] = {(char)global::get_commandKey(), 0};
-        DO(true, KEY(global::get_commandKey()), term->safewrite(cmdstr, 1));
+
+        if (cmd)
+        {
+
+            DO(CODE(KEY_UP), global::focus(term->m_rect.above()))
+            DO(CODE(KEY_DOWN), global::focus(term->m_rect.below()))
+            DO(CODE(KEY_LEFT), global::focus(term->m_rect.left()))
+            DO(CODE(KEY_RIGHT), global::focus(term->m_rect.right()))
+            DO(KEY(L'o'), global::focus_last())
+            DO(KEY(L'h'), n->split(true))
+            DO(KEY(L'v'), n->split(false))
+            DO(KEY(L'w'), n->closed = true)
+            DO(KEY(L'l'), touchwin(stdscr); global::draw(); redrawwin(stdscr))
+            DO(CODE(KEY_PPAGE), term->scrollback())
+            DO(CODE(KEY_NPAGE), term->scrollforward())
+            DO(CODE(KEY_END), term->s->scrollbottom())
+            const char cmdstr[] = {(char)global::get_commandKey(), 0};
+            DO(KEY(global::get_commandKey()), term->safewrite(cmdstr, 1));
+        }
+        else
+        {
+
+            DO(KEY(global::get_commandKey()), return cmd = true)
+            DO(KEY(0), term->safewrite("\000", 1); term->s->scrollbottom())
+            DO(KEY(L'\n'), term->safewrite("\n"); term->s->scrollbottom())
+            DO(KEY(L'\r'), term->safewrite(term->lnm ? "\r\n" : "\r");
+               term->s->scrollbottom())
+            DO(CODE(KEY_PPAGE) && term->s->INSCR(), term->scrollback())
+            DO(CODE(KEY_NPAGE) && term->s->INSCR(), term->scrollforward())
+            DO(CODE(KEY_END) && term->s->INSCR(), term->s->scrollbottom())
+            DO(CODE(KEY_ENTER), term->safewrite(term->lnm ? "\r\n" : "\r");
+               term->s->scrollbottom())
+            DO(CODE(KEY_UP), sendarrow(n, "A"); term->s->scrollbottom());
+            DO(CODE(KEY_DOWN), sendarrow(n, "B"); term->s->scrollbottom());
+            DO(CODE(KEY_RIGHT), sendarrow(n, "C"); term->s->scrollbottom());
+            DO(CODE(KEY_LEFT), sendarrow(n, "D"); term->s->scrollbottom());
+            DO(CODE(KEY_HOME), term->safewrite("\033[1~");
+               term->s->scrollbottom())
+            DO(CODE(KEY_END), term->safewrite("\033[4~");
+               term->s->scrollbottom())
+            DO(CODE(KEY_PPAGE), term->safewrite("\033[5~");
+               term->s->scrollbottom())
+            DO(CODE(KEY_NPAGE), term->safewrite("\033[6~");
+               term->s->scrollbottom())
+            DO(CODE(KEY_BACKSPACE), term->safewrite("\177");
+               term->s->scrollbottom())
+            DO(CODE(KEY_DC), term->safewrite("\033[3~");
+               term->s->scrollbottom())
+            DO(CODE(KEY_IC), term->safewrite("\033[2~");
+               term->s->scrollbottom())
+            DO(CODE(KEY_BTAB), term->safewrite("\033[Z");
+               term->s->scrollbottom())
+            DO(CODE(KEY_F(1)), term->safewrite("\033OP");
+               term->s->scrollbottom())
+            DO(CODE(KEY_F(2)), term->safewrite("\033OQ");
+               term->s->scrollbottom())
+            DO(CODE(KEY_F(3)), term->safewrite("\033OR");
+               term->s->scrollbottom())
+            DO(CODE(KEY_F(4)), term->safewrite("\033OS");
+               term->s->scrollbottom())
+            DO(CODE(KEY_F(5)), term->safewrite("\033[15~");
+               term->s->scrollbottom())
+            DO(CODE(KEY_F(6)), term->safewrite("\033[17~");
+               term->s->scrollbottom())
+            DO(CODE(KEY_F(7)), term->safewrite("\033[18~");
+               term->s->scrollbottom())
+            DO(CODE(KEY_F(8)), term->safewrite("\033[19~");
+               term->s->scrollbottom())
+            DO(CODE(KEY_F(9)), term->safewrite("\033[20~");
+               term->s->scrollbottom())
+            DO(CODE(KEY_F(10)), term->safewrite("\033[21~");
+               term->s->scrollbottom())
+            DO(CODE(KEY_F(11)), term->safewrite("\033[23~");
+               term->s->scrollbottom())
+            DO(CODE(KEY_F(12)), term->safewrite("\033[24~");
+               term->s->scrollbottom())
+        }
+
         char c[MB_LEN_MAX + 1] = {0};
         if (wctomb(c, k) > 0)
         {
