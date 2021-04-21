@@ -73,5 +73,3 @@ private:
                       const std::shared_ptr<NODE> &c2);
 
 };
-
-void focus(const std::shared_ptr<NODE> &n);
