@@ -33,8 +33,14 @@ public:
     void process();
     std::shared_ptr<NODE> findnode(const YX &yx);
     void reshape(const Rect &rect);
+    std::shared_ptr<NODE> findViewNode();
+    void split(bool isHorizontal);
 
 private:
+    std::shared_ptr<NODE> parent() const
+    {
+        return m_parent.lock();
+    }
     void reshapechildren();
     void drawchildren() const;
     void processVT();
@@ -59,16 +65,6 @@ private:
         m_child2 = node;
         node->m_parent = shared_from_this();
     }
-
-public:
-    std::shared_ptr<NODE> parent() const
-    {
-        return m_parent.lock();
-    }
-    std::shared_ptr<NODE> findViewNode();
-    void split(bool isHorizontal);
-
-private:
     void replacechild(const std::shared_ptr<NODE> &c1,
                       const std::shared_ptr<NODE> &c2);
 
