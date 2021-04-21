@@ -275,3 +275,13 @@ std::unique_ptr<CursesTerm> new_term(const Rect &rect) /* Open a new view. */
         return term;
     }
 }
+
+void CursesTerm::scrollback()
+{
+    this->s->scrollback(m_rect.h);
+}
+
+void CursesTerm::scrollforward()
+{
+    this->s->scrollforward(m_rect.h);
+}

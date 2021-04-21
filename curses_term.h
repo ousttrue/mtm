@@ -41,6 +41,8 @@ public:
     void fixCursor();
     void reset();
     bool alternate_screen_buffer_mode(bool set);
+    void scrollback();
+    void scrollforward();
 
     void HorizontalTabSet(int x);
     bool TryGetBackwardTab(int x, int *out);

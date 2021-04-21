@@ -191,8 +191,8 @@ public:
         DO(false, KEY(L'\n'), n->term->safewrite("\n"); SB)
         DO(false, KEY(L'\r'), n->term->safewrite(n->term->lnm ? "\r\n" : "\r");
            SB)
-        DO(false, SCROLLUP && INSCR, n->term->s->scrollback(n->m_rect.h))
-        DO(false, SCROLLDOWN && INSCR, n->term->s->scrollforward(n->m_rect.h))
+        DO(false, SCROLLUP && INSCR, n->term->scrollback())
+        DO(false, SCROLLDOWN && INSCR, n->term->scrollforward())
         DO(false, RECENTER && INSCR, n->term->s->scrollbottom())
         DO(false, CODE(KEY_ENTER),
            n->term->safewrite(n->term->lnm ? "\r\n" : "\r");
@@ -221,17 +221,17 @@ public:
         DO(false, CODE(KEY_F(10)), n->term->safewrite("\033[21~"); SB)
         DO(false, CODE(KEY_F(11)), n->term->safewrite("\033[23~"); SB)
         DO(false, CODE(KEY_F(12)), n->term->safewrite("\033[24~"); SB)
-        DO(true, MOVE_UP, global::focus(n->m_rect.above()))
-        DO(true, MOVE_DOWN, global::focus(n->m_rect.below()))
-        DO(true, MOVE_LEFT, global::focus(n->m_rect.left()))
-        DO(true, MOVE_RIGHT, global::focus(n->m_rect.right()))
+        DO(true, MOVE_UP, global::focus(n->term->m_rect.above()))
+        DO(true, MOVE_DOWN, global::focus(n->term->m_rect.below()))
+        DO(true, MOVE_LEFT, global::focus(n->term->m_rect.left()))
+        DO(true, MOVE_RIGHT, global::focus(n->term->m_rect.right()))
         DO(true, MOVE_OTHER, global::focus_last())
         DO(true, HSPLIT, n->split(true))
         DO(true, VSPLIT, n->split(false))
         DO(true, DELETE_NODE, n->closed = true)
         DO(true, REDRAW, touchwin(stdscr); global::draw(); redrawwin(stdscr))
-        DO(true, SCROLLUP, n->term->s->scrollback(n->m_rect.h))
-        DO(true, SCROLLDOWN, n->term->s->scrollforward(n->m_rect.h))
+        DO(true, SCROLLUP, n->term->scrollback())
+        DO(true, SCROLLDOWN, n->term->scrollforward())
         DO(true, RECENTER, n->term->s->scrollbottom())
         DO(true, KEY(global::get_commandKey()), n->term->safewrite(cmdstr, 1));
         char c[MB_LEN_MAX + 1] = {0};
