@@ -187,19 +187,18 @@ void NODE::processVT() /* Recursively check all ptty's for input. */
     }
 }
 
-void deletenode(const std::shared_ptr<NODE> &n) /* Delete a node. */
+void NODE::deletenode(const std::shared_ptr<NODE> &n) /* Delete a node. */
 {
-    auto p = n->parent();
+    auto other = n == this->child1() ? this->child2() : this->child1();
     if (n == global::focus())
     {
-        global::focus(p->child1() == n ? p->child2() : p->child1());
+        global::focus(other);
     }
 
-    auto parent = p->parent();
-    auto other = n == p->child1() ? p->child2() : p->child1();
+    auto parent = this->parent();
     if (parent)
     {
-        parent->replacechild(p, other);
+        parent->replacechild(shared_from_this(), other);
     }
     else
     {

@@ -35,9 +35,10 @@ public:
     std::shared_ptr<NODE> findnode(const YX &yx);
     void process();
 
-private:    
+private:
     void processVT();
     void deleteClosed();
+    void deletenode(const std::shared_ptr<NODE> &n);
 
 public:
     std::shared_ptr<NODE> child1() const
