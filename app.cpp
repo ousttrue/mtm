@@ -61,15 +61,6 @@ int get_commandKey()
 // Node manipulation
 //
 
-/* The scrollback keys. */
-#define SCROLLUP CODE(KEY_PPAGE)
-#define SCROLLDOWN CODE(KEY_NPAGE)
-#define RECENTER CODE(KEY_END)
-/* The change focus keys. */
-#define MOVE_UP CODE(KEY_UP)
-#define MOVE_DOWN CODE(KEY_DOWN)
-#define MOVE_RIGHT CODE(KEY_RIGHT)
-#define MOVE_LEFT CODE(KEY_LEFT)
 #define MOVE_OTHER KEY(L'o')
 /* The split terminal keys. */
 #define HSPLIT KEY(L'h')
@@ -193,9 +184,9 @@ public:
         DO(false, KEY(0), term->safewrite("\000", 1); term->s->scrollbottom())
         DO(false, KEY(L'\n'), term->safewrite("\n"); term->s->scrollbottom())
         DO(false, KEY(L'\r'), term->safewrite(term->lnm ? "\r\n" : "\r"); term->s->scrollbottom())
-        DO(false, SCROLLUP && INSCR, term->scrollback())
-        DO(false, SCROLLDOWN && INSCR, term->scrollforward())
-        DO(false, RECENTER && INSCR, term->s->scrollbottom())
+        DO(false, CODE(KEY_PPAGE) && INSCR, term->scrollback())
+        DO(false, CODE(KEY_NPAGE) && INSCR, term->scrollforward())
+        DO(false, CODE(KEY_END) && INSCR, term->s->scrollbottom())
         DO(false, CODE(KEY_ENTER), term->safewrite(term->lnm ? "\r\n" : "\r");
            term->s->scrollbottom())
         DO(false, CODE(KEY_UP), sendarrow(n, "A"); term->s->scrollbottom());
@@ -222,18 +213,18 @@ public:
         DO(false, CODE(KEY_F(10)), term->safewrite("\033[21~"); term->s->scrollbottom())
         DO(false, CODE(KEY_F(11)), term->safewrite("\033[23~"); term->s->scrollbottom())
         DO(false, CODE(KEY_F(12)), term->safewrite("\033[24~"); term->s->scrollbottom())
-        DO(true, MOVE_UP, global::focus(term->m_rect.above()))
-        DO(true, MOVE_DOWN, global::focus(term->m_rect.below()))
-        DO(true, MOVE_LEFT, global::focus(term->m_rect.left()))
-        DO(true, MOVE_RIGHT, global::focus(term->m_rect.right()))
+        DO(true, CODE(KEY_UP), global::focus(term->m_rect.above()))
+        DO(true, CODE(KEY_DOWN), global::focus(term->m_rect.below()))
+        DO(true, CODE(KEY_LEFT), global::focus(term->m_rect.left()))
+        DO(true, CODE(KEY_RIGHT), global::focus(term->m_rect.right()))
         DO(true, MOVE_OTHER, global::focus_last())
         DO(true, HSPLIT, n->split(true))
         DO(true, VSPLIT, n->split(false))
         DO(true, DELETE_NODE, n->closed = true)
         DO(true, REDRAW, touchwin(stdscr); global::draw(); redrawwin(stdscr))
-        DO(true, SCROLLUP, term->scrollback())
-        DO(true, SCROLLDOWN, term->scrollforward())
-        DO(true, RECENTER, term->s->scrollbottom())
+        DO(true, CODE(KEY_PPAGE), term->scrollback())
+        DO(true, CODE(KEY_NPAGE), term->scrollforward())
+        DO(true, CODE(KEY_END), term->s->scrollbottom())
         const char cmdstr[] = {(char)global::get_commandKey(), 0};
         DO(true, KEY(global::get_commandKey()), term->safewrite(cmdstr, 1));
         char c[MB_LEN_MAX + 1] = {0};
