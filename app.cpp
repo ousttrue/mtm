@@ -104,7 +104,7 @@ public:
         start_pairs();
 
         auto rect = Rect(0, 0, LINES, COLS);
-        m_root = std::make_shared<NODE>(Node::VIEW, rect);
+        m_root = std::make_shared<NODE>(rect);
         m_root->term = new_term(rect);
         focus(m_root);
     }
@@ -227,8 +227,8 @@ public:
         DO(true, MOVE_LEFT, global::focus(n->m_rect.left()))
         DO(true, MOVE_RIGHT, global::focus(n->m_rect.right()))
         DO(true, MOVE_OTHER, global::focus_last())
-        DO(true, HSPLIT, split(n, HORIZONTAL))
-        DO(true, VSPLIT, split(n, VERTICAL))
+        DO(true, HSPLIT, split(n, true))
+        DO(true, VSPLIT, split(n, false))
         DO(true, DELETE_NODE, deletenode(n))
         DO(true, REDRAW, touchwin(stdscr); global::draw(); redrawwin(stdscr))
         DO(true, SCROLLUP, n->term->s->scrollback(n->m_rect.h))

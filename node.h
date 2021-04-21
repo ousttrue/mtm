@@ -1,33 +1,32 @@
 #pragma once
+#include <functional>
 #include <memory>
 #include <vector>
 #include "rect.h"
 
-enum Node
-{
-    HORIZONTAL,
-    VERTICAL,
-    VIEW
-};
-
 struct CursesTerm;
+
+struct Splitter
+{
+    bool isHorizontal;
+    std::tuple<Rect, Rect> split(const Rect &rect) const;
+    void drawSeparator(const Rect &rect) const;
+    Rect viewRect(const Rect &rect) const;
+};
 
 class NODE : public std::enable_shared_from_this<NODE>
 {
-    Node m_type;
     std::weak_ptr<NODE> m_parent;
     std::shared_ptr<NODE> m_child1;
     std::shared_ptr<NODE> m_child2;
 
 public:
     Rect m_rect;
+    Splitter splitter;
     std::unique_ptr<CursesTerm> term;
-    NODE(Node type, const Rect &rect);
+
+    NODE(const Rect &rect);
     ~NODE();
-    bool isView() const
-    {
-        return m_type == VIEW;
-    }
     void reshape(const Rect &rect);
     void reshapechildren();
     void draw() const;
@@ -77,4 +76,4 @@ public:
 
 void focus(const std::shared_ptr<NODE> &n);
 void deletenode(const std::shared_ptr<NODE> &n);
-void split(const std::shared_ptr<NODE> &n, const Node t);
+void split(const std::shared_ptr<NODE> &n, bool isHorizontal);

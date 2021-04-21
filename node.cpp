@@ -5,7 +5,38 @@
 #include "curses_term.h"
 #include <curses.h>
 
-NODE::NODE(Node t, const Rect &rect) : m_type(t), m_rect(rect)
+std::tuple<Rect, Rect> Splitter::split(const Rect &rect) const
+{
+    if (isHorizontal)
+    {
+        return rect.splitHorizontal();
+    }
+    else
+    {
+        return rect.splitVertical();
+    }
+}
+
+void Splitter::drawSeparator(const Rect &rect) const
+{
+    if (isHorizontal)
+    {
+        mvvline(rect.y, rect.x + rect.w / 2, ACS_VLINE, rect.h);
+    }
+    else
+    {
+        mvhline(rect.y + rect.h / 2, rect.x, ACS_HLINE, rect.w);
+    }
+}
+
+Rect Splitter::viewRect(const Rect &rect) const
+{
+    int nh = !isHorizontal ? (rect.h - 1) / 2 : rect.h;
+    int nw = isHorizontal ? (rect.w) / 2 : rect.w;
+    return Rect(0, 0, MAX(0, nh), MAX(0, nw));
+}
+
+NODE::NODE(const Rect &rect) : m_rect(rect)
 {
 }
 
@@ -36,20 +67,10 @@ void NODE::reshape(const Rect &rect) /* Reshape a node. */
 
 void NODE::reshapechildren() /* Reshape all children of a view. */
 {
-    if (this->m_type == HORIZONTAL)
-    {
-        Rect left, right;
-        std::tie(left, right) = m_rect.splitHorizontal();
-        this->m_child1->reshape(left);
-        this->m_child2->reshape(right);
-    }
-    else if (this->m_type == VERTICAL)
-    {
-        Rect top, bottom;
-        std::tie(top, bottom) = m_rect.splitVertical();
-        this->m_child1->reshape(top);
-        this->m_child1->reshape(bottom);
-    }
+    Rect r1, r2;
+    std::tie(r1, r2) = this->splitter.split(m_rect);
+    this->m_child1->reshape(r1);
+    this->m_child2->reshape(r2);
 }
 
 void NODE::draw() const /* Draw a node. */
@@ -63,10 +84,7 @@ void NODE::draw() const /* Draw a node. */
 void NODE::drawchildren() const /* Draw all children of n. */
 {
     this->m_child1->draw();
-    if (this->m_type == HORIZONTAL)
-        mvvline(m_rect.y, m_rect.x + m_rect.w / 2, ACS_VLINE, m_rect.h);
-    else
-        mvhline(m_rect.y + m_rect.h / 2, m_rect.x, ACS_HLINE, m_rect.w);
+    this->splitter.drawSeparator(m_rect);
     wnoutrefresh(stdscr);
     this->m_child2->draw();
 }
@@ -138,12 +156,14 @@ void deletenode(const std::shared_ptr<NODE> &n) /* Delete a node. */
 }
 
 static std::shared_ptr<NODE>
-newcontainer(Node t, const Rect &rect, const std::shared_ptr<NODE> &c1,
+newcontainer(const Rect &rect, bool isHorizontal,
+             const std::shared_ptr<NODE> &c1,
              const std::shared_ptr<NODE> &c2) /* Create a new container */
 {
-    auto n = std::make_shared<NODE>(t, rect);
+    auto n = std::make_shared<NODE>(rect);
     n->child1(c1);
     n->child2(c2);
+    n->splitter.isHorizontal = isHorizontal;
     n->reshapechildren();
     return n;
 }
@@ -152,18 +172,16 @@ newcontainer(Node t, const Rect &rect, const std::shared_ptr<NODE> &c1,
 // c
 // nv
 //
-void split(const std::shared_ptr<NODE> &n, const Node t) /* Split a node. */
+void split(const std::shared_ptr<NODE> &n,
+           bool isHorizontal) /* Split a node. */
 {
-    // new view
-    int nh = t == VERTICAL ? (n->m_rect.h - 1) / 2 : n->m_rect.h;
-    int nw = t == HORIZONTAL ? (n->m_rect.w) / 2 : n->m_rect.w;
-    auto rect = Rect(0, 0, MAX(0, nh), MAX(0, nw));
-    auto v = std::make_shared<NODE>(VIEW, rect);
+    auto rect = n->splitter.viewRect(n->m_rect);
+    auto v = std::make_shared<NODE>(rect);
     v->term = new_term(rect);
 
     // split
     auto p = n->parent();
-    auto c = newcontainer(t, n->m_rect, n, v);
+    auto c = newcontainer(n->m_rect, isHorizontal, n, v);
     if (p)
     {
         p->replacechild(n, c);
@@ -171,8 +189,6 @@ void split(const std::shared_ptr<NODE> &n, const Node t) /* Split a node. */
     else
     {
         global::root(c);
-        // c->reshape(c->m_rect);
-        // c->draw();
     }
     global::focus(v);
     (p ? p : global::root())->draw();
@@ -201,7 +217,7 @@ void NODE::processVT() /* Recursively check all ptty's for input. */
 
 std::shared_ptr<NODE> NODE::findViewNode()
 {
-    if (isView())
+    if (this->term)
     {
         return shared_from_this();
     }
