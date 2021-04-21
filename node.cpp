@@ -76,17 +76,16 @@ void NODE::reshapechildren() /* Reshape all children of a view. */
 void NODE::draw() const /* Draw a node. */
 {
     if (this->term)
+    {
         this->term->draw(m_rect);
+    }
     else
-        drawchildren();
-}
-
-void NODE::drawchildren() const /* Draw all children of n. */
-{
-    this->m_child1->draw();
-    this->splitter.drawSeparator(m_rect);
-    wnoutrefresh(stdscr);
-    this->m_child2->draw();
+    {
+        this->m_child1->draw();
+        this->splitter.drawSeparator(m_rect);
+        wnoutrefresh(stdscr);
+        this->m_child2->draw();
+    }
 }
 
 std::shared_ptr<NODE>
@@ -120,39 +119,6 @@ void NODE::replacechild(const std::shared_ptr<NODE> &c1,
     }
     this->reshape(this->m_rect);
     this->draw();
-}
-
-static void
-removechild(const std::shared_ptr<NODE> &p,
-            const std::shared_ptr<NODE> &c) /* Replace p with other child. */
-{
-    auto parent = p->parent();
-    auto other = c == p->child1() ? p->child2() : p->child1();
-    if (parent)
-    {
-        parent->replacechild(p, other);
-    }
-    else
-    {
-        global::root(other);
-    }
-}
-
-void deletenode(const std::shared_ptr<NODE> &n) /* Delete a node. */
-{
-    auto p = n->parent();
-    if (!p)
-    {
-        global::quit();
-        return;
-    }
-
-    if (n == global::focus())
-    {
-        global::focus(p->child1() == n ? p->child2() : p->child1());
-    }
-
-    removechild(p, n);
 }
 
 static std::shared_ptr<NODE>
@@ -194,6 +160,12 @@ void split(const std::shared_ptr<NODE> &n,
     (p ? p : global::root())->draw();
 }
 
+void NODE::process()
+{
+    processVT();
+    deleteClosed();
+}
+
 void NODE::processVT() /* Recursively check all ptty's for input. */
 {
     if (this->m_child1)
@@ -210,7 +182,47 @@ void NODE::processVT() /* Recursively check all ptty's for input. */
     {
         if (!term->process())
         {
-            deletenode(shared_from_this());
+            this->closed = true;
+        }
+    }
+}
+
+void deletenode(const std::shared_ptr<NODE> &n) /* Delete a node. */
+{
+    auto p = n->parent();
+    if (n == global::focus())
+    {
+        global::focus(p->child1() == n ? p->child2() : p->child1());
+    }
+
+    auto parent = p->parent();
+    auto other = n == p->child1() ? p->child2() : p->child1();
+    if (parent)
+    {
+        parent->replacechild(p, other);
+    }
+    else
+    {
+        global::root(other);
+    }
+}
+
+void NODE::deleteClosed()
+{
+    if (!this->term)
+    {
+        if (this->m_child1->closed)
+        {
+            deletenode(this->m_child1);
+        }
+        else if (this->m_child2->closed)
+        {
+            deletenode(this->m_child2);
+        }
+        else
+        {
+            this->m_child1->deleteClosed();
+            this->m_child2->deleteClosed();
         }
     }
 }

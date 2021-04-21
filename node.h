@@ -21,6 +21,7 @@ class NODE : public std::enable_shared_from_this<NODE>
     std::shared_ptr<NODE> m_child2;
 
 public:
+    bool closed = false;
     Rect m_rect;
     Splitter splitter;
     std::unique_ptr<CursesTerm> term;
@@ -32,8 +33,13 @@ public:
     void draw() const;
     void drawchildren() const;
     std::shared_ptr<NODE> findnode(const YX &yx);
-    void processVT();
+    void process();
 
+private:    
+    void processVT();
+    void deleteClosed();
+
+public:
     std::shared_ptr<NODE> child1() const
     {
         return m_child1;
@@ -75,5 +81,4 @@ public:
 };
 
 void focus(const std::shared_ptr<NODE> &n);
-void deletenode(const std::shared_ptr<NODE> &n);
 void split(const std::shared_ptr<NODE> &n, bool isHorizontal);

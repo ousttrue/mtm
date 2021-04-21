@@ -229,7 +229,7 @@ public:
         DO(true, MOVE_OTHER, global::focus_last())
         DO(true, HSPLIT, split(n, true))
         DO(true, VSPLIT, split(n, false))
-        DO(true, DELETE_NODE, deletenode(n))
+        DO(true, DELETE_NODE, n->closed = true)
         DO(true, REDRAW, touchwin(stdscr); global::draw(); redrawwin(stdscr))
         DO(true, SCROLLUP, n->term->s->scrollback(n->m_rect.h))
         DO(true, SCROLLDOWN, n->term->s->scrollforward(n->m_rect.h))
@@ -263,8 +263,8 @@ public:
             // read pty and process vt
             //
             selector::select();
-            m_root->processVT();
-            if (!m_root)
+            m_root->process();
+            if (m_root->closed)
             {
                 break;
             }
