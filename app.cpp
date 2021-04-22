@@ -69,8 +69,13 @@ static void sendarrow(const std::shared_ptr<NODE> &n, const char *k)
     n->term->safewrite(buf);
 }
 
-using KeyCallbackFunc = std::function<void(
-    const std::shared_ptr<NODE> &n, const std::unique_ptr<CursesTerm> &term)>;
+struct CallbackContext
+{
+    std::shared_ptr<NODE> &node;
+    std::unique_ptr<CursesTerm> &term;
+};
+
+using KeyCallbackFunc = std::function<void(const CallbackContext &c)>;
 
 class App
 {
@@ -99,150 +104,110 @@ public:
         m_root->term = new_term(rect);
         focus(m_root);
 
-        m_cmdKeyCodeMap.insert(
-            {KEY_UP, [](const std::shared_ptr<NODE> &n,
-                        const std::unique_ptr<CursesTerm> &term) {
-                 global::focus(term->m_rect.above());
-             }});
-        m_cmdKeyCodeMap.insert(
-            {KEY_DOWN, [](const std::shared_ptr<NODE> &n,
-                          const std::unique_ptr<CursesTerm> &term) {
-                 global::focus(term->m_rect.below());
-             }});
-        m_cmdKeyCodeMap.insert(
-            {KEY_LEFT, [](const std::shared_ptr<NODE> &n,
-                          const std::unique_ptr<CursesTerm> &term) {
-                 global::focus(term->m_rect.left());
-             }});
-        m_cmdKeyCodeMap.insert(
-            {KEY_RIGHT, [](const std::shared_ptr<NODE> &n,
-                           const std::unique_ptr<CursesTerm> &term) {
-                 global::focus(term->m_rect.right());
-             }});
-        m_cmdKeyCodeMap.insert(
-            {KEY_PPAGE, [](const std::shared_ptr<NODE> &n,
-                           const std::unique_ptr<CursesTerm> &term) {
-                 term->scrollback();
-             }});
-        m_cmdKeyCodeMap.insert(
-            {KEY_NPAGE, [](const std::shared_ptr<NODE> &n,
-                           const std::unique_ptr<CursesTerm> &term) {
-                 term->scrollforward();
-             }});
-        m_cmdKeyCodeMap.insert(
-            {KEY_END, [](const std::shared_ptr<NODE> &n,
-                         const std::unique_ptr<CursesTerm> &term) {
-                 term->s->scrollbottom();
-             }});
+        m_cmdKeyCodeMap.insert({KEY_UP, [](const CallbackContext &c) {
+                                    global::focus(c.term->m_rect.above());
+                                }});
+        m_cmdKeyCodeMap.insert({KEY_DOWN, [](const CallbackContext &c) {
+                                    global::focus(c.term->m_rect.below());
+                                }});
+        m_cmdKeyCodeMap.insert({KEY_LEFT, [](const CallbackContext &c) {
+                                    global::focus(c.term->m_rect.left());
+                                }});
+        m_cmdKeyCodeMap.insert({KEY_RIGHT, [](const CallbackContext &c) {
+                                    global::focus(c.term->m_rect.right());
+                                }});
+        m_cmdKeyCodeMap.insert({KEY_PPAGE, [](const CallbackContext &c) {
+                                    c.term->scrollback();
+                                }});
+        m_cmdKeyCodeMap.insert({KEY_NPAGE, [](const CallbackContext &c) {
+                                    c.term->scrollforward();
+                                }});
+        m_cmdKeyCodeMap.insert({KEY_END, [](const CallbackContext &c) {
+                                    c.term->s->scrollbottom();
+                                }});
 
-        m_cmdOkMap.insert({L'o', [](const std::shared_ptr<NODE> &n,
-                                    const std::unique_ptr<CursesTerm> &term) {
-                               global::focus_last();
-                           }});
-        m_cmdOkMap.insert({L'h', [](const std::shared_ptr<NODE> &n,
-                                    const std::unique_ptr<CursesTerm> &term) {
-                               n->split(true);
-                           }});
-        m_cmdOkMap.insert({L'v', [](const std::shared_ptr<NODE> &n,
-                                    const std::unique_ptr<CursesTerm> &term) {
-                               n->split(false);
-                           }});
-        m_cmdOkMap.insert({L'w', [](const std::shared_ptr<NODE> &n,
-                                    const std::unique_ptr<CursesTerm> &term) {
-                               n->closed = true;
-                           }});
-        m_cmdOkMap.insert({L'l', [](const std::shared_ptr<NODE> &n,
-                                    const std::unique_ptr<CursesTerm> &term) {
+        m_cmdOkMap.insert(
+            {L'o', [](const CallbackContext &c) { global::focus_last(); }});
+        m_cmdOkMap.insert(
+            {L'h', [](const CallbackContext &c) { c.node->split(true); }});
+        m_cmdOkMap.insert(
+            {L'v', [](const CallbackContext &c) { c.node->split(false); }});
+        m_cmdOkMap.insert(
+            {L'w', [](const CallbackContext &c) { c.node->closed = true; }});
+        m_cmdOkMap.insert({L'l', [](const CallbackContext &c) {
                                touchwin(stdscr);
                                global::draw();
                                redrawwin(stdscr);
                            }});
 
-        m_okMap.insert({0, [](const std::shared_ptr<NODE> &n,
-                              const std::unique_ptr<CursesTerm> &term) {
-                            term->safewrite("\000", 1);
-                            term->s->scrollbottom();
+        m_okMap.insert({0, [](const CallbackContext &c) {
+                            c.term->safewrite("\000", 1);
+                            c.term->s->scrollbottom();
                         }});
-        m_okMap.insert({L'\n', [](const std::shared_ptr<NODE> &n,
-                                  const std::unique_ptr<CursesTerm> &term) {
-                            term->safewrite("\n");
-                            term->s->scrollbottom();
+        m_okMap.insert({L'\n', [](const CallbackContext &c) {
+                            c.term->safewrite("\n");
+                            c.term->s->scrollbottom();
                         }});
-        m_okMap.insert({L'\r', [](const std::shared_ptr<NODE> &n,
-                                  const std::unique_ptr<CursesTerm> &term) {
-                            term->safewrite(term->lnm ? "\r\n" : "\r");
-                            term->s->scrollbottom();
+        m_okMap.insert({L'\r', [](const CallbackContext &c) {
+                            c.term->safewrite(c.term->lnm ? "\r\n" : "\r");
+                            c.term->s->scrollbottom();
                         }});
 
         // DO(CODE(KEY_PPAGE) && term->s->INSCR(), term->scrollback())
         // DO(CODE(KEY_NPAGE) && term->s->INSCR(), term->scrollforward())
         // DO(CODE(KEY_END) && term->s->INSCR(), term->s->scrollbottom())
-        m_keyCodeMap.insert({KEY_ENTER, [](const std::shared_ptr<NODE> &n,
-                                      const std::unique_ptr<CursesTerm> &term) {
-                            term->safewrite(term->lnm ? "\r\n" : "\r");
-                            term->s->scrollbottom();
-                        }});
-        m_keyCodeMap.insert({KEY_UP, [](const std::shared_ptr<NODE> &n,
-                                   const std::unique_ptr<CursesTerm> &term) {
-                            sendarrow(n, "A");
-                            term->s->scrollbottom();
-                        }});
-        m_keyCodeMap.insert({KEY_DOWN, [](const std::shared_ptr<NODE> &n,
-                                     const std::unique_ptr<CursesTerm> &term) {
-                            sendarrow(n, "B");
-                            term->s->scrollbottom();
-                        }});
-        m_keyCodeMap.insert({KEY_RIGHT, [](const std::shared_ptr<NODE> &n,
-                                      const std::unique_ptr<CursesTerm> &term) {
-                            sendarrow(n, "C");
-                            term->s->scrollbottom();
-                        }});
-        m_keyCodeMap.insert({KEY_LEFT, [](const std::shared_ptr<NODE> &n,
-                                     const std::unique_ptr<CursesTerm> &term) {
-                            sendarrow(n, "D");
-                            term->s->scrollbottom();
-                        }});
-        m_keyCodeMap.insert({KEY_HOME, [](const std::shared_ptr<NODE> &n,
-                                     const std::unique_ptr<CursesTerm> &term) {
-                            term->safewrite("\033[1~");
-                            term->s->scrollbottom();
-                        }});
-        m_keyCodeMap.insert({KEY_END, [](const std::shared_ptr<NODE> &n,
-                                    const std::unique_ptr<CursesTerm> &term) {
-                            term->safewrite("\033[4~");
-                            term->s->scrollbottom();
-                        }});
-        m_keyCodeMap.insert({KEY_PPAGE, [](const std::shared_ptr<NODE> &n,
-                                      const std::unique_ptr<CursesTerm> &term) {
-                            term->safewrite("\033[5~");
-                            term->s->scrollbottom();
-                        }});
-        m_keyCodeMap.insert({KEY_NPAGE, [](const std::shared_ptr<NODE> &n,
-                                      const std::unique_ptr<CursesTerm> &term) {
-                            term->safewrite("\033[6~");
-                            term->s->scrollbottom();
-                        }});
-        m_keyCodeMap.insert(
-            {KEY_BACKSPACE, [](const std::shared_ptr<NODE> &n,
-                               const std::unique_ptr<CursesTerm> &term) {
-                 term->safewrite("\177");
-                 term->s->scrollbottom();
-             }});
-        m_keyCodeMap.insert({KEY_DC, [](const std::shared_ptr<NODE> &n,
-                                   const std::unique_ptr<CursesTerm> &term) {
-                            term->safewrite("\033[3~");
-                            term->s->scrollbottom();
-                        }});
-        m_keyCodeMap.insert({KEY_IC, [](const std::shared_ptr<NODE> &n,
-                                   const std::unique_ptr<CursesTerm> &term) {
-                            term->safewrite("\033[2~");
-                            term->s->scrollbottom();
-                        }});
-        m_keyCodeMap.insert({KEY_BTAB, [](const std::shared_ptr<NODE> &n,
-                                     const std::unique_ptr<CursesTerm> &term) {
-                            term->safewrite("\033[Z");
-                            term->s->scrollbottom();
-                        }});
+        m_keyCodeMap.insert({KEY_ENTER, [](const CallbackContext &c) {
+                                 c.term->safewrite(c.term->lnm ? "\r\n" : "\r");
+                                 c.term->s->scrollbottom();
+                             }});
+        m_keyCodeMap.insert({KEY_UP, [](const CallbackContext &c) {
+                                 sendarrow(c.node, "A");
+                                 c.term->s->scrollbottom();
+                             }});
+        m_keyCodeMap.insert({KEY_DOWN, [](const CallbackContext &c) {
+                                 sendarrow(c.node, "B");
+                                 c.term->s->scrollbottom();
+                             }});
+        m_keyCodeMap.insert({KEY_RIGHT, [](const CallbackContext &c) {
+                                 sendarrow(c.node, "C");
+                                 c.term->s->scrollbottom();
+                             }});
+        m_keyCodeMap.insert({KEY_LEFT, [](const CallbackContext &c) {
+                                 sendarrow(c.node, "D");
+                                 c.term->s->scrollbottom();
+                             }});
+        m_keyCodeMap.insert({KEY_HOME, [](const CallbackContext &c) {
+                                 c.term->safewrite("\033[1~");
+                                 c.term->s->scrollbottom();
+                             }});
+        m_keyCodeMap.insert({KEY_END, [](const CallbackContext &c) {
+                                 c.term->safewrite("\033[4~");
+                                 c.term->s->scrollbottom();
+                             }});
+        m_keyCodeMap.insert({KEY_PPAGE, [](const CallbackContext &c) {
+                                 c.term->safewrite("\033[5~");
+                                 c.term->s->scrollbottom();
+                             }});
+        m_keyCodeMap.insert({KEY_NPAGE, [](const CallbackContext &c) {
+                                 c.term->safewrite("\033[6~");
+                                 c.term->s->scrollbottom();
+                             }});
+        m_keyCodeMap.insert({KEY_BACKSPACE, [](const CallbackContext &c) {
+                                 c.term->safewrite("\177");
+                                 c.term->s->scrollbottom();
+                             }});
+        m_keyCodeMap.insert({KEY_DC, [](const CallbackContext &c) {
+                                 c.term->safewrite("\033[3~");
+                                 c.term->s->scrollbottom();
+                             }});
+        m_keyCodeMap.insert({KEY_IC, [](const CallbackContext &c) {
+                                 c.term->safewrite("\033[2~");
+                                 c.term->s->scrollbottom();
+                             }});
+        m_keyCodeMap.insert({KEY_BTAB, [](const CallbackContext &c) {
+                                 c.term->safewrite("\033[Z");
+                                 c.term->s->scrollbottom();
+                             }});
 
         //     DO(CODE(KEY_F(1)),term->safewrite("\033OP");
         //     term->s->scrollbottom();
@@ -325,14 +290,13 @@ public:
 
     bool cmd = false;
 
-    void handleUserInput(const std::shared_ptr<NODE> &n,
-                         const std::unique_ptr<CursesTerm> &term, int r,
+    void handleUserInput(const CallbackContext &c, int r,
                          wint_t k)
     {
         if (r == KEY_CODE_YES && k == KEY_RESIZE)
         {
             global::reshape(0, 0, LINES, COLS);
-            term->s->scrollbottom();
+            c.term->s->scrollbottom();
             cmd = false;
             return;
         }
@@ -344,7 +308,7 @@ public:
                 auto found = m_cmdOkMap.find(k);
                 if (found != m_cmdOkMap.end())
                 {
-                    found->second(n, term);
+                    found->second(c);
                     cmd = false;
                     return;
                 }
@@ -354,7 +318,7 @@ public:
                 auto found = m_cmdKeyCodeMap.find(k);
                 if (found != m_cmdKeyCodeMap.end())
                 {
-                    found->second(n, term);
+                    found->second(c);
                     cmd = false;
                     return;
                 }
@@ -362,7 +326,7 @@ public:
                 if (k == g_commandkey)
                 {
                     const char cmdstr[] = {(char)g_commandkey, 0};
-                    term->safewrite(cmdstr, 1);
+                    c.term->safewrite(cmdstr, 1);
                     cmd = false;
                     return;
                 }
@@ -385,7 +349,7 @@ public:
                 auto found = m_okMap.find(k);
                 if (found != m_okMap.end())
                 {
-                    found->second(n, term);
+                    found->second(c);
                     cmd = false;
                     return;
                 }
@@ -395,7 +359,7 @@ public:
                 auto found = m_keyCodeMap.find(k);
                 if (found != m_keyCodeMap.end())
                 {
-                    found->second(n, term);
+                    found->second(c);
                     cmd = false;
                     return;
                 }
@@ -406,11 +370,11 @@ public:
             }
         }
 
-        char c[MB_LEN_MAX + 1] = {0};
-        if (wctomb(c, k) > 0)
+        char buf[MB_LEN_MAX + 1] = {0};
+        if (wctomb(buf, k) > 0)
         {
-            term->s->scrollbottom();
-            term->safewrite(c);
+            c.term->s->scrollbottom();
+            c.term->safewrite(buf);
         }
         cmd = false;
     }
@@ -439,7 +403,7 @@ public:
                             break;
                         }
 
-                        handleUserInput(focus, term, r, k);
+                        handleUserInput({focus, term}, r, k);
                     }
                 }
             }
