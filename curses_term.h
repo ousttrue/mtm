@@ -14,7 +14,9 @@ private:
     std::vector<bool> m_tabs;
 
 public:
+    // Numeric Keypad Mode    
     bool pnm = false;
+    
     bool decom = false;
     bool am = false;
     bool lnm = false;
@@ -58,4 +60,5 @@ public:
     void safewrite(const char *s);
 
     bool INSCR() const;
+    void sendarrow(const char *k);
 };

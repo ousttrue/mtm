@@ -285,3 +285,10 @@ void CursesTerm::scrollforward()
 {
     this->s->scrollforward(m_rect.h);
 }
+
+void CursesTerm::sendarrow(const char *k)
+{
+    char buf[100] = {0};
+    snprintf(buf, sizeof(buf) - 1, "\033%s%s", this->pnm ? "O" : "[", k);
+    this->safewrite(buf);
+}

@@ -62,13 +62,6 @@ int get_commandKey()
 //
 // Node manipulation
 //
-static void sendarrow(const std::shared_ptr<NODE> &n, const char *k)
-{
-    char buf[100] = {0};
-    snprintf(buf, sizeof(buf) - 1, "\033%s%s", n->term->pnm ? "O" : "[", k);
-    n->term->safewrite(buf);
-}
-
 struct CallbackContext
 {
     std::shared_ptr<NODE> &node;
@@ -161,19 +154,19 @@ public:
                                  c.term->s->scrollbottom();
                              }});
         m_keyCodeMap.insert({KEY_UP, [](const CallbackContext &c) {
-                                 sendarrow(c.node, "A");
+                                 c.term->sendarrow("A");
                                  c.term->s->scrollbottom();
                              }});
         m_keyCodeMap.insert({KEY_DOWN, [](const CallbackContext &c) {
-                                 sendarrow(c.node, "B");
+                                 c.term->sendarrow("B");
                                  c.term->s->scrollbottom();
                              }});
         m_keyCodeMap.insert({KEY_RIGHT, [](const CallbackContext &c) {
-                                 sendarrow(c.node, "C");
+                                 c.term->sendarrow("C");
                                  c.term->s->scrollbottom();
                              }});
         m_keyCodeMap.insert({KEY_LEFT, [](const CallbackContext &c) {
-                                 sendarrow(c.node, "D");
+                                 c.term->sendarrow("D");
                                  c.term->s->scrollbottom();
                              }});
         m_keyCodeMap.insert({KEY_HOME, [](const CallbackContext &c) {
