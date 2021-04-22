@@ -251,9 +251,9 @@ static int fork_setup(int *pt, const Rect &rect)
     return pid;
 }
 
-std::unique_ptr<CursesTerm> new_term(const Rect &rect) /* Open a new view. */
+CursesTerm *CursesTerm::create(const Rect &rect) /* Open a new view. */
 {
-    auto term = std::make_unique<CursesTerm>(rect);
+    auto term = new CursesTerm(rect);
 
     vp_initialize(term);
     auto pid = fork_setup(&term->pt, rect);

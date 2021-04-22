@@ -7,10 +7,10 @@ struct SCRN;
 class VtParser;
 struct CursesTerm
 {
-    int pt = -1;
     Rect m_rect;
 
 private:
+    int pt = -1;
     std::vector<bool> m_tabs;
 
 public:
@@ -34,6 +34,8 @@ public:
 
     CursesTerm(const Rect &rect);
     ~CursesTerm();
+    static CursesTerm *create(const Rect &rect);
+
     void reshapeview(int d, int ow, const Rect &rect);
     void draw(const Rect &rect);
     bool process();
@@ -55,8 +57,5 @@ public:
     // safewrite( s)     - Write string s to node n's host.
     void safewrite(const char *s);
 
-    bool INSCR()const;
-
+    bool INSCR() const;
 };
-
-std::unique_ptr<CursesTerm> new_term(const Rect &rect);

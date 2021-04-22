@@ -129,7 +129,7 @@ void NODE::split(bool isHorizontal) /* Split a node. */
 {
     auto rect = this->splitter.viewRect(this->m_rect);
     auto v = std::make_shared<NODE>(rect);
-    v->term = new_term(rect);
+    v->term.reset(CursesTerm::create(rect));
 
     // split
     auto p = this->parent();
@@ -149,7 +149,6 @@ void NODE::split(bool isHorizontal) /* Split a node. */
         global::root(c);
     }
     global::focus(v);
-    (p ? p : global::root())->draw();
 }
 
 void NODE::process()

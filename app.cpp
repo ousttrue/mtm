@@ -101,7 +101,7 @@ public:
 
         auto rect = Rect(0, 0, LINES, COLS);
         m_root = std::make_shared<NODE>(rect);
-        m_root->term = new_term(rect);
+        m_root->term.reset(CursesTerm::create(rect));
         focus(m_root);
 
         m_cmdKeyCodeMap.insert({KEY_UP, [](const CallbackContext &c) {

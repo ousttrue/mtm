@@ -998,8 +998,8 @@ static void setupevents(const std::unique_ptr<VtParser> &vp)
     vp->setPrint(print);
 }
 
-void vp_initialize(const std::unique_ptr<CursesTerm> &term)
+void vp_initialize(CursesTerm *term)
 {
     setupevents(term->vp);
-    ris({term.get(), L'c', 0, 0, NULL});
+    ris({term, L'c', 0, 0, NULL});
 }

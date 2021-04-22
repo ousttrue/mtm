@@ -2,4 +2,4 @@
 #include "curses_term.h"
 #include <memory>
 
-void vp_initialize(const std::unique_ptr<struct CursesTerm> &p);
+void vp_initialize(struct CursesTerm *p);
