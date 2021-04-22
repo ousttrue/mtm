@@ -97,6 +97,9 @@ public:
         m_root->term.reset(CursesTerm::create(rect));
         focus(m_root);
 
+        //
+        // cmd == true
+        //
         m_cmdKeyCodeMap.insert({KEY_UP, [](const CallbackContext &c) {
                                     global::focus(c.term->m_rect.above());
                                 }});
@@ -133,6 +136,9 @@ public:
                                redrawwin(stdscr);
                            }});
 
+        //
+        // cmd == false
+        //
         m_okMap.insert({0, [](const CallbackContext &c) {
                             c.term->safewrite("\000", 1);
                             c.term->s->scrollbottom();
@@ -146,9 +152,25 @@ public:
                             c.term->s->scrollbottom();
                         }});
 
-        // DO(CODE(KEY_PPAGE) && term->s->INSCR(), term->scrollback())
-        // DO(CODE(KEY_NPAGE) && term->s->INSCR(), term->scrollforward())
-        // DO(CODE(KEY_END) && term->s->INSCR(), term->s->scrollbottom())
+        m_keyCodeMap.insert({KEY_PPAGE, [](const CallbackContext &c) {
+                                 if (c.term->s->INSCR())
+                                 {
+                                     c.term->scrollback();
+                                 }
+                             }});
+        m_keyCodeMap.insert({KEY_NPAGE, [](const CallbackContext &c) {
+                                 if (c.term->s->INSCR())
+                                 {
+                                     c.term->scrollforward();
+                                 }
+                             }});
+        m_keyCodeMap.insert({KEY_END, [](const CallbackContext &c) {
+                                 if (c.term->s->INSCR())
+                                 {
+                                     c.term->s->scrollbottom();
+                                 }
+                             }});
+
         m_keyCodeMap.insert({KEY_ENTER, [](const CallbackContext &c) {
                                  c.term->safewrite(c.term->lnm ? "\r\n" : "\r");
                                  c.term->s->scrollbottom();
@@ -201,29 +223,54 @@ public:
                                  c.term->safewrite("\033[Z");
                                  c.term->s->scrollbottom();
                              }});
-
-        //     DO(CODE(KEY_F(1)),term->safewrite("\033OP");
-        //     term->s->scrollbottom();
-        // }});
-        // DO(CODE(KEY_F(2)), term->safewrite("\033OQ");term->s->scrollbottom())
-        // DO(CODE(KEY_F(3)),term->safewrite("\033OR"); term->s->scrollbottom())
-        // DO(CODE(KEY_F(4)), term->safewrite("\033OS");term->s->scrollbottom())
-        // DO(CODE(KEY_F(5)),term->safewrite("\033[15~");
-        // term->s->scrollbottom()) DO(CODE(KEY_F(6)),
-        // term->safewrite("\033[17~");term->s->scrollbottom())
-        // DO(CODE(KEY_F(7)),term->safewrite("\033[18~");
-        // term->s->scrollbottom()) DO(CODE(KEY_F(8)),
-        // term->safewrite("\033[19~");term->s->scrollbottom())
-        // DO(CODE(KEY_F(9)),term->safewrite("\033[20~");
-        // term->s->scrollbottom()) DO(CODE(KEY_F(10)),
-        // term->safewrite("\033[21~");term->s->scrollbottom())
-        // DO(CODE(KEY_F(11)),
-        // term->safewrite("\033[23~");term->s->scrollbottom())
-        // DO(CODE(KEY_F(12)),
-        // term->safewrite("\033[24~");term->s->scrollbottom())
-
-#define KEY(i) (r == OK && (i) == k)
-#define CODE(i) (r == KEY_CODE_YES && (i) == k)
+        m_keyCodeMap.insert({KEY_F(1), [](const CallbackContext &c) {
+                                 c.term->safewrite("\033OP");
+                                 c.term->s->scrollbottom();
+                             }});
+        m_keyCodeMap.insert({KEY_F(2), [](const CallbackContext &c) {
+                                 c.term->safewrite("\033OQ");
+                                 c.term->s->scrollbottom();
+                             }});
+        m_keyCodeMap.insert({KEY_F(3), [](const CallbackContext &c) {
+                                 c.term->safewrite("\033OR");
+                                 c.term->s->scrollbottom();
+                             }});
+        m_keyCodeMap.insert({KEY_F(4), [](const CallbackContext &c) {
+                                 c.term->safewrite("\033OS");
+                                 c.term->s->scrollbottom();
+                             }});
+        m_keyCodeMap.insert({KEY_F(5), [](const CallbackContext &c) {
+                                 c.term->safewrite("\033[15~");
+                                 c.term->s->scrollbottom();
+                             }});
+        m_keyCodeMap.insert({KEY_F(6), [](const CallbackContext &c) {
+                                 c.term->safewrite("\033[17~");
+                                 c.term->s->scrollbottom();
+                             }});
+        m_keyCodeMap.insert({KEY_F(7), [](const CallbackContext &c) {
+                                 c.term->safewrite("\033[18~");
+                                 c.term->s->scrollbottom();
+                             }});
+        m_keyCodeMap.insert({KEY_F(8), [](const CallbackContext &c) {
+                                 c.term->safewrite("\033[19~");
+                                 c.term->s->scrollbottom();
+                             }});
+        m_keyCodeMap.insert({KEY_F(9), [](const CallbackContext &c) {
+                                 c.term->safewrite("\033[20~");
+                                 c.term->s->scrollbottom();
+                             }});
+        m_keyCodeMap.insert({KEY_F(10), [](const CallbackContext &c) {
+                                 c.term->safewrite("\033[21~");
+                                 c.term->s->scrollbottom();
+                             }});
+        m_keyCodeMap.insert({KEY_F(11), [](const CallbackContext &c) {
+                                 c.term->safewrite("\033[23~");
+                                 c.term->s->scrollbottom();
+                             }});
+        m_keyCodeMap.insert({KEY_F(12), [](const CallbackContext &c) {
+                                 c.term->safewrite("\033[24~");
+                                 c.term->s->scrollbottom();
+                             }});
     }
 
     ~App()
@@ -274,17 +321,9 @@ public:
         }
     }
 
-    enum Command
-    {
-        ON,
-        OFF,
-        ANY,
-    };
-
     bool cmd = false;
 
-    void handleUserInput(const CallbackContext &c, int r,
-                         wint_t k)
+    void handleUserInput(const CallbackContext &c, int r, wint_t k)
     {
         if (r == KEY_CODE_YES && k == KEY_RESIZE)
         {
@@ -418,8 +457,6 @@ public:
                 // cursor for focused
                 auto f = m_focused.lock();
                 f->term->fixCursor();
-                // f->draw();
-
                 m_root->draw();
                 doupdate();
             }
