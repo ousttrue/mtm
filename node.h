@@ -2,6 +2,7 @@
 #include <functional>
 #include <memory>
 #include <vector>
+#include <list>
 #include "rect.h"
 
 struct CursesTerm;
@@ -16,8 +17,7 @@ struct Splitter
 
 class NODE : public std::enable_shared_from_this<NODE>
 {
-    std::shared_ptr<NODE> m_child1;
-    std::shared_ptr<NODE> m_child2;
+    std::list<std::shared_ptr<NODE>> m_chidlren;
 
 public:
     bool closed = false;
@@ -31,19 +31,16 @@ public:
     void draw() const;
     void process();
     std::shared_ptr<NODE> findnode(const YX &yx);
-    void reshape(const Rect &rect);
     std::shared_ptr<NODE> findViewNode();
     void split(bool isHorizontal);
+    void reshape()
+    {
+        reshape(m_rect);
+    }
+    void reshape(const Rect &rect);
 
 private:
-    std::shared_ptr<NODE> parent() const;
-    using PRED = std::function<bool(const NODE *)>;
-    std::shared_ptr<NODE> find(const PRED &pred);
-    void reshapechildren();
-    void drawchildren() const;
+    void moveFrom(const std::shared_ptr<NODE> &from);
     void processVT();
     void deleteClosed();
-    void deletenode(const std::shared_ptr<NODE> &n);
-    void replacechild(const std::shared_ptr<NODE> &c1,
-                      const std::shared_ptr<NODE> &c2);
 };

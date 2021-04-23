@@ -454,6 +454,7 @@ public:
             // update visual
             //
             {
+                m_root->reshape();
                 // cursor for focused
                 auto f = m_focused.lock();
                 f->term->fixCursor();
