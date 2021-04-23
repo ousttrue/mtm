@@ -454,7 +454,7 @@ public:
             // update visual
             //
             {
-                m_root->reshape();
+                m_root->reshape({0, 0, LINES, COLS});
                 // cursor for focused
                 auto f = m_focused.lock();
                 f->term->fixCursor();

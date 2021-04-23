@@ -59,9 +59,6 @@ void NODE::moveFrom(const std::shared_ptr<NODE> &from)
 
 void NODE::reshape(const Rect &rect) /* Reshape a node. */
 {
-    if (m_rect == rect && this->term)
-        return;
-
     int d = m_rect.h - rect.h;
     int ow = m_rect.w;
     m_rect = {
@@ -81,7 +78,6 @@ void NODE::reshape(const Rect &rect) /* Reshape a node. */
         {
             throw std::exception();
         }
-        // reshapechildren();
         Rect r1, r2;
         std::tie(r1, r2) = this->splitter.split(m_rect);
 
@@ -90,7 +86,6 @@ void NODE::reshape(const Rect &rect) /* Reshape a node. */
         child1->reshape(r1);
         child2->reshape(r2);
     }
-    // this->draw();
 }
 
 void NODE::draw() const /* Draw a node. */

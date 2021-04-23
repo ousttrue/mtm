@@ -33,10 +33,6 @@ public:
     std::shared_ptr<NODE> findnode(const YX &yx);
     std::shared_ptr<NODE> findViewNode();
     void split(bool isHorizontal);
-    void reshape()
-    {
-        reshape(m_rect);
-    }
     void reshape(const Rect &rect);
 
 private:
