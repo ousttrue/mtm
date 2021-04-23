@@ -16,7 +16,6 @@ struct Splitter
 
 class NODE : public std::enable_shared_from_this<NODE>
 {
-    std::weak_ptr<NODE> m_parent;
     std::shared_ptr<NODE> m_child1;
     std::shared_ptr<NODE> m_child2;
 
@@ -37,35 +36,14 @@ public:
     void split(bool isHorizontal);
 
 private:
-    std::shared_ptr<NODE> parent() const
-    {
-        return m_parent.lock();
-    }
+    std::shared_ptr<NODE> parent() const;
+    using PRED = std::function<bool(const NODE *)>;
+    std::shared_ptr<NODE> find(const PRED &pred);
     void reshapechildren();
     void drawchildren() const;
     void processVT();
     void deleteClosed();
     void deletenode(const std::shared_ptr<NODE> &n);
-
-    void child1(const std::shared_ptr<NODE> &node)
-    {
-        if (this == node.get())
-        {
-            throw std::exception();
-        }
-        m_child1 = node;
-        node->m_parent = shared_from_this();
-    }
-    void child2(const std::shared_ptr<NODE> &node)
-    {
-        if (this == node.get())
-        {
-            throw std::exception();
-        }
-        m_child2 = node;
-        node->m_parent = shared_from_this();
-    }
     void replacechild(const std::shared_ptr<NODE> &c1,
                       const std::shared_ptr<NODE> &c2);
-
 };

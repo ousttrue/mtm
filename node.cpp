@@ -44,6 +44,44 @@ NODE::~NODE()
 {
 }
 
+std::shared_ptr<NODE> NODE::parent() const
+{
+    auto root = global::root();
+    if (!root)
+    {
+        return nullptr;
+    }
+
+    return root->find([self = this](const NODE *node) {
+        return node->m_child1.get() == self || node->m_child2.get() == self;
+    });
+}
+
+std::shared_ptr<NODE> NODE::find(const PRED &pred)
+{
+    if (pred(this))
+    {
+        return shared_from_this();
+    }
+
+    if (m_child1)
+    {
+        if (auto found = m_child1->find(pred))
+        {
+            return found;
+        }
+    }
+    if (m_child2)
+    {
+        if (auto found = m_child2->find(pred))
+        {
+            return found;
+        }
+    }
+
+    return nullptr;
+}
+
 void NODE::reshape(const Rect &rect) /* Reshape a node. */
 {
     if (m_rect == rect && this->term)
@@ -102,16 +140,16 @@ NODE::findnode(const YX &p) /* Find the node enclosing y,x. */
     return NULL;
 }
 
-void NODE::replacechild(const std::shared_ptr<NODE> &c1,
-                        const std::shared_ptr<NODE> &c2)
+void NODE::replacechild(const std::shared_ptr<NODE> &src,
+                        const std::shared_ptr<NODE> &dst)
 {
-    if (this->m_child1 == c1)
+    if (this->m_child1 == src)
     {
-        this->child1(c2);
+        this->m_child1 = dst;
     }
-    else if (this->m_child2 == c1)
+    else if (this->m_child2 == src)
     {
-        this->child2(c2);
+        this->m_child2 = dst;
     }
     else
     {
@@ -135,8 +173,8 @@ void NODE::split(bool isHorizontal) /* Split a node. */
     auto p = this->parent();
 
     auto c = std::make_shared<NODE>(this->m_rect);
-    c->child1(shared_from_this());
-    c->child2(v);
+    c->m_child1 = shared_from_this();
+    c->m_child2 = v;
     c->splitter.isHorizontal = isHorizontal;
     c->reshapechildren();
 
