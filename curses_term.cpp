@@ -22,36 +22,17 @@ CursesTerm::CursesTerm(const Rect &rect) : m_rect(rect)
         m_tabs.push_back(i % 8 == 0);
     }
 
-    this->pri = std::make_shared<SCRN>();
-    this->alt = std::make_shared<SCRN>();
-
-    this->pri->win = newpad(MAX(m_rect.h, SCROLLBACK), m_rect.w);
-    this->alt->win = newpad(m_rect.h, m_rect.w);
-    if (!pri->win || !alt->win)
-    {
-        throw "new pad";
-        // return nullptr;
-    }
+    this->pri = std::make_shared<SCRN>(MAX(m_rect.h, SCROLLBACK), m_rect.w);
+    this->alt = std::make_shared<SCRN>(m_rect.h, m_rect.w);
 
     pri->tos = pri->off = MAX(0, SCROLLBACK - m_rect.h);
     this->s = this->pri;
-
-    nodelay(pri->win, TRUE);
-    nodelay(alt->win, TRUE);
-    scrollok(pri->win, TRUE);
-    scrollok(alt->win, TRUE);
-    keypad(pri->win, TRUE);
-    keypad(alt->win, TRUE);
 
     this->vp = std::make_unique<VtParser>();
 }
 
 CursesTerm::~CursesTerm()
 {
-    if (this->pri->win)
-        delwin(this->pri->win);
-    if (this->alt->win)
-        delwin(this->alt->win);
     if (this->pt >= 0)
     {
         selector::close(this->pt);

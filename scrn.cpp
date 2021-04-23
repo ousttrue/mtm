@@ -4,6 +4,20 @@
 
 #include "pair.h"
 
+SCRN::SCRN(int lines, int cols)
+{
+    this->win = newpad(lines, cols);
+
+    nodelay(this->win, TRUE);
+    scrollok(this->win, TRUE);
+    keypad(this->win, TRUE);
+}
+
+SCRN::~SCRN()
+{
+    delwin(this->win);
+}
+
 void SCRN::scrollbottom()
 {
     this->off = this->tos;

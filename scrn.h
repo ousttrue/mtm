@@ -31,6 +31,8 @@ public:
     WINDOW *win = nullptr;
 
 public:
+    SCRN(int lines, int cols);
+    ~SCRN();
     void scrollbottom();
     void fixcursor(int h, bool focus);
     void scrollback(int h);

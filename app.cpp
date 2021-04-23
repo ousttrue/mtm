@@ -506,6 +506,7 @@ std::shared_ptr<NODE> root()
 {
     return g_app->root();
 }
+
 void root(const std::shared_ptr<NODE> &node)
 {
     g_app->root(node);
