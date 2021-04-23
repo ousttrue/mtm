@@ -52,8 +52,8 @@ void NODE::moveFrom(const std::shared_ptr<NODE> &from)
     }
     else
     {
-        this->m_chidlren = from->m_chidlren;
-        from->m_chidlren.clear();
+        this->m_splitter = from->m_splitter;
+        from->m_splitter = {};
     }
 }
 
@@ -74,15 +74,15 @@ void NODE::reshape(const Rect &rect) /* Reshape a node. */
     }
     else
     {
-        if (m_chidlren.size() != 2)
+        if (m_splitter.chidlren.size() != 2)
         {
             throw std::exception();
         }
         Rect r1, r2;
-        std::tie(r1, r2) = this->splitter.split(m_rect);
+        std::tie(r1, r2) = this->m_splitter.split(m_rect);
 
-        auto child1 = m_chidlren.front();
-        auto child2 = m_chidlren.back();
+        auto child1 = m_splitter.chidlren.front();
+        auto child2 = m_splitter.chidlren.back();
         child1->reshape(r1);
         child2->reshape(r2);
     }
@@ -96,9 +96,9 @@ void NODE::draw() const /* Draw a node. */
     }
     else
     {
-        auto it = m_chidlren.begin();
+        auto it = m_splitter.chidlren.begin();
         (*it)->draw();
-        this->splitter.drawSeparator(m_rect);
+        this->m_splitter.drawSeparator(m_rect);
         wnoutrefresh(stdscr);
         ++it;
         (*it)->draw();
@@ -110,7 +110,7 @@ NODE::findnode(const YX &p) /* Find the node enclosing y,x. */
 {
     if (m_rect.contains(p))
     {
-        for (auto &child : m_chidlren)
+        for (auto &child : m_splitter.chidlren)
         {
             if (auto found = child->findnode(p))
             {
@@ -128,31 +128,34 @@ NODE::findnode(const YX &p) /* Find the node enclosing y,x. */
 //
 void NODE::split(bool isHorizontal) /* Split a node. */
 {
-    auto rect = this->splitter.viewRect(this->m_rect);
+    auto rect = this->m_splitter.viewRect(this->m_rect);
     auto v = std::make_shared<NODE>(rect);
     v->term.reset(CursesTerm::create(rect));
 
     auto c = std::make_shared<NODE>(this->m_rect);
     c->moveFrom(shared_from_this());
-    this->m_chidlren.push_back(c);
-    this->m_chidlren.push_back(v);
-    this->splitter.isHorizontal = isHorizontal;
+    this->m_splitter.chidlren.push_back(c);
+    this->m_splitter.chidlren.push_back(v);
+    this->m_splitter.isHorizontal = isHorizontal;
 
     global::focus(v);
 }
 
-void NODE::process()
+bool NODE::process()
 {
     processVT();
-    if (!term)
+    if (m_closed)
     {
-        deleteClosed();
+        return false;
     }
+    deleteClosed();
+    reshape({0, 0, LINES, COLS});
+    return true;
 }
 
 void NODE::processVT() /* Recursively check all ptty's for input. */
 {
-    for (auto &child : m_chidlren)
+    for (auto &child : m_splitter.chidlren)
     {
         child->processVT();
     }
@@ -161,7 +164,7 @@ void NODE::processVT() /* Recursively check all ptty's for input. */
     {
         if (!term->process())
         {
-            this->closed = true;
+            this->m_closed = true;
         }
     }
 }
@@ -174,20 +177,20 @@ void NODE::deleteClosed()
         return;
     }
 
-    auto child1 = m_chidlren.front();
-    auto child2 = m_chidlren.back();
+    auto child1 = m_splitter.chidlren.front();
+    auto child2 = m_splitter.chidlren.back();
     auto focusThis = false;
-    if (child1->closed)
+    if (child1->m_closed)
     {
         focusThis = global::focus() == child1;
-        this->moveFrom(child2);
-        m_chidlren.clear();
+        this->moveFrom(child2);       
+        this->m_splitter = {};
     }
-    else if (child2->closed)
+    else if (child2->m_closed)
     {
         focusThis = global::focus() == child2;
         this->moveFrom(child1);
-        m_chidlren.clear();
+        this->m_splitter = {};
     }
     else
     {
@@ -207,7 +210,7 @@ std::shared_ptr<NODE> NODE::findViewNode()
         return shared_from_this();
     }
 
-    for (auto &child : m_chidlren)
+    for (auto &child : m_splitter.chidlren)
     {
         if (auto found = child->findViewNode())
         {

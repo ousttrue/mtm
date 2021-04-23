@@ -129,7 +129,7 @@ public:
         m_cmdOkMap.insert(
             {L'v', [](const CallbackContext &c) { c.node->split(false); }});
         m_cmdOkMap.insert(
-            {L'w', [](const CallbackContext &c) { c.node->closed = true; }});
+            {L'w', [](const CallbackContext &c) { c.node->close(); }});
         m_cmdOkMap.insert({L'l', [](const CallbackContext &c) {
                                touchwin(stdscr);
                                global::draw();
@@ -285,10 +285,6 @@ public:
     void root(const std::shared_ptr<NODE> &node)
     {
         m_root = node;
-        if (node)
-        {
-            node->reshape(Rect(0, 0, LINES, COLS));
-        }
     }
     std::shared_ptr<NODE> root() const
     {
@@ -327,7 +323,6 @@ public:
     {
         if (r == KEY_CODE_YES && k == KEY_RESIZE)
         {
-            global::reshape(0, 0, LINES, COLS);
             c.term->s->scrollbottom();
             cmd = false;
             return;
@@ -444,8 +439,7 @@ public:
             // read pty and process vt
             //
             selector::select();
-            m_root->process();
-            if (m_root->closed)
+            if(!m_root->process())
             {
                 break;
             }
@@ -454,7 +448,6 @@ public:
             // update visual
             //
             {
-                m_root->reshape({0, 0, LINES, COLS});
                 // cursor for focused
                 auto f = m_focused.lock();
                 f->term->fixCursor();
@@ -512,10 +505,6 @@ std::shared_ptr<NODE> root()
 void root(const std::shared_ptr<NODE> &node)
 {
     g_app->root(node);
-}
-void reshape(int y, int x, int h, int w)
-{
-    g_app->root()->reshape({y, x, h, w});
 }
 void draw()
 {

@@ -23,7 +23,6 @@ int run();
 void quit();
 std::shared_ptr<NODE> root();
 void root(const std::shared_ptr<NODE> &node);
-void reshape(int y, int x, int h, int w);
 void draw();
 
 } // namespace global

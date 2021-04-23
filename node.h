@@ -10,6 +10,7 @@ struct CursesTerm;
 struct Splitter
 {
     bool isHorizontal;
+    std::list<std::shared_ptr<class NODE>> chidlren;
     std::tuple<Rect, Rect> split(const Rect &rect) const;
     void drawSeparator(const Rect &rect) const;
     Rect viewRect(const Rect &rect) const;
@@ -17,25 +18,27 @@ struct Splitter
 
 class NODE : public std::enable_shared_from_this<NODE>
 {
-    std::list<std::shared_ptr<NODE>> m_chidlren;
+    bool m_closed = false;
+    Rect m_rect = {};
+    Splitter m_splitter = {};
 
 public:
-    bool closed = false;
-    Rect m_rect;
-    Splitter splitter;
     std::unique_ptr<CursesTerm> term;
 
     NODE(const Rect &rect);
     ~NODE();
-
+    void close()
+    {
+        m_closed = true;
+    }
     void draw() const;
-    void process();
+    bool process();
     std::shared_ptr<NODE> findnode(const YX &yx);
-    std::shared_ptr<NODE> findViewNode();
     void split(bool isHorizontal);
-    void reshape(const Rect &rect);
+    std::shared_ptr<NODE> findViewNode();
 
 private:
+    void reshape(const Rect &rect);
     void moveFrom(const std::shared_ptr<NODE> &from);
     void processVT();
     void deleteClosed();
