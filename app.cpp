@@ -1,14 +1,12 @@
 #include "app.h"
 #include "node.h"
+#include "curses_term.h"
 #include "scrn.h"
 #include "selector.h"
-#include "curses_term.h"
 #include "pair.h"
-#include <bits/types/wint_t.h>
 #include <climits>
 #include <cstring>
 #include <exception>
-#include <curses.h>
 #include <string>
 #include <unordered_map>
 
