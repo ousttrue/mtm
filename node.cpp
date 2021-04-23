@@ -36,7 +36,7 @@ Rect Splitter::viewRect(const Rect &rect) const
     return Rect(0, 0, MAX(0, nh), MAX(0, nw));
 }
 
-NODE::NODE(const Rect &rect) : m_rect(rect)
+NODE::NODE(const Rect &rect, CursesTerm *term) : m_rect(rect), m_term(term)
 {
 }
 
@@ -46,9 +46,9 @@ NODE::~NODE()
 
 void NODE::moveFrom(const std::shared_ptr<NODE> &from)
 {
-    if (from->term)
+    if (from->m_term)
     {
-        this->term = std::move(from->term);
+        this->m_term = std::move(from->m_term);
     }
     else
     {
@@ -68,9 +68,9 @@ void NODE::reshape(const Rect &rect) /* Reshape a node. */
         MAX(rect.w, 1),
     };
 
-    if (this->term)
+    if (this->m_term)
     {
-        this->term->reshapeview(d, ow, m_rect);
+        this->m_term->reshapeview(d, ow, m_rect);
     }
     else
     {
@@ -88,20 +88,24 @@ void NODE::reshape(const Rect &rect) /* Reshape a node. */
     }
 }
 
-void NODE::draw() const /* Draw a node. */
+void NODE::draw(const std::shared_ptr<NODE> &focus) const /* Draw a node. */
 {
-    if (this->term)
+    if (this->m_term)
     {
-        this->term->draw(m_rect);
+        if (this == focus.get())
+        {
+            m_term->fixCursor();
+        }
+        this->m_term->draw(m_rect);
     }
     else
     {
         auto it = m_splitter.chidlren.begin();
-        (*it)->draw();
+        (*it)->draw(focus);
         this->m_splitter.drawSeparator(m_rect);
         wnoutrefresh(stdscr);
         ++it;
-        (*it)->draw();
+        (*it)->draw(focus);
     }
 }
 
@@ -130,7 +134,7 @@ void NODE::split(bool isHorizontal) /* Split a node. */
 {
     auto rect = this->m_splitter.viewRect(this->m_rect);
     auto v = std::make_shared<NODE>(rect);
-    v->term.reset(CursesTerm::create(rect));
+    v->m_term.reset(CursesTerm::create(rect));
 
     auto c = std::make_shared<NODE>(this->m_rect);
     c->moveFrom(shared_from_this());
@@ -160,9 +164,9 @@ void NODE::processVT() /* Recursively check all ptty's for input. */
         child->processVT();
     }
 
-    if (this->term)
+    if (this->m_term)
     {
-        if (!term->process())
+        if (!m_term->process())
         {
             this->m_closed = true;
         }
@@ -171,7 +175,7 @@ void NODE::processVT() /* Recursively check all ptty's for input. */
 
 void NODE::deleteClosed()
 {
-    if (this->term)
+    if (this->m_term)
     {
         // throw std::exception();
         return;
@@ -183,7 +187,7 @@ void NODE::deleteClosed()
     if (child1->m_closed)
     {
         focusThis = global::focus() == child1;
-        this->moveFrom(child2);       
+        this->moveFrom(child2);
         this->m_splitter = {};
     }
     else if (child2->m_closed)
@@ -205,7 +209,7 @@ void NODE::deleteClosed()
 
 std::shared_ptr<NODE> NODE::findViewNode()
 {
-    if (this->term)
+    if (this->m_term)
     {
         return shared_from_this();
     }

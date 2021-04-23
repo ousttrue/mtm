@@ -23,6 +23,6 @@ int run();
 void quit();
 std::shared_ptr<NODE> root();
 void root(const std::shared_ptr<NODE> &node);
-void draw();
+
 
 } // namespace global

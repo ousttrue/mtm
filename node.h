@@ -21,17 +21,20 @@ class NODE : public std::enable_shared_from_this<NODE>
     bool m_closed = false;
     Rect m_rect = {};
     Splitter m_splitter = {};
+    std::unique_ptr<CursesTerm> m_term;
 
 public:
-    std::unique_ptr<CursesTerm> term;
-
-    NODE(const Rect &rect);
+    NODE(const Rect &rect, CursesTerm *term = nullptr);
     ~NODE();
+    CursesTerm *term() const
+    {
+        return m_term.get();
+    }
     void close()
     {
         m_closed = true;
     }
-    void draw() const;
+    void draw(const std::shared_ptr<NODE> &focus) const;
     bool process();
     std::shared_ptr<NODE> findnode(const YX &yx);
     void split(bool isHorizontal);

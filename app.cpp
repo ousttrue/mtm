@@ -64,8 +64,8 @@ int get_commandKey()
 //
 struct CallbackContext
 {
-    std::shared_ptr<NODE> &node;
-    std::unique_ptr<CursesTerm> &term;
+    NODE *node;
+    CursesTerm *term;
 };
 
 using KeyCallbackFunc = std::function<void(const CallbackContext &c)>;
@@ -93,8 +93,7 @@ public:
         start_pairs();
 
         auto rect = Rect(0, 0, LINES, COLS);
-        m_root = std::make_shared<NODE>(rect);
-        m_root->term.reset(CursesTerm::create(rect));
+        m_root = std::make_shared<NODE>(rect, CursesTerm::create(rect));
         focus(m_root);
 
         //
@@ -132,7 +131,6 @@ public:
             {L'w', [](const CallbackContext &c) { c.node->close(); }});
         m_cmdOkMap.insert({L'l', [](const CallbackContext &c) {
                                touchwin(stdscr);
-                               global::draw();
                                redrawwin(stdscr);
                            }});
 
@@ -319,7 +317,7 @@ public:
 
     bool cmd = false;
 
-    void handleUserInput(const CallbackContext &c, int r, wint_t k)
+    void _handleUserInput(const CallbackContext &c, int r, wint_t k)
     {
         if (r == KEY_CODE_YES && k == KEY_RESIZE)
         {
@@ -406,6 +404,18 @@ public:
         cmd = false;
     }
 
+    bool handleUserInput(const CallbackContext &c)
+    {
+        wint_t k = 0;
+        int r = wget_wch(c.term->s->win, &k);
+        if (r == ERR)
+        {
+            return false;
+        }
+        _handleUserInput(c, r, k);
+        return true;
+    }
+
     int run()
     {
         //
@@ -422,15 +432,10 @@ public:
                     auto focus = m_focused.lock();
                     if (focus)
                     {
-                        auto &term = focus->term;
-                        wint_t k = 0;
-                        int r = wget_wch(term->s->win, &k);
-                        if (r == ERR)
+                        if (!handleUserInput({focus.get(), focus->term()}))
                         {
                             break;
                         }
-
-                        handleUserInput({focus, term}, r, k);
                     }
                 }
             }
@@ -439,7 +444,7 @@ public:
             // read pty and process vt
             //
             selector::select();
-            if(!m_root->process())
+            if (!m_root->process())
             {
                 break;
             }
@@ -450,8 +455,7 @@ public:
             {
                 // cursor for focused
                 auto f = m_focused.lock();
-                f->term->fixCursor();
-                m_root->draw();
+                m_root->draw(f);
                 doupdate();
             }
         }
@@ -505,10 +509,6 @@ std::shared_ptr<NODE> root()
 void root(const std::shared_ptr<NODE> &node)
 {
     g_app->root(node);
-}
-void draw()
-{
-    g_app->root()->draw();
 }
 
 } // namespace global
