@@ -32,7 +32,7 @@ static void cup(VtContext context)
     int py, px, y, x, my, mx, top, bot, tos;
     std::tie(py, px, y, x, my, mx, top, bot, tos) = context.get();
 
-    wmove(term->s->win,
+    wmove(term->s->win(),
           term->s->tos + (term->decom ? top : 0) + context.P1(0) - 1,
           context.P1(1) - 1);
     context.end();
@@ -42,7 +42,7 @@ static void dch(VtContext context)
 { /* DCH - Delete Character */
     auto term = context.term();
     for (int i = 0; i < context.P1(0); i++)
-        wdelch(term->s->win);
+        wdelch(term->s->win());
     context.end();
 }
 
@@ -50,7 +50,7 @@ static void ich(VtContext context)
 { /* ICH - Insert Character */
     auto term = context.term();
     for (int i = 0; i < context.P1(0); i++)
-        wins_nwstr(term->s->win, L" ", 1);
+        wins_nwstr(term->s->win(), L" ", 1);
     context.end();
 }
 
@@ -59,7 +59,7 @@ static void cuu(VtContext context)
     auto term = context.term();
     int py, px, y, x, my, mx, top, bot, tos;
     std::tie(py, px, y, x, my, mx, top, bot, tos) = context.get();
-    wmove(term->s->win, MAX(py - context.P1(0), tos + top), x);
+    wmove(term->s->win(), MAX(py - context.P1(0), tos + top), x);
     context.end();
 }
 
@@ -68,7 +68,7 @@ static void cud(VtContext context)
     int py, px, y, x, my, mx, top, bot, tos;
     std::tie(py, px, y, x, my, mx, top, bot, tos) = context.get();
     auto term = context.term();
-    wmove(term->s->win, MIN(py + context.P1(0), tos + bot - 1), x);
+    wmove(term->s->win(), MIN(py + context.P1(0), tos + bot - 1), x);
     context.end();
 }
 
@@ -77,7 +77,7 @@ static void cuf(VtContext context)
     auto term = context.term();
     int py, px, y, x, my, mx, top, bot, tos;
     std::tie(py, px, y, x, my, mx, top, bot, tos) = context.get();
-    wmove(term->s->win, py, MIN(x + context.P1(0), mx - 1));
+    wmove(term->s->win(), py, MIN(x + context.P1(0), mx - 1));
     context.end();
 }
 
@@ -94,13 +94,13 @@ static void ri(VtContext context)
 { /* RI - Reverse Index */
     auto term = context.term();
     int otop = 0, obot = 0;
-    wgetscrreg(term->s->win, &otop, &obot);
+    wgetscrreg(term->s->win(), &otop, &obot);
     int py, px, y, x, my, mx, top, bot, tos;
     std::tie(py, px, y, x, my, mx, top, bot, tos) = context.get();
-    wsetscrreg(term->s->win, otop >= tos ? otop : tos, obot);
-    y == top ? wscrl(term->s->win, -1)
-             : wmove(term->s->win, MAX(tos, py - 1), x);
-    wsetscrreg(term->s->win, otop, obot);
+    wsetscrreg(term->s->win(), otop >= tos ? otop : tos, obot);
+    y == top ? wscrl(term->s->win(), -1)
+             : wmove(term->s->win(), MAX(tos, py - 1), x);
+    wsetscrreg(term->s->win(), otop, obot);
     context.end();
 }
 
@@ -119,7 +119,7 @@ static void hpa(VtContext context)
     auto term = context.term();
     int py, px, y, x, my, mx, top, bot, tos;
     std::tie(py, px, y, x, my, mx, top, bot, tos) = context.get();
-    wmove(term->s->win, py, MIN(context.P1(0) - 1, mx - 1));
+    wmove(term->s->win(), py, MIN(context.P1(0) - 1, mx - 1));
     context.end();
 }
 
@@ -128,7 +128,7 @@ static void hpr(VtContext context)
     auto term = context.term();
     int py, px, y, x, my, mx, top, bot, tos;
     std::tie(py, px, y, x, my, mx, top, bot, tos) = context.get();
-    wmove(term->s->win, py, MIN(px + context.P1(0), mx - 1));
+    wmove(term->s->win(), py, MIN(px + context.P1(0), mx - 1));
     context.end();
 }
 
@@ -137,7 +137,7 @@ static void vpa(VtContext context)
     auto term = context.term();
     int py, px, y, x, my, mx, top, bot, tos;
     std::tie(py, px, y, x, my, mx, top, bot, tos) = context.get();
-    wmove(term->s->win,
+    wmove(term->s->win(),
           MIN(tos + bot - 1, MAX(tos + top, tos + context.P1(0) - 1)), x);
     context.end();
 }
@@ -147,7 +147,7 @@ static void vpr(VtContext context)
     auto term = context.term();
     int py, px, y, x, my, mx, top, bot, tos;
     std::tie(py, px, y, x, my, mx, top, bot, tos) = context.get();
-    wmove(term->s->win, MIN(tos + bot - 1, MAX(tos + top, py + context.P1(0))),
+    wmove(term->s->win(), MIN(tos + bot - 1, MAX(tos + top, py + context.P1(0))),
           x);
     context.end();
 }
@@ -160,9 +160,9 @@ static void cbt(VtContext context)
     std::tie(py, px, y, x, my, mx, top, bot, tos) = context.get();
     if (term->TryGetBackwardTab(x, &i))
     {
-        wmove(term->s->win, py, i);
+        wmove(term->s->win(), py, i);
     }
-    wmove(term->s->win, py, 0);
+    wmove(term->s->win(), py, 0);
     context.end();
 }
 
@@ -174,9 +174,9 @@ static void ht(VtContext context)
     std::tie(py, px, y, x, my, mx, top, bot, tos) = context.get();
     if (term->TryGetForwardTab(x, &i))
     {
-        wmove(term->s->win, py, i);
+        wmove(term->s->win(), py, i);
     }
-    wmove(term->s->win, py, mx - 1);
+    wmove(term->s->win(), py, mx - 1);
     context.end();
 }
 
@@ -208,16 +208,16 @@ static void decaln(VtContext context)
     for (int r = 0; r < my; r++)
     {
         for (int c = 0; c <= mx; c++)
-            mvwaddchnstr(term->s->win, tos + r, c, e, 1);
+            mvwaddchnstr(term->s->win(), tos + r, c, e, 1);
     }
-    wmove(term->s->win, py, px);
+    wmove(term->s->win(), py, px);
     context.end();
 }
 
 static void su(VtContext context)
 { /* SU - Scroll Up/Down */
     auto term = context.term();
-    wscrl(term->s->win, (context.w == L'T' || context.w == L'^')
+    wscrl(term->s->win(), (context.w == L'T' || context.w == L'^')
                             ? -context.P1(0)
                             : context.P1(0));
     context.end();
@@ -278,7 +278,7 @@ static void cub(VtContext context)
     int py, px, y, x, my, mx, top, bot, tos;
     std::tie(py, px, y, x, my, mx, top, bot, tos) = context.get();
     s->xenl = false;
-    wmove(s->win, py, MAX(x - context.P1(0), 0));
+    wmove(s->win(), py, MAX(x - context.P1(0), 0));
     context.end();
 }
 
@@ -286,7 +286,7 @@ static void el(VtContext context)
 { /* EL - Erase in Line */
     auto term = context.term();
     auto s = term->s;
-    auto win = s->win;
+    auto win = s->win();
     int py, px, y, x, my, mx, top, bot, tos;
     std::tie(py, px, y, x, my, mx, top, bot, tos) = context.get();
     cchar_t b;
@@ -313,7 +313,7 @@ static void ed(VtContext context)
 { /* ED - Erase in Display */
     auto term = context.term();
     auto s = term->s;
-    auto win = s->win;
+    auto win = s->win();
     int py, px, y, x, my, mx, top, bot, tos;
     std::tie(py, px, y, x, my, mx, top, bot, tos) = context.get();
     int o = 1;
@@ -347,7 +347,7 @@ static void ech(VtContext context)
 { /* ECH - Erase Character */
     auto term = context.term();
     auto s = term->s;
-    auto win = s->win;
+    auto win = s->win();
     int py, px, y, x, my, mx, top, bot, tos;
     std::tie(py, px, y, x, my, mx, top, bot, tos) = context.get();
     cchar_t c;
@@ -362,7 +362,7 @@ static void dsr(VtContext context)
 { /* DSR - Device Status Report */
     auto term = context.term();
     auto s = term->s;
-    auto win = s->win;
+    auto win = s->win();
     int py, px, y, x, my, mx, top, bot, tos;
     std::tie(py, px, y, x, my, mx, top, bot, tos) = context.get();
     char buf[100] = {0};
@@ -381,7 +381,7 @@ static void idl(VtContext context)
      * and has a few other edge cases... */
     auto term = context.term();
     auto s = term->s;
-    auto win = s->win;
+    auto win = s->win();
     int py, px, y, x, my, mx, top, bot, tos;
     std::tie(py, px, y, x, my, mx, top, bot, tos) = context.get();
     int otop = 0, obot = 0, p1 = MIN(context.P1(0), (my - 1) - y);
@@ -397,7 +397,7 @@ static void csr(VtContext context)
 { /* CSR - Change Scrolling Region */
     auto term = context.term();
     auto s = term->s;
-    auto win = s->win;
+    auto win = s->win();
     int py, px, y, x, my, mx, top, bot, tos;
     std::tie(py, px, y, x, my, mx, top, bot, tos) = context.get();
     if (wsetscrreg(win, tos + context.P1(0) - 1, tos + context.PD(1, my) - 1) ==
@@ -410,7 +410,7 @@ static void decreqtparm(VtContext context)
 { /* DECREQTPARM - Request Device Parameters */
     auto term = context.term();
     auto s = term->s;
-    auto win = s->win;
+    auto win = s->win();
     int py, px, y, x, my, mx, top, bot, tos;
     std::tie(py, px, y, x, my, mx, top, bot, tos) = context.get();
     term->safewrite(context.P0(0) ? "\033[3;1;2;120;1;0x"
@@ -422,7 +422,7 @@ static void sgr0(VtContext context)
 { /* Reset SGR to default */
     auto term = context.term();
     auto s = term->s;
-    auto win = s->win;
+    auto win = s->win();
     int py, px, y, x, my, mx, top, bot, tos;
     std::tie(py, px, y, x, my, mx, top, bot, tos) = context.get();
     wattrset(win, A_NORMAL);
@@ -436,7 +436,7 @@ static void cls(VtContext context)
 { /* Clear screen */
     auto term = context.term();
     auto s = term->s;
-    auto win = s->win;
+    auto win = s->win();
     CALL(cup, term);
     wclrtobot(win);
     CALL(cup, term);
@@ -456,7 +456,7 @@ static void mode(VtContext context)
 { /* Set or Reset Mode */
     auto term = context.term();
     auto s = term->s;
-    auto win = s->win;
+    auto win = s->win();
     bool set = (context.w == L'h');
     for (int i = 0; i < context.argc; i++)
         switch (context.P0(i))
@@ -506,7 +506,7 @@ static void sgr(VtContext context)
 { /* SGR - Select Graphic Rendition */
     auto term = context.term();
     auto s = term->s;
-    auto win = s->win;
+    auto win = s->win();
 
     bool doc = false, do8 = COLORS >= 8, do16 = COLORS >= 16,
          do256 = COLORS >= 256;
@@ -720,7 +720,7 @@ static void cr(VtContext context)
 { /* CR - Carriage Return */
     auto term = context.term();
     auto s = term->s;
-    auto win = s->win;
+    auto win = s->win();
     int py, px, y, x, my, mx, top, bot, tos;
     std::tie(py, px, y, x, my, mx, top, bot, tos) = context.get();
 
@@ -733,7 +733,7 @@ static void ind(VtContext context)
 { /* IND - Index */
     auto term = context.term();
     auto s = term->s;
-    auto win = s->win;
+    auto win = s->win();
     int py, px, y, x, my, mx, top, bot, tos;
     std::tie(py, px, y, x, my, mx, top, bot, tos) = context.get();
 
@@ -745,7 +745,7 @@ static void nel(VtContext context)
 { /* NEL - Next Line */
     auto term = context.term();
     auto s = term->s;
-    auto win = s->win;
+    auto win = s->win();
     CALL(cr, term);
     CALL(ind, term);
     context.end();
@@ -755,7 +755,7 @@ static void pnl(VtContext context)
 { /* NL - Newline */
     auto term = context.term();
     auto s = term->s;
-    auto win = s->win;
+    auto win = s->win();
     CALL((term->lnm ? nel : ind), term);
     context.end();
 }
@@ -764,7 +764,7 @@ static void cpl(VtContext context)
 { /* CPL - Cursor Previous Line */
     auto term = context.term();
     auto s = term->s;
-    auto win = s->win;
+    auto win = s->win();
     int py, px, y, x, my, mx, top, bot, tos;
     std::tie(py, px, y, x, my, mx, top, bot, tos) = context.get();
 
@@ -776,7 +776,7 @@ static void cnl(VtContext context)
 { /* CNL - Cursor Next Line */
     auto term = context.term();
     auto s = term->s;
-    auto win = s->win;
+    auto win = s->win();
     int py, px, y, x, my, mx, top, bot, tos;
     std::tie(py, px, y, x, my, mx, top, bot, tos) = context.get();
 
@@ -788,7 +788,7 @@ static void print(VtContext context)
 { /* Print a character to the terminal */
     auto term = context.term();
     auto s = term->s;
-    auto win = s->win;
+    auto win = s->win();
     int py, px, y, x, my, mx, top, bot, tos;
     std::tie(py, px, y, x, my, mx, top, bot, tos) = context.get();
 
@@ -825,7 +825,7 @@ static void rep(VtContext context)
 { /* REP - Repeat Character */
     auto term = context.term();
     auto s = term->s;
-    auto win = s->win;
+    auto win = s->win();
     int py, px, y, x, my, mx, top, bot, tos;
     std::tie(py, px, y, x, my, mx, top, bot, tos) = context.get();
 
@@ -838,7 +838,7 @@ static void scs(VtContext context)
 { /* Select Character Set */
     auto term = context.term();
     auto s = term->s;
-    auto win = s->win;
+    auto win = s->win();
     int py, px, y, x, my, mx, top, bot, tos;
     std::tie(py, px, y, x, my, mx, top, bot, tos) = context.get();
 
@@ -886,7 +886,7 @@ static void so(VtContext context)
 { /* Switch Out/In Character Set */
     auto term = context.term();
     auto s = term->s;
-    auto win = s->win;
+    auto win = s->win();
     int py, px, y, x, my, mx, top, bot, tos;
     std::tie(py, px, y, x, my, mx, top, bot, tos) = context.get();
 

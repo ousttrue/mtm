@@ -5,7 +5,6 @@
 #include "app.h"
 #include <climits>
 #include <cstring>
-#include <curses.h>
 #include <memory>
 #include <pwd.h>
 #include <unistd.h>
@@ -54,17 +53,17 @@ void CursesTerm::reshapeview(int d, int ow,
     }
 
     int oy, ox;
-    getyx(this->s->win, oy, ox);
-    wresize(this->pri->win, MAX(m_rect.h, SCROLLBACK), MAX(m_rect.w, 2));
-    wresize(this->alt->win, MAX(m_rect.h, 2), MAX(m_rect.w, 2));
+    std::tie(oy, ox) = this->s->cursor();
+    this->pri->resize(MAX(m_rect.h, SCROLLBACK), MAX(m_rect.w, 2));
+    this->alt->resize(MAX(m_rect.h, 2), MAX(m_rect.w, 2));
     this->pri->tos = this->pri->off = MAX(0, SCROLLBACK - m_rect.h);
     this->alt->tos = this->alt->off = 0;
-    wsetscrreg(this->pri->win, 0, MAX(SCROLLBACK, m_rect.h) - 1);
-    wsetscrreg(this->alt->win, 0, m_rect.h - 1);
+    this->pri->scrollRegion(0, MAX(SCROLLBACK, m_rect.h) - 1);
+    this->alt->scrollRegion(0, m_rect.h - 1);
     if (d > 0)
     { /* make sure the new top line syncs up after reshape */
-        wmove(this->s->win, oy + d, ox);
-        wscrl(this->s->win, -d);
+        this->s->cursor(oy + d, ox);
+        this->s->scr(-d);
     }
     doupdate();
     refresh();
@@ -75,7 +74,7 @@ void CursesTerm::draw(const Rect &rect, bool focus)
 {
     m_rect = rect;
     this->s->fixcursor(m_rect.h, focus);
-    pnoutrefresh(this->s->win, this->s->off, 0, m_rect.y, m_rect.x,
+    this->s->refresh(this->s->off, 0, m_rect.y, m_rect.x,
                  m_rect.y + m_rect.h - 1, m_rect.x + m_rect.w - 1);
 }
 
@@ -111,8 +110,8 @@ void CursesTerm::reset()
     this->pnm = false;
     this->pri->vis = this->alt->vis = 1;
     this->s = this->pri;
-    wsetscrreg(this->pri->win, 0, MAX(SCROLLBACK, m_rect.h) - 1);
-    wsetscrreg(this->alt->win, 0, m_rect.h - 1);
+    this->pri->scrollRegion(0, MAX(SCROLLBACK, m_rect.h) - 1);
+    this->alt->scrollRegion(0, m_rect.h - 1);
     for (int i = 0; i < this->m_tabs.size(); i++)
         this->m_tabs[i] = (i % 8 == 0);
 }

@@ -15,7 +15,7 @@ std::tuple<int, int, int, int, int, int, int, int, int> VtContext::get() const
 {
     auto term = (CursesTerm *)this->p;
     auto s = term->s;
-    WINDOW *win = s->win;
+    WINDOW *win = s->win();
 
     // COMMONVARS     - All of the common variables for a handler.
     //                  x, y     - cursor position

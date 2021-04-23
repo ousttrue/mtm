@@ -406,13 +406,13 @@ public:
 
     bool handleUserInput(const CallbackContext &c)
     {
-        wint_t k = 0;
-        int r = wget_wch(c.term->s->win, &k);
-        if (r == ERR)
+        auto input = c.term->s->input();
+        if (input.status == ERR)
         {
             return false;
         }
-        _handleUserInput(c, r, k);
+
+        _handleUserInput(c, input.status, input.code);
         return true;
     }
 
