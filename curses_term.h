@@ -34,31 +34,31 @@ public:
     wchar_t *sgs = nullptr;
     std::unique_ptr<VtParser> vp;
 
+public:
     CursesTerm(const Rect &rect);
     ~CursesTerm();
     static CursesTerm *create(const Rect &rect);
-
     void reshapeview(int d, int ow, const Rect &rect);
-    void draw(const Rect &rect);
+    void draw(const Rect &rect, bool focus);
     bool process();
-    bool handleUserInput();
-    void fixCursor();
-    void reset();
-    bool alternate_screen_buffer_mode(bool set);
+    //
     void scrollback();
     void scrollforward();
-
-    void HorizontalTabSet(int x);
-    bool TryGetBackwardTab(int x, int *out);
-    bool TryGetForwardTab(int x, int *out);
-    void TabClear(int x);
-    void TabClearAll();
-
     // SENDN(n, s, c) - Write string c bytes of s to n.
     void safewrite(const char *b, size_t n); /* Write, checking for errors. */
     // safewrite( s)     - Write string s to node n's host.
     void safewrite(const char *s);
-
-    bool INSCR() const;
     void sendarrow(const char *k);
+    void reset();
+    bool alternate_screen_buffer_mode(bool set);
+    bool TryGetBackwardTab(int x, int *out);
+    bool TryGetForwardTab(int x, int *out);
+    void TabClear(int x);
+    void TabClearAll();
+    void HorizontalTabSet(int x);
+
+private:
+    bool handleUserInput();
+    void fixCursor();
+    bool INSCR() const;
 };

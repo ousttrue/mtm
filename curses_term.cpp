@@ -90,9 +90,10 @@ void CursesTerm::reshapeview(int d, int ow,
     ioctl(this->pt, TIOCSWINSZ, &ws);
 }
 
-void CursesTerm::draw(const Rect &rect)
+void CursesTerm::draw(const Rect &rect, bool focus)
 {
     m_rect = rect;
+    this->s->fixcursor(m_rect.h, focus);
     pnoutrefresh(this->s->win, this->s->off, 0, m_rect.y, m_rect.x,
                  m_rect.y + m_rect.h - 1, m_rect.x + m_rect.w - 1);
 }
@@ -114,11 +115,6 @@ bool CursesTerm::process()
     }
 
     return true;
-}
-
-void CursesTerm::fixCursor()
-{
-    this->s->fixcursor(m_rect.h);
 }
 
 void CursesTerm::reset()

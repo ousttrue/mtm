@@ -92,11 +92,7 @@ void NODE::draw(const std::shared_ptr<NODE> &focus) const /* Draw a node. */
 {
     if (this->m_term)
     {
-        if (this == focus.get())
-        {
-            m_term->fixCursor();
-        }
-        this->m_term->draw(m_rect);
+        this->m_term->draw(m_rect, this == focus.get());
     }
     else
     {

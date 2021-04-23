@@ -9,8 +9,13 @@ void SCRN::scrollbottom()
     this->off = this->tos;
 }
 
-void SCRN::fixcursor(int h) /* Move the terminal cursor to the active view. */
+void SCRN::fixcursor(
+    int h, bool focus) /* Move the terminal cursor to the active view. */
 {
+    if (!focus)
+    {
+        return;
+    }
     curs_set(this->off != this->tos ? 0 : this->vis);
 
     int y, x;
@@ -52,7 +57,7 @@ void SCRN::save()
     this->sfg = this->fg;     /* save foreground color      */
     this->sbg = this->bg;     /* save background color      */
     this->oxenl = this->xenl; /* save xenl state            */
-    this->saved = true;    /* save data is valid         */
+    this->saved = true;       /* save data is valid         */
 }
 
 bool SCRN::restore()
@@ -77,5 +82,5 @@ bool SCRN::restore()
 void SCRN::reset()
 {
     auto s = this;
-    s->insert = s->oxenl = s->xenl =  false;
+    s->insert = s->oxenl = s->xenl = false;
 }

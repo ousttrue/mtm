@@ -32,7 +32,7 @@ public:
 
 public:
     void scrollbottom();
-    void fixcursor(int h);
+    void fixcursor(int h, bool focus);
     void scrollback(int h);
     void scrollforward(int h);
     void getAttr();
