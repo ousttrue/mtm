@@ -18,12 +18,6 @@ inline void CALL(VTCALLBACK x, CursesTerm *term)
     x({term, 0, 0, 0, NULL});
 }
 
-static void numkp(VtContext context)
-{ /* Application/Numeric Keypad Mode */
-    context.term()->pnm = (context.w == L'=');
-    context.end();
-}
-
 static void cup(VtContext context)
 { /* CUP - Cursor Position */
     auto term = context.term();
@@ -147,8 +141,8 @@ static void vpr(VtContext context)
     auto term = context.term();
     int py, px, y, x, my, mx, top, bot, tos;
     std::tie(py, px, y, x, my, mx, top, bot, tos) = context.get();
-    wmove(term->s->win(), MIN(tos + bot - 1, MAX(tos + top, py + context.P1(0))),
-          x);
+    wmove(term->s->win(),
+          MIN(tos + bot - 1, MAX(tos + top, py + context.P1(0))), x);
     context.end();
 }
 
@@ -218,8 +212,8 @@ static void su(VtContext context)
 { /* SU - Scroll Up/Down */
     auto term = context.term();
     wscrl(term->s->win(), (context.w == L'T' || context.w == L'^')
-                            ? -context.P1(0)
-                            : context.P1(0));
+                              ? -context.P1(0)
+                              : context.P1(0));
     context.end();
 }
 
@@ -993,8 +987,16 @@ static void setupevents(const std::unique_ptr<VtParser> &vp)
         ctx.end();
     });
 
-    vp->setEscape(L'=', numkp);
-    vp->setEscape(L'>', numkp);
+    vp->setEscape(L'=', [](VtContext context) {
+        /* Application/Numeric Keypad Mode */
+        context.term()->pnm = (context.w == L'=');
+        context.end();
+    });
+    vp->setEscape(L'>', [](VtContext context) {
+        /* Application/Numeric Keypad Mode */
+        context.term()->pnm = (context.w == L'=');
+        context.end();
+    });
     vp->setPrint(print);
 }
 
