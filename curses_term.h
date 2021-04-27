@@ -38,6 +38,7 @@ public:
     CursesTerm(const Rect &rect);
     ~CursesTerm();
     static CursesTerm *create(const Rect &rect);
+    static CursesTerm *create();
     void reshapeview(int d, int ow, const Rect &rect);
     void draw(const Rect &rect, bool focus);
     bool process();

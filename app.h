@@ -32,6 +32,30 @@ class App
     ~App();
 
 public:
+    void keyCodeMap(bool cmd, wint_t key, const KeyCallbackFunc &func)
+    {
+        if (cmd)
+        {
+            m_cmdKeyCodeMap.insert(std::make_pair(key, func));
+        }
+        else
+        {
+            m_keyCodeMap.insert(std::make_pair(key, func));
+        }
+    }
+
+    void okMap(bool cmd, wint_t key, const KeyCallbackFunc &func)
+    {
+        if (cmd)
+        {
+            m_cmdOkMap.insert(std::make_pair(key, func));
+        }
+        else
+        {
+            m_okMap.insert(std::make_pair(key, func));
+        }
+    }
+
     void quit();
     void root(const std::shared_ptr<NODE> &node);
     std::shared_ptr<NODE> root() const;
@@ -49,9 +73,11 @@ public:
 
     static App &instance();
 
-    static void set_term(const char *term);
+    // static void set_term(const char *term);
     static const char *get_term(void);
 
-    static void set_commandkey(int k);
+    // static void set_commandkey(int k);
     static int get_commandKey();
+
+    static void initialize(const char *term, int k);
 };

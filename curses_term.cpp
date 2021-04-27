@@ -75,7 +75,7 @@ void CursesTerm::draw(const Rect &rect, bool focus)
     m_rect = rect;
     this->s->fixcursor(m_rect.h, focus);
     this->s->refresh(this->s->off, 0, m_rect.y, m_rect.x,
-                 m_rect.y + m_rect.h - 1, m_rect.x + m_rect.w - 1);
+                     m_rect.y + m_rect.h - 1, m_rect.x + m_rect.w - 1);
 }
 
 bool CursesTerm::process()
@@ -250,6 +250,11 @@ CursesTerm *CursesTerm::create(const Rect &rect) /* Open a new view. */
         selector::set(term->pt);
         return term;
     }
+}
+
+CursesTerm *CursesTerm::create()
+{
+    return create({0, 0, LINES, COLS});
 }
 
 void CursesTerm::scrollback()

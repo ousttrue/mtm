@@ -40,6 +40,10 @@ NODE::NODE(const Rect &rect, CursesTerm *term) : m_rect(rect), m_term(term)
 {
 }
 
+NODE::NODE(CursesTerm *term) : m_rect(term->m_rect), m_term(term)
+{
+}
+
 NODE::~NODE()
 {
 }

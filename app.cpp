@@ -29,182 +29,6 @@ App::App()
     start_color();
     use_default_colors();
     start_pairs();
-
-    auto rect = Rect(0, 0, LINES, COLS);
-    m_root = std::make_shared<NODE>(rect, CursesTerm::create(rect));
-    focus(m_root);
-
-    //
-    // cmd == true
-    //
-    m_cmdKeyCodeMap.insert({KEY_UP, [self = this](const CallbackContext &c) {
-                                self->focus(c.term->m_rect.above());
-                            }});
-    m_cmdKeyCodeMap.insert({KEY_DOWN, [self = this](const CallbackContext &c) {
-                                self->focus(c.term->m_rect.below());
-                            }});
-    m_cmdKeyCodeMap.insert({KEY_LEFT, [self = this](const CallbackContext &c) {
-                                self->focus(c.term->m_rect.left());
-                            }});
-    m_cmdKeyCodeMap.insert({KEY_RIGHT, [self = this](const CallbackContext &c) {
-                                self->focus(c.term->m_rect.right());
-                            }});
-    m_cmdKeyCodeMap.insert(
-        {KEY_PPAGE, [](const CallbackContext &c) { c.term->scrollback(); }});
-    m_cmdKeyCodeMap.insert(
-        {KEY_NPAGE, [](const CallbackContext &c) { c.term->scrollforward(); }});
-    m_cmdKeyCodeMap.insert(
-        {KEY_END, [](const CallbackContext &c) { c.term->s->scrollbottom(); }});
-
-    m_cmdOkMap.insert({L'o', [self = this](const CallbackContext &c) {
-                           self->focus_last();
-                       }});
-    m_cmdOkMap.insert(
-        {L'h', [](const CallbackContext &c) { c.node->split(true); }});
-    m_cmdOkMap.insert(
-        {L'v', [](const CallbackContext &c) { c.node->split(false); }});
-    m_cmdOkMap.insert(
-        {L'w', [](const CallbackContext &c) { c.node->close(); }});
-    m_cmdOkMap.insert({L'l', [](const CallbackContext &c) {
-                           touchwin(stdscr);
-                           redrawwin(stdscr);
-                       }});
-
-    //
-    // cmd == false
-    //
-    m_okMap.insert({0, [](const CallbackContext &c) {
-                        c.term->safewrite("\000", 1);
-                        c.term->s->scrollbottom();
-                    }});
-    m_okMap.insert({L'\n', [](const CallbackContext &c) {
-                        c.term->safewrite("\n");
-                        c.term->s->scrollbottom();
-                    }});
-    m_okMap.insert({L'\r', [](const CallbackContext &c) {
-                        c.term->safewrite(c.term->lnm ? "\r\n" : "\r");
-                        c.term->s->scrollbottom();
-                    }});
-
-    m_keyCodeMap.insert({KEY_PPAGE, [](const CallbackContext &c) {
-                             if (c.term->s->INSCR())
-                             {
-                                 c.term->scrollback();
-                             }
-                         }});
-    m_keyCodeMap.insert({KEY_NPAGE, [](const CallbackContext &c) {
-                             if (c.term->s->INSCR())
-                             {
-                                 c.term->scrollforward();
-                             }
-                         }});
-    m_keyCodeMap.insert({KEY_END, [](const CallbackContext &c) {
-                             if (c.term->s->INSCR())
-                             {
-                                 c.term->s->scrollbottom();
-                             }
-                         }});
-
-    m_keyCodeMap.insert({KEY_ENTER, [](const CallbackContext &c) {
-                             c.term->safewrite(c.term->lnm ? "\r\n" : "\r");
-                             c.term->s->scrollbottom();
-                         }});
-    m_keyCodeMap.insert({KEY_UP, [](const CallbackContext &c) {
-                             c.term->sendarrow("A");
-                             c.term->s->scrollbottom();
-                         }});
-    m_keyCodeMap.insert({KEY_DOWN, [](const CallbackContext &c) {
-                             c.term->sendarrow("B");
-                             c.term->s->scrollbottom();
-                         }});
-    m_keyCodeMap.insert({KEY_RIGHT, [](const CallbackContext &c) {
-                             c.term->sendarrow("C");
-                             c.term->s->scrollbottom();
-                         }});
-    m_keyCodeMap.insert({KEY_LEFT, [](const CallbackContext &c) {
-                             c.term->sendarrow("D");
-                             c.term->s->scrollbottom();
-                         }});
-    m_keyCodeMap.insert({KEY_HOME, [](const CallbackContext &c) {
-                             c.term->safewrite("\033[1~");
-                             c.term->s->scrollbottom();
-                         }});
-    m_keyCodeMap.insert({KEY_END, [](const CallbackContext &c) {
-                             c.term->safewrite("\033[4~");
-                             c.term->s->scrollbottom();
-                         }});
-    m_keyCodeMap.insert({KEY_PPAGE, [](const CallbackContext &c) {
-                             c.term->safewrite("\033[5~");
-                             c.term->s->scrollbottom();
-                         }});
-    m_keyCodeMap.insert({KEY_NPAGE, [](const CallbackContext &c) {
-                             c.term->safewrite("\033[6~");
-                             c.term->s->scrollbottom();
-                         }});
-    m_keyCodeMap.insert({KEY_BACKSPACE, [](const CallbackContext &c) {
-                             c.term->safewrite("\177");
-                             c.term->s->scrollbottom();
-                         }});
-    m_keyCodeMap.insert({KEY_DC, [](const CallbackContext &c) {
-                             c.term->safewrite("\033[3~");
-                             c.term->s->scrollbottom();
-                         }});
-    m_keyCodeMap.insert({KEY_IC, [](const CallbackContext &c) {
-                             c.term->safewrite("\033[2~");
-                             c.term->s->scrollbottom();
-                         }});
-    m_keyCodeMap.insert({KEY_BTAB, [](const CallbackContext &c) {
-                             c.term->safewrite("\033[Z");
-                             c.term->s->scrollbottom();
-                         }});
-    m_keyCodeMap.insert({KEY_F(1), [](const CallbackContext &c) {
-                             c.term->safewrite("\033OP");
-                             c.term->s->scrollbottom();
-                         }});
-    m_keyCodeMap.insert({KEY_F(2), [](const CallbackContext &c) {
-                             c.term->safewrite("\033OQ");
-                             c.term->s->scrollbottom();
-                         }});
-    m_keyCodeMap.insert({KEY_F(3), [](const CallbackContext &c) {
-                             c.term->safewrite("\033OR");
-                             c.term->s->scrollbottom();
-                         }});
-    m_keyCodeMap.insert({KEY_F(4), [](const CallbackContext &c) {
-                             c.term->safewrite("\033OS");
-                             c.term->s->scrollbottom();
-                         }});
-    m_keyCodeMap.insert({KEY_F(5), [](const CallbackContext &c) {
-                             c.term->safewrite("\033[15~");
-                             c.term->s->scrollbottom();
-                         }});
-    m_keyCodeMap.insert({KEY_F(6), [](const CallbackContext &c) {
-                             c.term->safewrite("\033[17~");
-                             c.term->s->scrollbottom();
-                         }});
-    m_keyCodeMap.insert({KEY_F(7), [](const CallbackContext &c) {
-                             c.term->safewrite("\033[18~");
-                             c.term->s->scrollbottom();
-                         }});
-    m_keyCodeMap.insert({KEY_F(8), [](const CallbackContext &c) {
-                             c.term->safewrite("\033[19~");
-                             c.term->s->scrollbottom();
-                         }});
-    m_keyCodeMap.insert({KEY_F(9), [](const CallbackContext &c) {
-                             c.term->safewrite("\033[20~");
-                             c.term->s->scrollbottom();
-                         }});
-    m_keyCodeMap.insert({KEY_F(10), [](const CallbackContext &c) {
-                             c.term->safewrite("\033[21~");
-                             c.term->s->scrollbottom();
-                         }});
-    m_keyCodeMap.insert({KEY_F(11), [](const CallbackContext &c) {
-                             c.term->safewrite("\033[23~");
-                             c.term->s->scrollbottom();
-                         }});
-    m_keyCodeMap.insert({KEY_F(12), [](const CallbackContext &c) {
-                             c.term->safewrite("\033[24~");
-                             c.term->s->scrollbottom();
-                         }});
 }
 
 App::~App()
@@ -219,6 +43,7 @@ void App::quit()
 void App::root(const std::shared_ptr<NODE> &node)
 {
     m_root = node;
+    focus(m_root);
 }
 std::shared_ptr<NODE> App::root() const
 {
@@ -421,7 +246,7 @@ static int g_commandkey = CTL(COMMAND_KEY);
 #define DEFAULT_TERMINAL "screen-bce"
 #define DEFAULT_256_COLOR_TERMINAL "screen-256color-bce"
 
-void App::set_term(const char *term)
+void set_term(const char *term)
 {
     if (term)
     {
@@ -439,7 +264,7 @@ const char *App::get_term(void)
     return DEFAULT_TERMINAL;
 }
 
-void App::set_commandkey(int k)
+void set_commandkey(int k)
 {
     g_commandkey = CTL(k);
 }
@@ -447,4 +272,12 @@ void App::set_commandkey(int k)
 int App::get_commandKey()
 {
     return g_commandkey;
+}
+
+void App::initialize(const char *term, int k)
+{
+    set_term(term);
+    set_commandkey(k);
+    // initiailze static
+    instance();
 }

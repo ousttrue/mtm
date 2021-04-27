@@ -25,6 +25,7 @@ class NODE : public std::enable_shared_from_this<NODE>
 
 public:
     NODE(const Rect &rect, CursesTerm *term = nullptr);
+    NODE(CursesTerm *term);
     ~NODE();
     CursesTerm *term() const
     {
