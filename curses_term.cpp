@@ -218,7 +218,7 @@ static int fork_setup(int *pt, const Rect &rect)
         snprintf(buf, sizeof(buf) - 1, "%lu", (unsigned long)getppid());
         setsid();
         setenv("MTM", buf, 1);
-        setenv("TERM", global::get_term(), 1);
+        setenv("TERM", App::get_term(), 1);
         signal(SIGCHLD, SIG_DFL);
         execl(getshell(), getshell(), NULL);
 

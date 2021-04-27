@@ -29,7 +29,7 @@ int main(int argc, char **argv)
             return EXIT_FAILURE;
         }
 
-    global::set_term(term);
-    global::set_commandkey(commandkey);
-    return global::run();
+    App::set_term(term);
+    App::set_commandkey(commandkey);
+    return App::instance().run();
 }

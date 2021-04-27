@@ -138,7 +138,7 @@ void NODE::split(bool isHorizontal) /* Split a node. */
     this->m_splitter.chidlren.push_back(v);
     this->m_splitter.isHorizontal = isHorizontal;
 
-    global::focus(v);
+    App::instance().focus(v);
 }
 
 bool NODE::process()
@@ -182,13 +182,13 @@ void NODE::deleteClosed()
     auto focusThis = false;
     if (child1->m_closed)
     {
-        focusThis = global::focus() == child1;
+        focusThis = App::instance().focus() == child1;
         this->moveFrom(child2);
         this->m_splitter = {};
     }
     else if (child2->m_closed)
     {
-        focusThis = global::focus() == child2;
+        focusThis = App::instance().focus() == child2;
         this->moveFrom(child1);
         this->m_splitter = {};
     }
@@ -199,7 +199,7 @@ void NODE::deleteClosed()
     }
     if (focusThis)
     {
-        global::focus(shared_from_this());
+        App::instance().focus(shared_from_this());
     }
 }
 

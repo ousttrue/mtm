@@ -1,28 +1,57 @@
 #pragma once
 #include <memory>
+#include <unordered_map>
+#include <functional>
 #include "rect.h"
 
 class NODE;
-namespace global
+class CursesTerm;
+struct CallbackContext
 {
+    NODE *node;
+    CursesTerm *term;
+};
 
-void set_term(const char *term);
-const char *get_term(void);
+using KeyCallbackFunc = std::function<void(const CallbackContext &c)>;
 
-void set_commandkey(int k);
-int get_commandKey();
+class App
+{
+    std::shared_ptr<NODE> m_root;
+    std::weak_ptr<NODE> m_focused;
+    std::weak_ptr<NODE> m_lastfocused;
 
-// focus
-std::shared_ptr<NODE> focus();
-void focus(const std::shared_ptr<NODE> &node);
-void focus(YX yx);
-void focus_last();
-int run();
+    std::unordered_map<wint_t, KeyCallbackFunc> m_keyCodeMap;
+    std::unordered_map<wint_t, KeyCallbackFunc> m_okMap;
+    std::unordered_map<wint_t, KeyCallbackFunc> m_cmdKeyCodeMap;
+    std::unordered_map<wint_t, KeyCallbackFunc> m_cmdOkMap;
+    bool cmd = false;
 
-// root
-void quit();
-std::shared_ptr<NODE> root();
-void root(const std::shared_ptr<NODE> &node);
+    App(const App &) = delete;
+    App &operator=(const App &) = delete;
+    App();
+    ~App();
 
+public:
+    void quit();
+    void root(const std::shared_ptr<NODE> &node);
+    std::shared_ptr<NODE> root() const;
+    void focus(const std::shared_ptr<NODE> &n);
+    void focus(YX yx);
+    std::shared_ptr<NODE> focus() const;
+    void focus_last();
 
-} // namespace global
+private:
+    void _handleUserInput(const CallbackContext &c, int r, wint_t k);
+
+public:
+    bool handleUserInput(const CallbackContext &c);
+    int run();
+
+    static App &instance();
+
+    static void set_term(const char *term);
+    static const char *get_term(void);
+
+    static void set_commandkey(int k);
+    static int get_commandKey();
+};
