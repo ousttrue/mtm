@@ -2,7 +2,6 @@
 #include "node.h"
 #include "curses_term.h"
 #include "scrn.h"
-#include <signal.h>
 #include <unistd.h>
 #include <curses.h>
 
@@ -10,9 +9,6 @@ auto USAGE = "usage: mtm [-T NAME] [-t NAME] [-c KEY]\n";
 
 int main(int argc, char **argv)
 {
-    setlocale(LC_ALL, "");
-    signal(SIGCHLD, SIG_IGN); /* automatically reap children */
-
     int commandkey = 'g';
     const char *term = nullptr;
     int c = 0;
@@ -33,13 +29,12 @@ int main(int argc, char **argv)
             return EXIT_FAILURE;
         }
 
-    App::initialize(term ,commandkey);
+    App::set_commandkey(commandkey);
 
     //
     // default layout
     //
-    auto root = std::make_shared<NODE>(CursesTerm::create());
-    App::instance().root(root);
+    auto root = std::make_shared<NODE>(App::create_term(term));
 
     //
     // key binding
@@ -215,5 +210,5 @@ int main(int argc, char **argv)
         c.term->s->scrollbottom();
     });
 
-    return App::instance().run();
+    return App::instance().run(root);
 }

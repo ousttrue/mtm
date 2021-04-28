@@ -9,6 +9,8 @@
 #include <exception>
 #include <string>
 #include <unordered_map>
+#include <signal.h>
+#include <unistd.h>
 
 //
 // Node manipulation
@@ -16,6 +18,9 @@
 
 App::App()
 {
+    setlocale(LC_ALL, "");
+    signal(SIGCHLD, SIG_IGN); /* automatically reap children */
+
     if (!initscr())
     {
         // quit(EXIT_FAILURE, "could not initialize terminal");
@@ -40,11 +45,11 @@ void App::quit()
 {
     m_root = nullptr;
 }
-void App::root(const std::shared_ptr<NODE> &node)
-{
-    m_root = node;
-    focus(m_root);
-}
+// void App::root(const std::shared_ptr<NODE> &node)
+// {
+//     m_root = node;
+//     focus(m_root);
+// }
 std::shared_ptr<NODE> App::root() const
 {
     return m_root;
@@ -180,8 +185,11 @@ bool App::handleUserInput(const CallbackContext &c)
     return true;
 }
 
-int App::run()
+int App::run(const std::shared_ptr<NODE> &node)
 {
+    m_root = node;
+    focus(m_root);
+
     //
     // main loop
     //
@@ -246,7 +254,7 @@ static int g_commandkey = CTL(COMMAND_KEY);
 #define DEFAULT_TERMINAL "screen-bce"
 #define DEFAULT_256_COLOR_TERMINAL "screen-256color-bce"
 
-void set_term(const char *term)
+void App::set_term(const char *term)
 {
     if (term)
     {
@@ -264,7 +272,7 @@ const char *App::get_term(void)
     return DEFAULT_TERMINAL;
 }
 
-void set_commandkey(int k)
+void App::set_commandkey(int k)
 {
     g_commandkey = CTL(k);
 }
@@ -274,10 +282,12 @@ int App::get_commandKey()
     return g_commandkey;
 }
 
-void App::initialize(const char *term, int k)
+CursesTerm *App::create_term(const char *term)
 {
     set_term(term);
-    set_commandkey(k);
+    // set_commandkey(k);
     // initiailze static
     instance();
+
+    return CursesTerm::create({0, 0, LINES, COLS});
 }

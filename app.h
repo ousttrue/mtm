@@ -57,7 +57,7 @@ public:
     }
 
     void quit();
-    void root(const std::shared_ptr<NODE> &node);
+    // void root(const std::shared_ptr<NODE> &node);
     std::shared_ptr<NODE> root() const;
     void focus(const std::shared_ptr<NODE> &n);
     void focus(YX yx);
@@ -69,15 +69,15 @@ private:
 
 public:
     bool handleUserInput(const CallbackContext &c);
-    int run();
+    int run(const std::shared_ptr<NODE> &node);
 
     static App &instance();
 
-    // static void set_term(const char *term);
+    static void set_term(const char *term);
     static const char *get_term(void);
 
-    // static void set_commandkey(int k);
+    static void set_commandkey(int k);
     static int get_commandKey();
 
-    static void initialize(const char *term, int k);
+    static CursesTerm *create_term(const char *term = nullptr);
 };

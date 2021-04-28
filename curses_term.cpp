@@ -252,11 +252,6 @@ CursesTerm *CursesTerm::create(const Rect &rect) /* Open a new view. */
     }
 }
 
-CursesTerm *CursesTerm::create()
-{
-    return create({0, 0, LINES, COLS});
-}
-
 void CursesTerm::scrollback()
 {
     this->s->scrollback(m_rect.h);
