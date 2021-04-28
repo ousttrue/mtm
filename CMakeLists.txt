@@ -39,3 +39,9 @@ target_link_libraries(mtm PRIVATE
 #
 # vtlog
 #
+add_executable(vtlog
+    vtlog.cpp
+)
+target_link_libraries(vtlog PRIVATE
+    sub
+)
