@@ -15,8 +15,7 @@
 //
 // Node manipulation
 //
-
-App::App()
+bool App::initialize()
 {
     setlocale(LC_ALL, "");
     signal(SIGCHLD, SIG_IGN); /* automatically reap children */
@@ -24,9 +23,18 @@ App::App()
     if (!initscr())
     {
         // quit(EXIT_FAILURE, "could not initialize terminal");
-        throw std::exception();
+        // throw std::exception();
+        return false;
     }
 
+    // setup curses
+    App::instance();
+
+    return true;
+}
+
+App::App()
+{
     raw();
     noecho();
     nonl();
@@ -86,7 +94,7 @@ void App::focus_last()
     }
 }
 
-void App::_handleUserInput(const CallbackContext &c, int r, wint_t k)
+void App::handleUserInput(const CallbackContext &c, int r, wint_t k)
 {
     if (r == KEY_CODE_YES && k == KEY_RESIZE)
     {
@@ -173,22 +181,17 @@ void App::_handleUserInput(const CallbackContext &c, int r, wint_t k)
     cmd = false;
 }
 
-bool App::handleUserInput(const CallbackContext &c)
-{
-    auto input = c.term->s->input();
-    if (input.status == ERR)
-    {
-        return false;
-    }
-
-    _handleUserInput(c, input.status, input.code);
-    return true;
-}
-
-int App::run(const std::shared_ptr<NODE> &node)
+int App::run(const std::shared_ptr<NODE> &node, const std::shared_ptr<NODE> &f)
 {
     m_root = node;
-    focus(m_root);
+    if (f)
+    {
+        focus(f);
+    }
+    else
+    {
+        focus(m_root);
+    }
 
     //
     // main loop
@@ -204,7 +207,7 @@ int App::run(const std::shared_ptr<NODE> &node)
                 auto focus = m_focused.lock();
                 if (focus)
                 {
-                    if (!handleUserInput({focus.get(), focus->term()}))
+                    if (!focus->term()->handleUserInput(focus.get()))
                     {
                         break;
                     }

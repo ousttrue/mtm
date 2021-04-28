@@ -36,16 +36,30 @@ Rect Splitter::viewRect(const Rect &rect) const
     return Rect(0, 0, MAX(0, nh), MAX(0, nw));
 }
 
-NODE::NODE(const Rect &rect, CursesTerm *term) : m_rect(rect), m_term(term)
+NODE::NODE() : m_rect({0, 0, LINES, COLS}), m_term(nullptr)
 {
 }
 
-NODE::NODE(CursesTerm *term) : m_rect(term->m_rect), m_term(term)
+NODE::NODE(const Rect &rect, Content *content) : m_rect(rect), m_term(content)
+{
+}
+
+NODE::NODE(Content *content) : m_rect(content->rect()), m_term(content)
 {
 }
 
 NODE::~NODE()
 {
+}
+
+void NODE::term(Content *c)
+{
+    m_term.reset(c);
+}
+
+void NODE::term(std::unique_ptr<Content> c)
+{
+    m_term = std::move(c);
 }
 
 void NODE::moveFrom(const std::shared_ptr<NODE> &from)
@@ -74,7 +88,7 @@ void NODE::reshape(const Rect &rect) /* Reshape a node. */
 
     if (this->m_term)
     {
-        this->m_term->reshapeview(d, ow, m_rect);
+        this->m_term->reshape(d, ow, m_rect);
     }
     else
     {
@@ -130,7 +144,8 @@ NODE::findnode(const YX &p) /* Find the node enclosing y,x. */
 // c
 // nv
 //
-void NODE::split(bool isHorizontal) /* Split a node. */
+std::tuple<std::shared_ptr<NODE>, std::shared_ptr<NODE>>
+NODE::split(bool isHorizontal) /* Split a node. */
 {
     auto rect = this->m_splitter.viewRect(this->m_rect);
     auto v = std::make_shared<NODE>(rect);
@@ -143,6 +158,8 @@ void NODE::split(bool isHorizontal) /* Split a node. */
     this->m_splitter.isHorizontal = isHorizontal;
 
     App::instance().focus(v);
+
+    return {c, v};
 }
 
 bool NODE::process()

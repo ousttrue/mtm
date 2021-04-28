@@ -5,18 +5,41 @@
 
 struct SCRN;
 class VtParser;
-struct CursesTerm
-{
-    Rect m_rect;
 
+class Content
+{
+protected:
+    Rect m_rect = {};
+    Content(const Rect &rect) : m_rect(rect)
+    {
+    }
+
+public:
+    virtual ~Content()
+    {
+    }
+
+    Rect rect() const
+    {
+        return m_rect;
+    }
+
+    virtual void reshape(int d, int ow, const Rect &rect) = 0;
+    virtual void draw(const Rect &rect, bool focus) = 0;
+    virtual bool handleUserInput(class NODE *node) = 0;
+    virtual bool process() = 0;
+};
+
+struct CursesTerm : public Content
+{
 private:
     int pt = -1;
     std::vector<bool> m_tabs;
 
 public:
-    // Numeric Keypad Mode    
+    // Numeric Keypad Mode
     bool pnm = false;
-    
+
     bool decom = false;
     bool am = false;
     bool lnm = false;
@@ -38,9 +61,6 @@ public:
     CursesTerm(const Rect &rect);
     ~CursesTerm();
     static CursesTerm *create(const Rect &rect);
-    void reshapeview(int d, int ow, const Rect &rect);
-    void draw(const Rect &rect, bool focus);
-    bool process();
     //
     void scrollback();
     void scrollforward();
@@ -56,6 +76,11 @@ public:
     void TabClear(int x);
     void TabClearAll();
     void HorizontalTabSet(int x);
+
+    void reshape(int d, int ow, const Rect &rect) override;
+    void draw(const Rect &rect, bool focus) override;
+    bool process() override;
+    bool handleUserInput(class NODE *node) override;
 
 private:
     bool handleUserInput();

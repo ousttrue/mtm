@@ -5,7 +5,7 @@
 #include <list>
 #include "rect.h"
 
-struct CursesTerm;
+class Content;
 
 struct Splitter
 {
@@ -21,16 +21,23 @@ class NODE : public std::enable_shared_from_this<NODE>
     bool m_closed = false;
     Rect m_rect = {};
     Splitter m_splitter = {};
-    std::unique_ptr<CursesTerm> m_term;
+    std::unique_ptr<Content> m_term;
 
 public:
-    NODE(const Rect &rect, CursesTerm *term = nullptr);
-    NODE(CursesTerm *term);
+    NODE();
+    NODE(const Rect &rect, Content *term = nullptr);
+    NODE(Content *term);
     ~NODE();
-    CursesTerm *term() const
+    Rect rect() const
+    {
+        return m_rect;
+    }
+    Content *term() const
     {
         return m_term.get();
     }
+    void term(Content *c);
+    void term(std::unique_ptr<Content> c);
     void close()
     {
         m_closed = true;
@@ -38,7 +45,16 @@ public:
     void draw(const std::shared_ptr<NODE> &focus) const;
     bool process();
     std::shared_ptr<NODE> findnode(const YX &yx);
-    void split(bool isHorizontal);
+    std::tuple<std::shared_ptr<NODE>, std::shared_ptr<NODE>>
+    split(bool isHorizontal);
+    std::tuple<std::shared_ptr<NODE>, std::shared_ptr<NODE>> splitHorizontal()
+    {
+        return split(true);
+    }
+    std::tuple<std::shared_ptr<NODE>, std::shared_ptr<NODE>> splitVertical()
+    {
+        return split(false);
+    }
     std::shared_ptr<NODE> findViewNode();
 
 private:

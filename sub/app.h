@@ -64,12 +64,12 @@ public:
     std::shared_ptr<NODE> focus() const;
     void focus_last();
 
-private:
-    void _handleUserInput(const CallbackContext &c, int r, wint_t k);
+    void handleUserInput(const CallbackContext &c, int r, wint_t k);
 
 public:
-    bool handleUserInput(const CallbackContext &c);
-    int run(const std::shared_ptr<NODE> &node);
+    static bool initialize();
+    int run(const std::shared_ptr<NODE> &node,
+            const std::shared_ptr<NODE> &focus = nullptr);
 
     static App &instance();
 

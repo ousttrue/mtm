@@ -13,7 +13,7 @@
 #include "config.h"
 #include "vthandler.h"
 
-CursesTerm::CursesTerm(const Rect &rect) : m_rect(rect)
+CursesTerm::CursesTerm(const Rect &rect) : Content(rect)
 {
     for (int i = 0; i < m_rect.w; i++)
     {
@@ -38,8 +38,7 @@ CursesTerm::~CursesTerm()
     }
 }
 
-void CursesTerm::reshapeview(int d, int ow,
-                             const Rect &rect) /* Reshape a view. */
+void CursesTerm::reshape(int d, int ow, const Rect &rect) /* Reshape a view. */
 {
     m_rect = rect;
     struct winsize ws = {.ws_row = (unsigned short)m_rect.h,
@@ -267,4 +266,17 @@ void CursesTerm::sendarrow(const char *k)
     char buf[100] = {0};
     snprintf(buf, sizeof(buf) - 1, "\033%s%s", this->pnm ? "O" : "[", k);
     this->safewrite(buf);
+}
+
+bool CursesTerm::handleUserInput(class NODE *node)
+{
+    auto input = s->input();
+    if (input.status == ERR)
+    {
+        return false;
+    }
+
+    App::instance().handleUserInput({node, this}, input.status, input.code);
+
+    return true;
 }
