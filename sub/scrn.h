@@ -41,7 +41,7 @@ public:
 public:
     SCRN(int lines, int cols);
     ~SCRN();
-    WINDOW* win()const;
+    WINDOW *win() const;
     void scrollbottom();
     void fixcursor(int h, bool focus);
     void scrollback(int h);
@@ -69,6 +69,7 @@ public:
     void add(const chtype *ch, int n);
     void add(const cchar_t *ch, int n);
     void add(const wchar_t *ch, int n);
+    void add(const char *msg);
     void clear_to_eol();
     void clear_to_bottom();
     void erase();

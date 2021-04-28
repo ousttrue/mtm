@@ -22,4 +22,5 @@ target_link_libraries(${TARGET_NAME} PUBLIC
 )
 target_include_directories(${TARGET_NAME} PUBLIC
     ${CMAKE_CURRENT_LIST_DIR}
+    ${CMAKE_CURRENT_LIST_DIR}/../_externals/plog/include
 )

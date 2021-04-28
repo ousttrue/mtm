@@ -1,6 +1,8 @@
+#include "config.h"
 #include "app.h"
 #include "curses_term.h"
 #include "node.h"
+#include "scrn.h"
 #include <plog/Log.h>
 #include <plog/Init.h>
 #include <plog/Formatters/FuncMessageFormatter.h>
@@ -8,60 +10,78 @@
 
 namespace plog
 {
-template <class Formatter> // Typically a formatter is passed as a template
-                           // parameter.
-class MyAppender
-    : public IAppender // All appenders MUST inherit IAppender interface.
+
+template <class Formatter> class VtAppender : public IAppender
 {
-public:
-    virtual void write(const Record &record) // This is a method from IAppender
-                                             // that MUST be implemented.
+    std::function<void(const char *)> m_callback;
+
+    void write(const Record &record) override // This is a method from IAppender
+                                              // that MUST be implemented.
     {
         util::nstring str = Formatter::format(
             record); // Use the formatter to get a string from a record.
 
-        m_messageList.push_back(str); // Store a log message in a list.
+        if (m_callback)
+        {
+            m_callback(str.c_str());
+        }
     }
 
-    std::list<util::nstring> &getMessageList()
+public:
+    void callback(const std::function<void(const char *msg)> &cb)
     {
-        return m_messageList;
+        m_callback = cb;
     }
-
-private:
-    std::list<util::nstring> m_messageList;
 };
+
 } // namespace plog
 
-class Logger : public Content
+class VtLogger : public Content
 {
+    std::unique_ptr<SCRN> m_s;
+    int m_count=0;
+
 public:
-    Logger(const Rect &rect) : Content(rect)
+    VtLogger(const Rect &rect) : Content(rect)
     {
+        this->m_s = std::make_unique<SCRN>(SCROLLBACK, rect.w);
     }
 
     void reshape(int d, int ow, const Rect &rect) override
     {
+        m_rect = rect;
+        this->m_s->resize(SCROLLBACK, rect.w);
     }
+
     void draw(const Rect &rect, bool focus) override
     {
+        m_rect = rect;
+        this->m_s->refresh(m_count-LINES, 0, m_rect.y, m_rect.x, m_rect.y + m_rect.h - 1,
+                           m_rect.x + m_rect.w - 1);
     }
+
     bool handleUserInput(class NODE *node) override
     {
         return true;
     }
+
     bool process() override
     {
         return true;
+    }
+
+    void message(const char *msg)
+    {
+        this->m_s->add(msg);
+        ++m_count;
     }
 };
 
 int main(int argc, char **argv)
 {
-    static plog::MyAppender<plog::FuncMessageFormatter>
-        myAppender; // Create our custom appender.
+    plog::VtAppender<plog::FuncMessageFormatter> appender;
     plog::init(plog::debug,
-               &myAppender); // Initialize the logger with our appender.
+               &appender); // Initialize the logger with our appender.
 
     // Step3: write log messages using a special macro
     // There are several log macros, use the macro you liked the most
@@ -85,9 +105,10 @@ int main(int argc, char **argv)
     std::shared_ptr<NODE> r;
     std::tie(l, r) = root->splitHorizontal();
 
-    l->term(new Logger(l->rect()));
-    // l->term(CursesTerm::create(l->rect()));
+    auto logger = std::make_unique<VtLogger>(l->rect());
+    appender.callback([l = logger.get()](const char *msg) { l->message(msg); });
 
+    l->term(std::move(logger));
     r->term(CursesTerm::create(r->rect()));
 
     return App::instance().run(root, r);

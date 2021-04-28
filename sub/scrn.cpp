@@ -145,6 +145,11 @@ struct SCRNImpl
         waddnwstr(win, ch, n);
     }
 
+    void add(const char *msg)
+    {
+        waddstr(win, msg);
+    }
+
     void clear_to_eol()
     {
         wclrtoeol(win);
@@ -334,6 +339,11 @@ void SCRN::add(const cchar_t *ch, int n)
 void SCRN::add(const wchar_t *ch, int n)
 {
     m_impl->add(ch, n);
+}
+
+void SCRN::add(const char *p)
+{
+    m_impl->add(p);
 }
 
 void SCRN::clear_to_eol()

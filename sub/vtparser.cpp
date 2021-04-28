@@ -30,6 +30,7 @@
 #include <wchar.h>
 #include <vector>
 #include <functional>
+#include <plog/Log.h>
 
 /**** CONFIGURATION
  * VTPARSER_BAD_CHAR is the character that will be displayed when
@@ -232,6 +233,9 @@ void VtParser::handlechar(void *p, wchar_t w)
     {
         this->s = g_stateMachine.getGround();
     }
+
+    LOG_DEBUG << w;
+
     for (auto &a : this->s->actions)
     {
         STATE *pNext;
@@ -291,8 +295,7 @@ void VtParser::param(VtParser *v, void *p, wchar_t w)
 void VtParser::doescape(VtParser *v, void *p, wchar_t w)
 {
     if (w < MAXCALLBACK && v->m_escapes[w])
-        v->m_escapes[w](
-            {p, w, v->inter, v->inter > 0, &v->inter});
+        v->m_escapes[w]({p, w, v->inter, v->inter > 0, &v->inter});
 }
 void VtParser::docsi(VtParser *v, void *p, wchar_t w)
 {
