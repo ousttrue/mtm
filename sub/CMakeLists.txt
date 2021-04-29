@@ -7,7 +7,7 @@ add_library(${TARGET_NAME}
     curses_term.cpp
     selector.cpp
     node.cpp
-    scrn.cpp
+    curses_window.cpp
     app.cpp
     vtcontext.cpp
 )

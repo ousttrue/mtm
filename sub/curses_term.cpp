@@ -1,5 +1,5 @@
 #include "curses_term.h"
-#include "scrn.h"
+#include "curses_window.h"
 #include "minmax.h"
 #include "selector.h"
 #include "app.h"
@@ -21,8 +21,8 @@ CursesTerm::CursesTerm(const Rect &rect) : Content(rect)
         m_tabs.push_back(i % 8 == 0);
     }
 
-    this->pri = std::make_shared<SCRN>(MAX(m_rect.h, SCROLLBACK), m_rect.w);
-    this->alt = std::make_shared<SCRN>(m_rect.h, m_rect.w);
+    this->pri = std::make_shared<CursesWindow>(MAX(m_rect.h, SCROLLBACK), m_rect.w);
+    this->alt = std::make_shared<CursesWindow>(m_rect.h, m_rect.w);
 
     pri->tos = pri->off = MAX(0, SCROLLBACK - m_rect.h);
     this->s = this->pri;

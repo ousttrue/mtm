@@ -1,7 +1,7 @@
 #include "app.h"
 #include "node.h"
 #include "curses_term.h"
-#include "scrn.h"
+#include "curses_window.h"
 #include "selector.h"
 #include "pair.h"
 #include <climits>

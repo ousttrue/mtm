@@ -1,5 +1,5 @@
 #include "node.h"
-#include "scrn.h"
+#include "curses_window.h"
 #include "minmax.h"
 #include "pair.h"
 #include <bits/stdint-uintn.h>
@@ -9,7 +9,9 @@
 struct SCRNImpl
 {
     WINDOW *win = nullptr;
+    // saved color pair
     short sp = 0;
+    // saved attribute
     attr_t sattr = {};
 
     SCRNImpl(int lines, int cols)
@@ -186,26 +188,26 @@ struct SCRNImpl
     }
 };
 
-SCRN::SCRN(int lines, int cols) : m_impl(new SCRNImpl(lines, cols))
+CursesWindow::CursesWindow(int lines, int cols) : m_impl(new SCRNImpl(lines, cols))
 {
 }
 
-SCRN::~SCRN()
+CursesWindow::~CursesWindow()
 {
     delete m_impl;
 }
 
-WINDOW *SCRN::win() const
+WINDOW *CursesWindow::win() const
 {
     return m_impl->win;
 }
 
-void SCRN::scrollbottom()
+void CursesWindow::scrollbottom()
 {
     this->off = this->tos;
 }
 
-void SCRN::fixcursor(
+void CursesWindow::fixcursor(
     int h, bool focus) /* Move the terminal cursor to the active view. */
 {
     if (!focus)
@@ -220,27 +222,27 @@ void SCRN::fixcursor(
     m_impl->cursor(MIN(MAX(y, this->tos), this->tos + h - 1), x);
 }
 
-void SCRN::scrollback(int h)
+void CursesWindow::scrollback(int h)
 {
     this->off = MAX(0, this->off - h / 2);
 }
 
-void SCRN::scrollforward(int h)
+void CursesWindow::scrollforward(int h)
 {
     this->off = MIN(this->tos, this->off + h / 2);
 }
 
-void SCRN::getAttr()
+void CursesWindow::getAttr()
 {
     m_impl->getAttr();
 }
 
-void SCRN::setAttr()
+void CursesWindow::setAttr()
 {
     m_impl->setAttr();
 }
 
-void SCRN::save()
+void CursesWindow::save()
 {
     int y, x;
     std::tie(y, x) = m_impl->cursor();
@@ -253,7 +255,7 @@ void SCRN::save()
     this->saved = true;       /* save data is valid         */
 }
 
-bool SCRN::restore()
+bool CursesWindow::restore()
 {
     if (!this->saved)
         return false;
@@ -269,119 +271,119 @@ bool SCRN::restore()
     return true;
 }
 
-void SCRN::reset()
+void CursesWindow::reset()
 {
     auto s = this;
     s->insert = s->oxenl = s->xenl = false;
 }
 
-void SCRN::scr(int y)
+void CursesWindow::scr(int y)
 {
     m_impl->scr(y);
 }
 
-bool SCRN::scrollRegion(int top, int bottom)
+bool CursesWindow::scrollRegion(int top, int bottom)
 {
     return m_impl->scrollRegion(top, bottom);
 }
 
-std::tuple<int, int> SCRN::scrollRegion() const
+std::tuple<int, int> CursesWindow::scrollRegion() const
 {
     return m_impl->scrollRegion();
 }
 
-void SCRN::refresh(int pminrow, int pmincol, int sminrow, int smincol,
+void CursesWindow::refresh(int pminrow, int pmincol, int sminrow, int smincol,
                    int smaxrow, int smaxcol)
 {
     m_impl->refresh(pminrow, pmincol, sminrow, smincol, smaxrow, smaxcol);
 }
 
-CursesInput SCRN::input() const
+CursesInput CursesWindow::input() const
 {
     return m_impl->input();
 }
 
-std::tuple<int, int, int, int, int, int, int, int, int> SCRN::output() const
+std::tuple<int, int, int, int, int, int, int, int, int> CursesWindow::output() const
 {
     return m_impl->output(this->tos);
 }
 
-std::tuple<int, int> SCRN::cursor() const
+std::tuple<int, int> CursesWindow::cursor() const
 {
     return m_impl->cursor();
 }
 
-bool SCRN::cursor(int y, int x)
+bool CursesWindow::cursor(int y, int x)
 {
     return m_impl->cursor(y, x);
 }
 
-void SCRN::del()
+void CursesWindow::del()
 {
     m_impl->del();
 }
 
-void SCRN::ins(const wchar_t *ch, int n)
+void CursesWindow::ins(const wchar_t *ch, int n)
 {
     m_impl->insert(ch, n);
 }
 
-void SCRN::add(const chtype *ch, int n)
+void CursesWindow::add(const chtype *ch, int n)
 {
     m_impl->add(ch, n);
 }
 
-void SCRN::add(const cchar_t *ch, int n)
+void CursesWindow::add(const cchar_t *ch, int n)
 {
     m_impl->add(ch, n);
 }
 
-void SCRN::add(const wchar_t *ch, int n)
+void CursesWindow::add(const wchar_t *ch, int n)
 {
     m_impl->add(ch, n);
 }
 
-void SCRN::add(const char *p)
+void CursesWindow::add(const char *p)
 {
     m_impl->add(p);
 }
 
-void SCRN::clear_to_eol()
+void CursesWindow::clear_to_eol()
 {
     m_impl->clear_to_eol();
 }
 
-void SCRN::clear_to_bottom()
+void CursesWindow::clear_to_bottom()
 {
     m_impl->clear_to_bottom();
 }
 
-void SCRN::erase()
+void CursesWindow::erase()
 {
     m_impl->erase();
 }
 
-void SCRN::attr(int attr)
+void CursesWindow::attr(int attr)
 {
     m_impl->attr(attr);
 }
 
-void SCRN::color(short color, void *opts)
+void CursesWindow::color(short color, void *opts)
 {
     m_impl->color(color, opts);
 }
 
-void SCRN::bkg(chtype ch)
+void CursesWindow::bkg(chtype ch)
 {
     m_impl->bg(ch);
 }
 
-void SCRN::bkg(const cchar_t *ch)
+void CursesWindow::bkg(const cchar_t *ch)
 {
     m_impl->bg(ch);
 }
 
-void SCRN::resize(int lines, int cols)
+void CursesWindow::resize(int lines, int cols)
 {
     m_impl->resize(lines, cols);
 }

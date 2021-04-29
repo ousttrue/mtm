@@ -4,7 +4,7 @@
 #include "vtparser.h"
 #include "vthandler.h"
 #include "curses_term.h"
-#include "scrn.h"
+#include "curses_window.h"
 #include "minmax.h"
 #include <climits>
 #include <pwd.h>

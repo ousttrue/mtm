@@ -3,7 +3,7 @@
 #include <memory>
 #include "rect.h"
 
-struct SCRN;
+struct CursesWindow;
 class VtParser;
 
 class Content
@@ -44,9 +44,9 @@ public:
     bool am = false;
     bool lnm = false;
     wchar_t repc = 0;
-    std::shared_ptr<SCRN> pri;
-    std::shared_ptr<SCRN> alt;
-    std::shared_ptr<SCRN> s;
+    std::shared_ptr<CursesWindow> pri;
+    std::shared_ptr<CursesWindow> alt;
+    std::shared_ptr<CursesWindow> s;
     wchar_t *g0 = nullptr;
     wchar_t *g1 = nullptr;
     wchar_t *g2 = nullptr;

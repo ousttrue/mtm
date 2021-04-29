@@ -2,7 +2,7 @@
 #include "app.h"
 #include "curses_term.h"
 #include "node.h"
-#include "scrn.h"
+#include "curses_window.h"
 #include <plog/Log.h>
 #include <plog/Init.h>
 #include <plog/Formatters/FuncMessageFormatter.h>
@@ -38,13 +38,13 @@ public:
 
 class VtLogger : public Content
 {
-    std::unique_ptr<SCRN> m_s;
+    std::unique_ptr<CursesWindow> m_s;
     int m_count=0;
 
 public:
     VtLogger(const Rect &rect) : Content(rect)
     {
-        this->m_s = std::make_unique<SCRN>(SCROLLBACK, rect.w);
+        this->m_s = std::make_unique<CursesWindow>(SCROLLBACK, rect.w);
     }
 
     void reshape(int d, int ow, const Rect &rect) override

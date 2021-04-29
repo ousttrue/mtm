@@ -1,7 +1,7 @@
 #include "vtcontext.h"
 #include "curses_term.h"
 #include "node.h"
-#include "scrn.h"
+#include "curses_window.h"
 #include <curses.h>
 
 // (END)HANDLER   - Declare/end a handler function

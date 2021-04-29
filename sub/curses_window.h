@@ -9,7 +9,7 @@ struct CursesInput
     wint_t code = 0;
 };
 
-struct SCRN
+struct CursesWindow
 {
     struct SCRNImpl *m_impl = nullptr;
 
@@ -39,8 +39,8 @@ private:
 
 public:
 public:
-    SCRN(int lines, int cols);
-    ~SCRN();
+    CursesWindow(int lines, int cols);
+    ~CursesWindow();
     WINDOW *win() const;
     void scrollbottom();
     void fixcursor(int h, bool focus);
