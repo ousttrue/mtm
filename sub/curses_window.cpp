@@ -11,11 +11,11 @@ CursesWindow::CursesWindow(int lines, int cols, int scrollback)
     if (scrollback > 0)
     {
         lines = MAX(lines, scrollback);
-        tos = off = MAX(0, scrollback - lines);
+        m_maxScrollPosition = m_scrollPosition = MAX(0, scrollback - lines);
     }
     else
     {
-        tos = off = 0;
+        m_maxScrollPosition = m_scrollPosition = 0;
     }
     m_win = newpad(lines, cols);
     nodelay(m_win, TRUE);
@@ -33,11 +33,12 @@ void CursesWindow::resize(int lines, int cols, int scrollback)
     if (scrollback > 0)
     {
         lines = MAX(lines, scrollback);
-        this->tos = this->off = MAX(0, scrollback - lines);
+        this->m_maxScrollPosition = this->m_scrollPosition =
+            MAX(0, scrollback - lines);
     }
     else
     {
-        this->tos = this->off = 0;
+        this->m_maxScrollPosition = this->m_scrollPosition = 0;
     }
     wresize(m_win, lines, cols);
     scrollRegion(0, lines - 1);
@@ -53,6 +54,15 @@ std::tuple<int, int> CursesWindow::cursor() const
 bool CursesWindow::cursor(int y, int x)
 {
     return wmove(m_win, y, x) == OK;
+}
+
+void CursesWindow::cup(int y, int x, bool decom)
+{
+    if (decom)
+    {
+        throw std::exception();
+    }
+    wmove(m_win, m_maxScrollPosition + y, x);
 }
 
 void CursesWindow::getAttr()
@@ -115,17 +125,18 @@ std::tuple<int, int> CursesWindow::scrollRegion() const
 
 void CursesWindow::scrollbottom()
 {
-    this->off = this->tos;
+    this->m_scrollPosition = this->m_maxScrollPosition;
 }
 
 void CursesWindow::scrollback(int h)
 {
-    this->off = MAX(0, this->off - h / 2);
+    this->m_scrollPosition = MAX(0, this->m_scrollPosition - h / 2);
 }
 
 void CursesWindow::scrollforward(int h)
 {
-    this->off = MIN(this->tos, this->off + h / 2);
+    this->m_scrollPosition =
+        MIN(this->m_maxScrollPosition, this->m_scrollPosition + h / 2);
 }
 
 void CursesWindow::refresh(int pminrow, int pmincol, int sminrow, int smincol,
@@ -156,16 +167,16 @@ CursesWindow::output() const
 
     int py, px, y, x, my, mx, top = 0, bot = 0;
     getyx(m_win, py, px);
-    y = py - tos;
+    y = py - m_maxScrollPosition;
     x = px;
     getmaxyx(m_win, my, mx);
-    my -= tos;
+    my -= m_maxScrollPosition;
     wgetscrreg(m_win, &top, &bot);
     bot++;
-    bot -= tos;
-    top = top <= tos ? 0 : top - tos;
+    bot -= m_maxScrollPosition;
+    top = top <= m_maxScrollPosition ? 0 : top - m_maxScrollPosition;
 
-    return {py, px, y, x, my, mx, top, bot, tos};
+    return {py, px, y, x, my, mx, top, bot, m_maxScrollPosition};
 }
 
 void CursesWindow::fixcursor(
@@ -175,11 +186,14 @@ void CursesWindow::fixcursor(
     {
         return;
     }
-    curs_set(this->off == this->tos ? this->vis : 0);
+    curs_set(this->m_scrollPosition == this->m_maxScrollPosition ? this->vis
+                                                                 : 0);
 
     int y, x;
     std::tie(y, x) = cursor();
-    cursor(MIN(MAX(y, this->tos), this->tos + h - 1), x);
+    cursor(MIN(MAX(y, this->m_maxScrollPosition),
+               this->m_maxScrollPosition + h - 1),
+           x);
 }
 
 void CursesWindow::save()

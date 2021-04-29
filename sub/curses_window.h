@@ -17,8 +17,8 @@ struct CursesInput
 class CursesWindow
 {
     WINDOW *m_win = nullptr;
-    // scroll position
-    int off = 0;
+    int m_scrollPosition = 0;
+    int m_maxScrollPosition = 0;
 
     // saved color pair
     short m_sp = 0;
@@ -31,8 +31,6 @@ public:
     // color
     short fg = 0;
     short bg = 0;
-    // top of scroll
-    int tos = 0;
 
 public:
     // is there cursor end of line
@@ -58,6 +56,7 @@ public:
     void resize(int lines, int cols, int scrollback = 0);
     bool cursor(int y, int x);
     std::tuple<int, int> cursor() const;
+    void cup(int y, int x, bool decom);
     void getAttr();
     void setAttr();
     void setColor(short fg, short bg);
@@ -71,7 +70,7 @@ public:
     void reset(int lines, int scrollback = 0);
     bool INSCR() const
     {
-        return tos != off;
+        return m_maxScrollPosition != m_scrollPosition;
     }
     void scr(int y);
     bool scrollRegion(int top, int bottom);
@@ -80,7 +79,7 @@ public:
                  int smaxrow, int smaxcol);
     void refresh(const Rect &rect)
     {
-        refresh(off, 0, rect.y, rect.x, rect.y + rect.h - 1,
+        refresh(m_scrollPosition, 0, rect.y, rect.x, rect.y + rect.h - 1,
                 rect.x + rect.w - 1);
     }
     CursesInput input() const;

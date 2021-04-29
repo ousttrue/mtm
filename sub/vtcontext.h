@@ -16,8 +16,6 @@ struct VtContext
 
     void end();
 
-    std::tuple<int, int, int, int, int, int, int, int, int> get() const;
-
     // PD(n, d)       - Parameter n, with default d.
     int PD(int x, int d) const
     {
