@@ -1,10 +1,2 @@
-# config.h
-
-*~
-*.swp
-
-*.o
-mtm
-
-build
 .cache
+build
