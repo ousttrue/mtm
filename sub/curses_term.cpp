@@ -21,12 +21,9 @@ CursesTerm::CursesTerm(const Rect &rect) : Content(rect)
         m_tabs.push_back(i % 8 == 0);
     }
 
-    this->pri = std::make_shared<CursesWindow>(MAX(m_rect.h, SCROLLBACK), m_rect.w);
+    this->s = this->pri =
+        std::make_shared<CursesWindow>(m_rect.h, m_rect.w, SCROLLBACK);
     this->alt = std::make_shared<CursesWindow>(m_rect.h, m_rect.w);
-
-    pri->tos = pri->off = MAX(0, SCROLLBACK - m_rect.h);
-    this->s = this->pri;
-
     this->vp = std::make_unique<VtParser>();
 }
 
@@ -53,12 +50,8 @@ void CursesTerm::reshape(int d, int ow, const Rect &rect) /* Reshape a view. */
 
     int oy, ox;
     std::tie(oy, ox) = this->s->cursor();
-    this->pri->resize(MAX(m_rect.h, SCROLLBACK), MAX(m_rect.w, 2));
+    this->pri->resize(MAX(m_rect.h, 2), MAX(m_rect.w, 2), SCROLLBACK);
     this->alt->resize(MAX(m_rect.h, 2), MAX(m_rect.w, 2));
-    this->pri->tos = this->pri->off = MAX(0, SCROLLBACK - m_rect.h);
-    this->alt->tos = this->alt->off = 0;
-    this->pri->scrollRegion(0, MAX(SCROLLBACK, m_rect.h) - 1);
-    this->alt->scrollRegion(0, m_rect.h - 1);
     if (d > 0)
     { /* make sure the new top line syncs up after reshape */
         this->s->cursor(oy + d, ox);
@@ -73,8 +66,7 @@ void CursesTerm::draw(const Rect &rect, bool focus)
 {
     m_rect = rect;
     this->s->fixcursor(m_rect.h, focus);
-    this->s->refresh(this->s->off, 0, m_rect.y, m_rect.x,
-                     m_rect.y + m_rect.h - 1, m_rect.x + m_rect.w - 1);
+    this->s->refresh(m_rect);
 }
 
 bool CursesTerm::process()
@@ -104,13 +96,12 @@ void CursesTerm::reset()
     this->g3 = CSET_GRAPH;
     this->decom = false;
     this->lnm = false;
-    this->s->reset();
     this->am = true;
     this->pnm = false;
-    this->pri->vis = this->alt->vis = 1;
+
+    this->pri->reset(m_rect.h, SCROLLBACK);
+    this->alt->reset(m_rect.h);
     this->s = this->pri;
-    this->pri->scrollRegion(0, MAX(SCROLLBACK, m_rect.h) - 1);
-    this->alt->scrollRegion(0, m_rect.h - 1);
     for (int i = 0; i < this->m_tabs.size(); i++)
         this->m_tabs[i] = (i % 8 == 0);
 }
