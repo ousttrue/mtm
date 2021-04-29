@@ -1,34 +1,10 @@
 #pragma once
 #include <vector>
 #include <memory>
-#include "rect.h"
+#include "content.h"
 
 struct CursesWindow;
 class VtParser;
-
-class Content
-{
-protected:
-    Rect m_rect = {};
-    Content(const Rect &rect) : m_rect(rect)
-    {
-    }
-
-public:
-    virtual ~Content()
-    {
-    }
-
-    Rect rect() const
-    {
-        return m_rect;
-    }
-
-    virtual void reshape(int d, int ow, const Rect &rect) = 0;
-    virtual void draw(const Rect &rect, bool focus) = 0;
-    virtual bool handleUserInput(class NODE *node) = 0;
-    virtual bool process() = 0;
-};
 
 struct CursesTerm : public Content
 {
@@ -61,28 +37,29 @@ public:
     CursesTerm(const Rect &rect);
     ~CursesTerm();
     static CursesTerm *create(const Rect &rect);
-    //
-    void scrollback();
-    void scrollforward();
-    // SENDN(n, s, c) - Write string c bytes of s to n.
-    void safewrite(const char *b, size_t n); /* Write, checking for errors. */
-    // safewrite( s)     - Write string s to node n's host.
-    void safewrite(const char *s);
-    void sendarrow(const char *k);
-    void reset();
-    bool alternate_screen_buffer_mode(bool set);
-    bool TryGetBackwardTab(int x, int *out);
-    bool TryGetForwardTab(int x, int *out);
-    void TabClear(int x);
-    void TabClearAll();
-    void HorizontalTabSet(int x);
 
     void reshape(int d, int ow, const Rect &rect) override;
     void draw(const Rect &rect, bool focus) override;
     bool process() override;
     bool handleUserInput(class NODE *node) override;
 
+    // SENDN(n, s, c) - Write string c bytes of s to n.
+    void safewrite(const char *b, size_t n); /* Write, checking for errors. */
+    // safewrite( s)     - Write string s to node n's host.
+    void safewrite(const char *s);
+    void reset();
+    bool alternate_screen_buffer_mode(bool set);
+    void TabClear(int x);
+    void TabClearAll();
+    bool TryGetBackwardTab(int x, int *out);
+    bool TryGetForwardTab(int x, int *out);
+    void HorizontalTabSet(int x);
+    //
+    void scrollback();
+    void scrollforward();
+    void sendarrow(const char *k);
 private:
+    //
     bool handleUserInput();
     void fixCursor();
     bool INSCR() const;
