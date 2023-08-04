@@ -4,7 +4,7 @@
 #include "pair.h"
 #include <bits/stdint-uintn.h>
 #include <curses.h>
-#include <pstl/pstl_config.h>
+// #include <pstl/pstl_config.h>
 
 CursesWindow::CursesWindow(int lines, int cols, int scrollback)
 {

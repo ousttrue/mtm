@@ -9,6 +9,7 @@
 #include <pwd.h>
 #include <unistd.h>
 #include <signal.h>
+#include <errno.h>
 #include "vtparser.h"
 #include "config.h"
 #include "vthandler.h"

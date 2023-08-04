@@ -1,2 +1,6 @@
 .cache
 build
+/subprojects/*
+!/subprojects/packagefiles
+!/subprojects/plog.wrap
+/prefix/

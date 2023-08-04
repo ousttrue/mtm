@@ -11,6 +11,7 @@
 #include <unordered_map>
 #include <signal.h>
 #include <unistd.h>
+#include <locale.h>
 
 //
 // Node manipulation
