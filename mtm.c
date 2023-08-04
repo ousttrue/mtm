@@ -28,7 +28,7 @@
 #include <unistd.h>
 #include <wchar.h>
 #include <wctype.h>
-
+#include <curses.h>
 #include "vtparser.h"
 
 /*** CONFIGURATION */

@@ -1,7 +1,2 @@
-config.h
-
-*~
-*.swp
-
-*.o
-mtm
+# config.h
+/prefix/
