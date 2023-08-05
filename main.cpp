@@ -1,4 +1,5 @@
 #include "config.h"
+#include "curses_term.h"
 #include "mtm.h"
 #include "node.h"
 #include "posix_selector.h"
@@ -7,6 +8,7 @@
 #include <curses.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <iostream>
 #include <limits.h>
 #include <locale.h>
 #include <pty.h>
@@ -25,36 +27,16 @@ extern "C" {
 #define USAGE "usage: mtm [-T NAME] [-t NAME] [-c KEY]\n"
 #define CTL(x) ((x)&0x1f)
 
-NODE *root = nullptr;
+std::shared_ptr<NODE> g_root;
 /*** GLOBALS AND PROTOTYPES */
 int commandkey = CTL(COMMAND_KEY);
 const char *term = NULL;
-
-/*** UTILITY FUNCTIONS */
-static void quit(int rc, const char *m) /* Shut down MTM. */
-{
-  if (m)
-    fprintf(stderr, "%s\n", m);
-  if (root)
-    delete (root);
-  endwin();
-  exit(rc);
-}
-
-static void fixcursor(void) /* Move the terminal cursor to the active view. */
-{
-  int y, x;
-  curs_set(root->s->off != root->s->tos ? 0 : root->s->vis);
-  getyx(root->s->win, y, x);
-  y = std::min(std::max(y, root->s->tos), root->s->tos + root->Size.Rows - 1);
-  wmove(root->s->win, y, x);
-}
 
 static bool handlechar(int r, int k) /* Handle a single input character. */
 {
   const char cmdstr[] = {(char)commandkey, 0};
   static bool cmd = false;
-  NODE *n = root;
+  auto n = g_root;
 #define KERR(i) (r == ERR && (i) == k)
 #define KEY(i) (r == OK && (i) == k)
 #define CODE(i) (r == KEY_CODE_YES && (i) == k)
@@ -69,7 +51,7 @@ static bool handlechar(int r, int k) /* Handle a single input character. */
 
   DO(cmd, KERR(k), return false)
   DO(cmd, CODE(KEY_RESIZE),
-     root->reshape({0, 0}, {(uint16_t)LINES, (uint16_t)COLS});
+     g_root->reshape({0, 0}, {(uint16_t)LINES, (uint16_t)COLS});
      SB)
   DO(false, KEY(commandkey), return cmd = true)
   DO(false, KEY(0), n->SENDN("\000", 1); SB)
@@ -103,8 +85,8 @@ static bool handlechar(int r, int k) /* Handle a single input character. */
   DO(false, CODE(KEY_F(10)), n->SEND("\033[21~"); SB)
   DO(false, CODE(KEY_F(11)), n->SEND("\033[23~"); SB)
   DO(false, CODE(KEY_F(12)), n->SEND("\033[24~"); SB)
-  DO(true, DELETE_NODE, delete n)
-  DO(true, REDRAW, touchwin(stdscr); root->draw(); redrawwin(stdscr))
+  DO(true, DELETE_NODE, g_root = {})
+  DO(true, REDRAW, touchwin(stdscr); g_root->draw(); redrawwin(stdscr))
   DO(true, SCROLLUP, n->scrollback())
   DO(true, SCROLLDOWN, n->scrollforward())
   DO(true, RECENTER, n->scrollbottom())
@@ -118,28 +100,31 @@ static bool handlechar(int r, int k) /* Handle a single input character. */
 }
 static void run(void) /* Run MTM. */
 {
-  while (root) {
+  while (g_root) {
     wint_t w = 0;
 
     Selector::Instance().Select();
 
-    int r = wget_wch(root->s->win, &w);
+    int r = wget_wch(g_root->s->win, &w);
     while (handlechar(r, w))
-      r = wget_wch(root->s->win, &w);
+      r = wget_wch(g_root->s->win, &w);
+    if (!g_root) {
+      return;
+    }
 
-    if (auto span = Selector::Instance().Read(root->pt)) {
+    if (auto span = Selector::Instance().Read(g_root->pt)) {
       if (span->size()) {
-        vtwrite(root->vp.get(), span->data(), span->size());
+        vtwrite(g_root->vp.get(), span->data(), span->size());
       }
     } else {
       // error
       break;
     }
 
-    root->draw();
+    g_root->draw();
     doupdate();
-    fixcursor();
-    root->draw();
+    g_root->fixcursor();
+    g_root->draw();
     doupdate();
   }
 }
@@ -163,16 +148,15 @@ static const char *getshell(void) /* Get the user's preferred shell. */
   return "/bin/sh";
 }
 
-static NODE *newview(const POS &pos, const SIZE &size) {
+static std::shared_ptr<NODE> newview(const POS &pos, const SIZE &size) {
   struct winsize ws = {
       .ws_row = size.Rows,
       .ws_col = size.Cols,
   };
-  auto n = new NODE(pos, size);
+  auto n = std::make_shared<NODE>(pos, size);
   n->pri->win = newpad(std::max(size.Rows, (uint16_t)SCROLLBACK), size.Cols);
   n->alt->win = newpad(size.Rows, size.Cols);
   if (!n->pri->win || !n->alt->win) {
-    delete n;
     return NULL;
   }
   n->pri->tos = n->pri->off = std::max(0, SCROLLBACK - size.Rows);
@@ -185,12 +169,11 @@ static NODE *newview(const POS &pos, const SIZE &size) {
   keypad(n->pri->win, TRUE);
   keypad(n->alt->win, TRUE);
 
-  setupevents(n);
+  setupevents(n.get());
 
   pid_t pid = forkpty(&n->pt, NULL, NULL, &ws);
   if (pid < 0) {
     perror("forkpty");
-    delete n;
     return nullptr;
   } else if (pid == 0) {
     char buf[100] = {0};
@@ -204,16 +187,16 @@ static NODE *newview(const POS &pos, const SIZE &size) {
   }
 
   Selector::Instance().Register(n->pt);
-
   return n;
 }
 
 int main(int argc, char **argv) {
   setlocale(LC_ALL, "");
-  signal(SIGCHLD, SIG_IGN); /* automatically reap children */
+  /* automatically reap children */
+  signal(SIGCHLD, SIG_IGN);
 
   int c = 0;
-  while ((c = getopt(argc, argv, "c:T:t:")) != -1)
+  while ((c = getopt(argc, argv, "c:T:t:")) != -1) {
     switch (c) {
     case 'c':
       commandkey = CTL(optarg[0]);
@@ -225,21 +208,20 @@ int main(int argc, char **argv) {
       term = optarg;
       break;
     default:
-      quit(EXIT_FAILURE, USAGE);
-      break;
+      std::cout << USAGE << std::endl;
+      return EXIT_FAILURE;
     }
+  }
 
-  if (!initscr())
-    quit(EXIT_FAILURE, "could not initialize terminal");
-  raw();
-  noecho();
-  nonl();
-  intrflush(stdscr, FALSE);
-  start_color();
-  use_default_colors();
+  if (!Term::Insance().Initialize()) {
+    std::cout << "could not initialize terminal" << std::endl;
+    return EXIT_FAILURE;
+  }
+  Term::Insance().RawMode();
+
   start_pairs();
 
-  root = newview(
+  g_root = newview(
       POS{
           .Y = 2,
           .X = 2,
@@ -248,11 +230,12 @@ int main(int argc, char **argv) {
           .Rows = (uint16_t)(LINES - 4),
           .Cols = (uint16_t)(COLS - 4),
       });
-  if (!root)
-    quit(EXIT_FAILURE, "could not open root window");
-  root->draw();
+  if (!g_root) {
+    std::cout << "could not open root window" << std::endl;
+    return EXIT_FAILURE;
+  }
+  g_root->draw();
   run();
 
-  quit(EXIT_SUCCESS, NULL);
-  return EXIT_SUCCESS; /* not reached */
+  return EXIT_SUCCESS;
 }

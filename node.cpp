@@ -114,3 +114,12 @@ void NODE::reshapeview(int d) {
   };
   ioctl(this->pt, TIOCSWINSZ, &ws);
 }
+
+void NODE::fixcursor(void) /* Move the terminal cursor to the active view. */
+{
+  int y, x;
+  curs_set(this->s->off != this->s->tos ? 0 : this->s->vis);
+  getyx(this->s->win, y, x);
+  y = std::min(std::max(y, this->s->tos), this->s->tos + this->Size.Rows - 1);
+  wmove(this->s->win, y, x);
+}

@@ -29,10 +29,13 @@ struct NODE {
 
   // pty
   int pt = -1;
-  bool pnm, decom, am, lnm;
+
+  bool pnm;
+  bool decom;
+  bool am;
+  bool lnm;
   std::vector<bool> tabs;
   wchar_t repc;
-
   std::shared_ptr<SCRN> pri;
   std::shared_ptr<SCRN> alt;
   std::shared_ptr<SCRN> s;
@@ -40,7 +43,10 @@ struct NODE {
   std::shared_ptr<VTPARSER> vp;
 
   NODE(const POS &pos, const SIZE &size);
+  NODE(const NODE &) = delete;
+  NODE &operator=(const NODE &) = delete;
   ~NODE();
+
   // pty
   void safewrite(const char *b, size_t n);
   void SENDN(const char *s, size_t c) { safewrite(s, c); }
@@ -50,6 +56,8 @@ struct NODE {
   void draw() const;
   void reshape(const POS &pos, const SIZE &size);
   void reshapeview(int d);
+  /* Move the terminal cursor to the active view. */
+  void fixcursor(void);
   // scrn
   void scrollbottom();
   void scrollback();

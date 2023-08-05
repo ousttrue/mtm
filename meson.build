@@ -18,6 +18,7 @@ executable(
         'config.c',
         'node.cpp',
         'posix_selector.cpp',
+        'curses_term.cpp',
     ],
     install: true,
     c_args: [
