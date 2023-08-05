@@ -1,7 +1,6 @@
 #include "config.h"
 #include "curses_screen.h"
 #include "curses_term.h"
-#include "mtm.h"
 #include "node.h"
 #include "posix_process.h"
 #include "posix_selector.h"
@@ -103,61 +102,31 @@ static bool handlechar(const std::shared_ptr<NODE> &n,
   return true;
 }
 
-static void run(const std::shared_ptr<NODE> &g_root) /* Run MTM. */
-{
+static void run(const std::shared_ptr<NODE> &node) {
+  node->s->draw(node->Pos, node->Size);
   while (true) {
 
     Selector::Instance().Select();
 
     while (true) {
-      auto input = g_root->s->getchar();
-      if (!handlechar(g_root, input)) {
+      auto input = node->s->getchar();
+      if (!handlechar(node, input)) {
         break;
       }
     }
 
-    if (auto span = Selector::Instance().Read(g_root->Process->FD())) {
+    if (auto span = Selector::Instance().Read(node->Process->FD())) {
       if (span->size()) {
-        vtwrite(g_root->vp.get(), span->data(), span->size());
+        vtwrite(node->vp.get(), span->data(), span->size());
       }
     } else {
-      // error
+      // error exit
       break;
     }
 
-    g_root->s->draw(g_root->Pos, g_root->Size);
-    g_root->s->fixcursor(g_root->Size);
-    g_root->s->draw(g_root->Pos, g_root->Size);
-  }
-}
-
-static std::shared_ptr<NODE> newview(const POS &pos, const SIZE &size,
-                                     const char *term = nullptr) {
-  auto n = std::make_shared<NODE>(pos, size);
-  n->pri->win = newpad(std::max(size.Rows, (uint16_t)SCROLLBACK), size.Cols);
-  n->alt->win = newpad(size.Rows, size.Cols);
-  if (!n->pri->win || !n->alt->win) {
-    return NULL;
-  }
-  n->pri->tos = n->pri->off = std::max(0, SCROLLBACK - size.Rows);
-  n->s = n->pri;
-
-  nodelay(n->pri->win, TRUE);
-  nodelay(n->alt->win, TRUE);
-  scrollok(n->pri->win, TRUE);
-  scrollok(n->alt->win, TRUE);
-  keypad(n->pri->win, TRUE);
-  keypad(n->alt->win, TRUE);
-
-  setupevents(n.get());
-
-  if (auto process = PosixProcess::Fork(size, term)) {
-    if (n->Process) {
-      Selector::Instance().Register(n->Process->FD());
-    }
-    return n;
-  } else {
-    return {};
+    node->s->draw(node->Pos, node->Size);
+    node->s->fixcursor(node->Size);
+    node->s->draw(node->Pos, node->Size);
   }
 }
 
@@ -193,7 +162,7 @@ int main(int argc, char **argv) {
 
   start_pairs();
 
-  auto g_root = newview(
+  auto node = std::make_shared<NODE>(
       POS{
           .Y = 2,
           .X = 2,
@@ -201,14 +170,18 @@ int main(int argc, char **argv) {
       SIZE{
           .Rows = (uint16_t)(LINES - 4),
           .Cols = (uint16_t)(COLS - 4),
-      },
-      term);
-  if (!g_root) {
+      });
+  if (!node) {
     std::cout << "could not open root window" << std::endl;
     return EXIT_FAILURE;
   }
-  g_root->s->draw(g_root->Pos, g_root->Size);
-  run(g_root);
+
+  node->Process = PosixProcess::Fork(node->Size, term);
+  if (!node->Process) {
+    return 0;
+  }
+
+  run(node);
 
   return EXIT_SUCCESS;
 }

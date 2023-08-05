@@ -1,4 +1,5 @@
 #include "posix_process.h"
+#include "posix_selector.h"
 #include <curses.h>
 #include <pty.h>
 #include <pwd.h>
@@ -11,7 +12,10 @@
 struct PosixProcessImpl {
   int m_pty = -1;
 
-  ~PosixProcessImpl() { close(m_pty); }
+  ~PosixProcessImpl() {
+    Selector::Instance().Unregister(m_pty);
+    close(m_pty);
+  }
 
   void Write(const char *b, size_t n) {
     size_t w = 0;
@@ -60,6 +64,7 @@ PosixProcess::Fork(const SIZE &size, const char *term, const char *shell) {
     return {};
   }
 
+  Selector::Instance().Register(ptr->m_impl->m_pty);
   return ptr;
 }
 

@@ -1,11 +1,11 @@
+#include "node.h"
 extern "C" {
 #include "vtparser.h"
 }
 #include "config.h"
 #include "curses_screen.h"
-#include "node.h"
+#include "mtm.h"
 #include "posix_process.h"
-#include "posix_selector.h"
 #include <algorithm>
 #include <curses.h>
 #include <errno.h>
@@ -23,6 +23,22 @@ SIZE SIZE::Max(const SIZE &rhs) const {
 NODE::NODE(const POS &pos, const SIZE &size)
     : Pos(pos), Size(size), pri(new SCRN), alt(new SCRN), vp(new VTPARSER) {
   this->tabs.resize(Size.Cols, 0);
+
+  this->pri->win = newpad(std::max(size.Rows, (uint16_t)SCROLLBACK), size.Cols);
+  this->alt->win = newpad(size.Rows, size.Cols);
+  if (this->pri->win && this->alt->win) {
+    this->pri->tos = this->pri->off = std::max(0, SCROLLBACK - size.Rows);
+    this->s = this->pri;
+
+    nodelay(this->pri->win, TRUE);
+    nodelay(this->alt->win, TRUE);
+    scrollok(this->pri->win, TRUE);
+    scrollok(this->alt->win, TRUE);
+    keypad(this->pri->win, TRUE);
+    keypad(this->alt->win, TRUE);
+
+    setupevents(this);
+  }
 }
 
 NODE::~NODE() /* Free a node. */
@@ -31,9 +47,6 @@ NODE::~NODE() /* Free a node. */
     delwin(this->pri->win);
   if (this->alt->win)
     delwin(this->alt->win);
-  if (this->Process) {
-    Selector::Instance().Unregister(this->Process->FD());
-  }
 }
 
 void NODE::reshape(const POS &pos, const SIZE &size) {
