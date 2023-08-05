@@ -45,24 +45,6 @@ extern "C" {
 #define MIN(x, y) ((x) < (y) ? (x) : (y))
 #define MAX(x, y) ((x) > (y) ? (x) : (y))
 
-/*** GLOBALS AND PROTOTYPES */
-int commandkey = CTL(COMMAND_KEY);
-int nfds = 1; /* stdin */
-fd_set fds;
-
-static void setupevents(NODE *n);
-const char *term = NULL;
-
-static const char *getshell(void) /* Get the user's preferred shell. */
-{
-  if (getenv("SHELL"))
-    return getenv("SHELL");
-  struct passwd *pwd = getpwuid(getuid());
-  if (pwd)
-    return pwd->pw_shell;
-  return "/bin/sh";
-}
-
 /*** TERMINAL EMULATION HANDLERS
  * These functions implement the various terminal commands activated by
  * escape sequences and printing to the terminal. Large amounts of boilerplate
@@ -780,7 +762,7 @@ else if (w == L'N') {
 }
 ENDHANDLER
 
-static void setupevents(NODE *n) {
+void setupevents(NODE *n) {
   n->vp->p = n;
   vtonevent(n->vp.get(), VTPARSER_CONTROL, 0x05, ack);
   vtonevent(n->vp.get(), VTPARSER_CONTROL, 0x07, bell);
@@ -845,112 +827,7 @@ static void setupevents(NODE *n) {
   vtonevent(n->vp.get(), VTPARSER_ESCAPE, L'=', numkp);
   vtonevent(n->vp.get(), VTPARSER_ESCAPE, L'>', numkp);
   vtonevent(n->vp.get(), VTPARSER_PRINT, 0, print);
-}
 
-/*** MTM FUNCTIONS
- * These functions do the user-visible work of MTM: creating nodes in the
- * tree, updating the display, and so on.
- */
-NODE::NODE(const POS &pos, const SIZE &size)
-    : Pos(pos), Size(size), pri(new SCRN), alt(new SCRN), vp(new VTPARSER) {
-  this->tabs.resize(Size.Cols, 0);
-}
-
-NODE::~NODE() /* Free a node. */
-{
-  if (this->pri->win)
-    delwin(this->pri->win);
-  if (this->alt->win)
-    delwin(this->alt->win);
-  if (this->pt >= 0) {
-    close(this->pt);
-    FD_CLR(this->pt, &fds);
-  }
-}
-
-static const char *getterm(void) {
-  const char *envterm = getenv("TERM");
-  if (term)
-    return term;
-  if (envterm && COLORS >= 256 && !strstr(DEFAULT_TERMINAL, "-256color"))
-    return DEFAULT_256_COLOR_TERMINAL;
-  return DEFAULT_TERMINAL;
-}
-
-NODE *newview(const POS &pos, const SIZE &size) {
-  struct winsize ws = {
-      .ws_row = size.Rows,
-      .ws_col = size.Cols,
-  };
-  auto n = new NODE(pos, size);
-  n->pri->win = newpad(MAX(size.Rows, SCROLLBACK), size.Cols);
-  n->alt->win = newpad(size.Rows, size.Cols);
-  if (!n->pri->win || !n->alt->win) {
-    delete n;
-    return NULL;
-  }
-  n->pri->tos = n->pri->off = MAX(0, SCROLLBACK - size.Rows);
-  n->s = n->pri;
-
-  nodelay(n->pri->win, TRUE);
-  nodelay(n->alt->win, TRUE);
-  scrollok(n->pri->win, TRUE);
-  scrollok(n->alt->win, TRUE);
-  keypad(n->pri->win, TRUE);
-  keypad(n->alt->win, TRUE);
-
-  setupevents(n);
   ris(n->vp.get(), n, L'c', 0, 0, NULL, NULL);
-
-  pid_t pid = forkpty(&n->pt, NULL, NULL, &ws);
-  if (pid < 0) {
-    perror("forkpty");
-    delete n;
-    return nullptr;
-  } else if (pid == 0) {
-    char buf[100] = {0};
-    snprintf(buf, sizeof(buf) - 1, "%lu", (unsigned long)getppid());
-    setsid();
-    setenv("MTM", buf, 1);
-    setenv("TERM", getterm(), 1);
-    signal(SIGCHLD, SIG_DFL);
-    execl(getshell(), getshell(), NULL);
-    return NULL;
-  }
-
-  FD_SET(n->pt, &fds);
-  fcntl(n->pt, F_SETFL, O_NONBLOCK);
-  nfds = n->pt > nfds ? n->pt : nfds;
-  return n;
 }
 
-#define ABOVE(n) n->y - 2, n->x + n->Size.Cols / 2
-#define BELOW(n) n->y + n->Size.Rows + 2, n->x + n->Size.Cols / 2
-#define LEFT(n) n->y + n->Size.Rows / 2, n->x - 2
-#define RIGHT(n) n->y + n->Size.Rows / 2, n->x + n->Size.Cols + 2
-
-/* Reshape a view. */
-void NODE::reshapeview(int d) {
-
-  int oy, ox;
-  getyx(this->s->win, oy, ox);
-  wresize(this->pri->win, MAX(this->Size.Rows, SCROLLBACK),
-          MAX(this->Size.Cols, 2));
-  wresize(this->alt->win, MAX(this->Size.Rows, 2), MAX(this->Size.Cols, 2));
-  this->pri->tos = this->pri->off = MAX(0, SCROLLBACK - this->Size.Rows);
-  this->alt->tos = this->alt->off = 0;
-  wsetscrreg(this->pri->win, 0, MAX(SCROLLBACK, this->Size.Rows) - 1);
-  wsetscrreg(this->alt->win, 0, this->Size.Rows - 1);
-  if (d > 0) { /* make sure the new top line syncs up after reshape */
-    wmove(this->s->win, oy + d, ox);
-    wscrl(this->s->win, -d);
-  }
-  doupdate();
-  refresh();
-
-  struct winsize ws = {
-      .ws_row = this->Size.Rows,
-      .ws_col = this->Size.Cols,
-  };
-  ioctl(this->pt, TIOCSWINSZ, &ws);
-}

@@ -5,20 +5,31 @@
 #include <algorithm>
 #include <curses.h>
 #include <errno.h>
+#include <fcntl.h>
 #include <limits.h>
 #include <locale.h>
+#include <pty.h>
+#include <pwd.h>
 #include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/ioctl.h>
+#include <unistd.h>
 extern "C" {
 #include "pair.h"
 #include "vtparser.h"
 }
 
 #define USAGE "usage: mtm [-T NAME] [-t NAME] [-c KEY]\n"
+#define CTL(x) ((x)&0x1f)
 
 NODE *root = nullptr;
+/*** GLOBALS AND PROTOTYPES */
+int commandkey = CTL(COMMAND_KEY);
+int nfds = 1; /* stdin */
+fd_set fds;
+const char *term = NULL;
 
 /*** UTILITY FUNCTIONS */
 static void quit(int rc, const char *m) /* Shut down MTM. */
@@ -143,6 +154,71 @@ static void run(void) /* Run MTM. */
     root->draw();
     doupdate();
   }
+}
+
+static const char *getterm(void) {
+  const char *envterm = getenv("TERM");
+  if (term)
+    return term;
+  if (envterm && COLORS >= 256 && !strstr(DEFAULT_TERMINAL, "-256color"))
+    return DEFAULT_256_COLOR_TERMINAL;
+  return DEFAULT_TERMINAL;
+}
+
+static const char *getshell(void) /* Get the user's preferred shell. */
+{
+  if (getenv("SHELL"))
+    return getenv("SHELL");
+  struct passwd *pwd = getpwuid(getuid());
+  if (pwd)
+    return pwd->pw_shell;
+  return "/bin/sh";
+}
+
+static NODE *newview(const POS &pos, const SIZE &size) {
+  struct winsize ws = {
+      .ws_row = size.Rows,
+      .ws_col = size.Cols,
+  };
+  auto n = new NODE(pos, size);
+  n->pri->win = newpad(std::max(size.Rows, (uint16_t)SCROLLBACK), size.Cols);
+  n->alt->win = newpad(size.Rows, size.Cols);
+  if (!n->pri->win || !n->alt->win) {
+    delete n;
+    return NULL;
+  }
+  n->pri->tos = n->pri->off = std::max(0, SCROLLBACK - size.Rows);
+  n->s = n->pri;
+
+  nodelay(n->pri->win, TRUE);
+  nodelay(n->alt->win, TRUE);
+  scrollok(n->pri->win, TRUE);
+  scrollok(n->alt->win, TRUE);
+  keypad(n->pri->win, TRUE);
+  keypad(n->alt->win, TRUE);
+
+  setupevents(n);
+
+  pid_t pid = forkpty(&n->pt, NULL, NULL, &ws);
+  if (pid < 0) {
+    perror("forkpty");
+    delete n;
+    return nullptr;
+  } else if (pid == 0) {
+    char buf[100] = {0};
+    snprintf(buf, sizeof(buf) - 1, "%lu", (unsigned long)getppid());
+    setsid();
+    setenv("MTM", buf, 1);
+    setenv("TERM", getterm(), 1);
+    signal(SIGCHLD, SIG_DFL);
+    execl(getshell(), getshell(), NULL);
+    return NULL;
+  }
+
+  FD_SET(n->pt, &fds);
+  fcntl(n->pt, F_SETFL, O_NONBLOCK);
+  nfds = n->pt > nfds ? n->pt : nfds;
+  return n;
 }
 
 int main(int argc, char **argv) {
