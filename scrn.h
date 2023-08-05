@@ -1,10 +1,19 @@
 #pragma once
-#include <curses.h>
+#include <stdint.h>
+// #include <curses.h>
 
 struct SCRN {
-  int sy, sx, vis, tos, off;
-  short fg, bg, sfg, sbg, sp;
-  bool insert, oxenl, xenl, saved;
-  attr_t sattr;
-  WINDOW *win;
+  int sy, sx;
+  int vis;
+  int tos;
+  int off;
+  short fg, bg;
+  short sfg, sbg;
+  short sp;
+  bool insert;
+  bool oxenl;
+  bool xenl;
+  bool saved;
+  uint32_t sattr;
+  struct _win_st *win;
 };

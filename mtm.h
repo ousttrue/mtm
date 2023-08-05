@@ -1,5 +1,4 @@
 #pragma once
-#include <curses.h>
 #include <memory>
 #include <sys/select.h>
 #include <vector>

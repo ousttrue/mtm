@@ -1,6 +1,7 @@
 #include "node.h"
 #include "scrn.h"
 #include <algorithm>
+#include <curses.h>
 #include <errno.h>
 #include <string.h>
 #include <unistd.h>

@@ -3,6 +3,7 @@
 #include "node.h"
 #include "scrn.h"
 #include <algorithm>
+#include <curses.h>
 #include <errno.h>
 #include <limits.h>
 #include <locale.h>
