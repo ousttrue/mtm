@@ -1,11 +1,9 @@
 #include "node.h"
-extern "C" {
-#include "vtparser.h"
-}
 #include "config.h"
 #include "curses_screen.h"
 #include "mtm.h"
 #include "posix_process.h"
+#include "vtparser.h"
 
 SIZE SIZE::Max(const SIZE &rhs) const {
   return {

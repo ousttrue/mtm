@@ -13,36 +13,14 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-extern "C" {
-#include "vtparser.h"
-}
-#include "config.h"
-#include "curses_screen.h"
-#include "curses_term.h"
 #include "mtm.h"
+#include "config.h"
+#include "curses_term.h"
 #include "node.h"
 #include "posix_process.h"
+#include "vtparser.h"
 #include <assert.h>
 #include <curses.h>
-#include <errno.h>
-#include <fcntl.h>
-#include <limits.h>
-#include <locale.h>
-#include <pty.h>
-#include <pwd.h>
-#include <signal.h>
-#include <stdbool.h>
-#include <stdlib.h>
-#include <string.h>
-#include <sys/ioctl.h>
-#include <sys/select.h>
-#include <sys/types.h>
-#include <unistd.h>
-#include <wchar.h>
-#include <wctype.h>
-
-/*** CONFIGURATION */
-// #include "config.h"
 
 #define MIN(x, y) ((x) < (y) ? (x) : (y))
 #define MAX(x, y) ((x) > (y) ? (x) : (y))
@@ -154,7 +132,7 @@ n->Process->WriteString("\006");
 ENDHANDLER
 
 HANDLER(hts) /* HTS - Horizontal Tab Set */
-if (x < n->tabs.size() && x > 0)
+if (x < (int)n->tabs.size() && x > 0)
   n->tabs[x] = true;
 ENDHANDLER
 
@@ -190,7 +168,7 @@ wmove(win, MIN(tos + bot - 1, MAX(tos + top, py + P1(0))), x);
 ENDHANDLER
 
 HANDLER(cbt) /* CBT - Cursor Backwards Tab */
-for (int i = x - 1; i < n->tabs.size() && i >= 0; i--)
+for (int i = x - 1; i < (int)n->tabs.size() && i >= 0; i--)
   if (n->tabs[i]) {
     wmove(win, py, i);
     return;
@@ -199,7 +177,7 @@ wmove(win, py, 0);
 ENDHANDLER
 
 HANDLER(ht) /* HT - Horizontal Tab */
-for (int i = x + 1; i < n->Size.Cols && i < n->tabs.size(); i++)
+for (int i = x + 1; i < n->Size.Cols && i < (int)n->tabs.size(); i++)
   if (n->tabs[i]) {
     wmove(win, py, i);
     return;
@@ -274,7 +252,7 @@ ENDHANDLER
 HANDLER(tbc) /* TBC - Tabulation Clear */
 switch (P0(0)) {
 case 0:
-  n->tabs[x < n->tabs.size() ? x : 0] = false;
+  n->tabs[x < (int)n->tabs.size() ? x : 0] = false;
   break;
 case 3:
   std::fill(n->tabs.begin(), n->tabs.end(), 0);
@@ -397,7 +375,7 @@ n->pri->vis = n->alt->vis = 1;
 n->s = n->pri;
 wsetscrreg(n->pri->win, 0, MAX(SCROLLBACK, n->Size.Rows) - 1);
 wsetscrreg(n->alt->win, 0, n->Size.Rows - 1);
-for (int i = 0; i < n->tabs.size(); i++)
+for (int i = 0; i < (int)n->tabs.size(); i++)
   n->tabs[i] = (i % 8 == 0);
 ENDHANDLER
 

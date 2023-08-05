@@ -4,13 +4,11 @@
 #include "node.h"
 #include "posix_process.h"
 #include "posix_selector.h"
+#include "vtparser.h"
 #include <curses.h>
 #include <iostream>
 #include <signal.h>
 #include <string.h>
-extern "C" {
-#include "vtparser.h"
-}
 
 #define USAGE "usage: mtm [-T NAME] [-t NAME] [-c KEY]\n"
 #define CTL(x) ((x)&0x1f)

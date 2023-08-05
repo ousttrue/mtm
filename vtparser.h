@@ -27,7 +27,10 @@
 #ifndef VTC_H
 #define VTC_H
 
-#include <stddef.h>
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include <wchar.h>
 
 /**** CONFIGURATION
@@ -76,5 +79,9 @@ vtonevent(VTPARSER *vp, VtEvent t, wchar_t w, VTCALLBACK cb);
 
 void
 vtwrite(VTPARSER *vp, const char *s, size_t n);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif
