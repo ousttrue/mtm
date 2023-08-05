@@ -62,14 +62,10 @@ void NODE::reshape(const POS &pos, const SIZE &size) {
   this->s->draw(Pos, Size);
 }
 
-void NODE::SENDN(const char *s, size_t c) { Process->Write(s, c); }
-
-void NODE::SEND(const char *s) { SENDN(s, strlen(s)); }
-
 void NODE::sendarrow(const char *k) {
   char buf[100] = {0};
   snprintf(buf, sizeof(buf) - 1, "\033%s%s", this->pnm ? "O" : "[", k);
-  SEND(buf);
+  Process->WriteString(buf);
 }
 
 void NODE::reshapeview(int d) {

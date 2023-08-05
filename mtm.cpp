@@ -18,9 +18,10 @@ extern "C" {
 #include "vtparser.h"
 }
 #include "config.h"
+#include "curses_screen.h"
 #include "mtm.h"
 #include "node.h"
-#include "curses_screen.h"
+#include "posix_process.h"
 #include <curses.h>
 #include <errno.h>
 #include <fcntl.h>
@@ -148,7 +149,7 @@ wmove(win, py, MIN(x + P1(0), mx - 1));
 ENDHANDLER
 
 HANDLER(ack) /* ACK - Acknowledge Enquiry */
-n->SEND("\006");
+n->Process->WriteString("\006");
 ENDHANDLER
 
 HANDLER(hts) /* HTS - Horizontal Tab Set */
@@ -166,9 +167,9 @@ ENDHANDLER
 
 HANDLER(decid) /* DECID - Send Terminal Identification */
 if (w == L'c')
-  n->SEND(iw == L'>' ? "\033[>1;10;0c" : "\033[?1;2c");
+  n->Process->WriteString(iw == L'>' ? "\033[>1;10;0c" : "\033[?1;2c");
 else if (w == L'Z')
-  n->SEND("\033[?6c");
+  n->Process->WriteString("\033[?6c");
 ENDHANDLER
 
 HANDLER(hpa) /* HPA - Cursor Horizontal Absolute */
@@ -343,7 +344,7 @@ if (P0(0) == 6)
            x + 1);
 else
   snprintf(buf, sizeof(buf) - 1, "\033[0n");
-n->SEND(buf);
+n->Process->WriteString(buf);
 ENDHANDLER
 
 HANDLER(idl) /* IL or DL - Insert/Delete Line */
@@ -363,7 +364,7 @@ if (wsetscrreg(win, tos + P1(0) - 1, tos + PD(1, my) - 1) == OK)
 ENDHANDLER
 
 HANDLER(decreqtparm) /* DECREQTPARM - Request Device Parameters */
-n->SEND(P0(0) ? "\033[3;1;2;120;1;0x" : "\033[2;1;2;120;128;1;0x");
+n->Process->WriteString(P0(0) ? "\033[3;1;2;120;1;0x" : "\033[2;1;2;120;128;1;0x");
 ENDHANDLER
 
 HANDLER(sgr0) /* Reset SGR to default */
@@ -830,4 +831,3 @@ void setupevents(NODE *n) {
 
   ris(n->vp.get(), n, L'c', 0, 0, NULL, NULL);
 }
-

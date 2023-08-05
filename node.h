@@ -11,8 +11,6 @@ struct NODE {
   POS Pos;
   SIZE Size;
 
-  // pty
-  // int pt = -1;
   std::shared_ptr<PosixProcess> Process;
 
   bool pnm;
@@ -33,8 +31,6 @@ struct NODE {
   ~NODE();
 
   // pty
-  void SENDN(const char *s, size_t c);
-  void SEND(const char *s);
   void sendarrow(const char *k);
   // curses
   void reshape(const POS &pos, const SIZE &size);

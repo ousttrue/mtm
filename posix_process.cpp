@@ -71,6 +71,7 @@ PosixProcess::Fork(const SIZE &size, const char *term, const char *shell) {
 int PosixProcess::FD() const { return m_impl->m_pty; }
 
 void PosixProcess::Write(const char *b, size_t n) { m_impl->Write(b, n); }
+void PosixProcess::WriteString(const char *s) { m_impl->Write(s, strlen(s)); }
 
 void PosixProcess::Resize(const SIZE &size) {
   struct winsize ws = {

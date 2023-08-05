@@ -52,51 +52,73 @@ static bool handlechar(const std::shared_ptr<NODE> &n,
      n->reshape({0, 0}, {(uint16_t)LINES, (uint16_t)COLS});
      n->s->scrollbottom())
   DO(false, input.KEY(commandkey), return cmd = true)
-  DO(false, input.KEY(0), n->SENDN("\000", 1); n->s->scrollbottom())
-  DO(false, input.KEY(L'\n'), n->SEND("\n"); n->s->scrollbottom())
-  DO(false, input.KEY(L'\r'), n->SEND(n->lnm ? "\r\n" : "\r");
+  DO(false, input.KEY(0), n->Process->Write("\000", 1); n->s->scrollbottom())
+  DO(false, input.KEY(L'\n'), n->Process->WriteString("\n");
+     n->s->scrollbottom())
+  DO(false, input.KEY(L'\r'), n->Process->WriteString(n->lnm ? "\r\n" : "\r");
      n->s->scrollbottom())
   DO(false, SCROLLUP && n->s->INSCR(), n->s->scrollback(n->Size.Rows / 2))
   DO(false, SCROLLDOWN && n->s->INSCR(), n->s->scrollforward(n->Size.Rows / 2))
   DO(false, RECENTER && n->s->INSCR(), n->s->scrollbottom())
-  DO(false, input.CODE(KEY_ENTER), n->SEND(n->lnm ? "\r\n" : "\r");
+  DO(false, input.CODE(KEY_ENTER),
+     n->Process->WriteString(n->lnm ? "\r\n" : "\r");
      n->s->scrollbottom())
   DO(false, input.CODE(KEY_UP), n->sendarrow("A"); n->s->scrollbottom());
   DO(false, input.CODE(KEY_DOWN), n->sendarrow("B"); n->s->scrollbottom());
   DO(false, input.CODE(KEY_RIGHT), n->sendarrow("C"); n->s->scrollbottom());
   DO(false, input.CODE(KEY_LEFT), n->sendarrow("D"); n->s->scrollbottom());
-  DO(false, input.CODE(KEY_HOME), n->SEND("\033[1~"); n->s->scrollbottom())
-  DO(false, input.CODE(KEY_END), n->SEND("\033[4~"); n->s->scrollbottom())
-  DO(false, input.CODE(KEY_PPAGE), n->SEND("\033[5~"); n->s->scrollbottom())
-  DO(false, input.CODE(KEY_NPAGE), n->SEND("\033[6~"); n->s->scrollbottom())
-  DO(false, input.CODE(KEY_BACKSPACE), n->SEND("\177"); n->s->scrollbottom())
-  DO(false, input.CODE(KEY_DC), n->SEND("\033[3~"); n->s->scrollbottom())
-  DO(false, input.CODE(KEY_IC), n->SEND("\033[2~"); n->s->scrollbottom())
-  DO(false, input.CODE(KEY_BTAB), n->SEND("\033[Z"); n->s->scrollbottom())
-  DO(false, input.CODE(KEY_F(1)), n->SEND("\033OP"); n->s->scrollbottom())
-  DO(false, input.CODE(KEY_F(2)), n->SEND("\033OQ"); n->s->scrollbottom())
-  DO(false, input.CODE(KEY_F(3)), n->SEND("\033OR"); n->s->scrollbottom())
-  DO(false, input.CODE(KEY_F(4)), n->SEND("\033OS"); n->s->scrollbottom())
-  DO(false, input.CODE(KEY_F(5)), n->SEND("\033[15~"); n->s->scrollbottom())
-  DO(false, input.CODE(KEY_F(6)), n->SEND("\033[17~"); n->s->scrollbottom())
-  DO(false, input.CODE(KEY_F(7)), n->SEND("\033[18~"); n->s->scrollbottom())
-  DO(false, input.CODE(KEY_F(8)), n->SEND("\033[19~"); n->s->scrollbottom())
-  DO(false, input.CODE(KEY_F(9)), n->SEND("\033[20~"); n->s->scrollbottom())
-  DO(false, input.CODE(KEY_F(10)), n->SEND("\033[21~"); n->s->scrollbottom())
-  DO(false, input.CODE(KEY_F(11)), n->SEND("\033[23~"); n->s->scrollbottom())
-  DO(false, input.CODE(KEY_F(12)), n->SEND("\033[24~"); n->s->scrollbottom())
+  DO(false, input.CODE(KEY_HOME), n->Process->WriteString("\033[1~");
+     n->s->scrollbottom())
+  DO(false, input.CODE(KEY_END), n->Process->WriteString("\033[4~");
+     n->s->scrollbottom())
+  DO(false, input.CODE(KEY_PPAGE), n->Process->WriteString("\033[5~");
+     n->s->scrollbottom())
+  DO(false, input.CODE(KEY_NPAGE), n->Process->WriteString("\033[6~");
+     n->s->scrollbottom())
+  DO(false, input.CODE(KEY_BACKSPACE), n->Process->WriteString("\177");
+     n->s->scrollbottom())
+  DO(false, input.CODE(KEY_DC), n->Process->WriteString("\033[3~");
+     n->s->scrollbottom())
+  DO(false, input.CODE(KEY_IC), n->Process->WriteString("\033[2~");
+     n->s->scrollbottom())
+  DO(false, input.CODE(KEY_BTAB), n->Process->WriteString("\033[Z");
+     n->s->scrollbottom())
+  DO(false, input.CODE(KEY_F(1)), n->Process->WriteString("\033OP");
+     n->s->scrollbottom())
+  DO(false, input.CODE(KEY_F(2)), n->Process->WriteString("\033OQ");
+     n->s->scrollbottom())
+  DO(false, input.CODE(KEY_F(3)), n->Process->WriteString("\033OR");
+     n->s->scrollbottom())
+  DO(false, input.CODE(KEY_F(4)), n->Process->WriteString("\033OS");
+     n->s->scrollbottom())
+  DO(false, input.CODE(KEY_F(5)), n->Process->WriteString("\033[15~");
+     n->s->scrollbottom())
+  DO(false, input.CODE(KEY_F(6)), n->Process->WriteString("\033[17~");
+     n->s->scrollbottom())
+  DO(false, input.CODE(KEY_F(7)), n->Process->WriteString("\033[18~");
+     n->s->scrollbottom())
+  DO(false, input.CODE(KEY_F(8)), n->Process->WriteString("\033[19~");
+     n->s->scrollbottom())
+  DO(false, input.CODE(KEY_F(9)), n->Process->WriteString("\033[20~");
+     n->s->scrollbottom())
+  DO(false, input.CODE(KEY_F(10)), n->Process->WriteString("\033[21~");
+     n->s->scrollbottom())
+  DO(false, input.CODE(KEY_F(11)), n->Process->WriteString("\033[23~");
+     n->s->scrollbottom())
+  DO(false, input.CODE(KEY_F(12)), n->Process->WriteString("\033[24~");
+     n->s->scrollbottom())
   // DO(true, DELETE_NODE, g_root = {})
   DO(true, REDRAW, touchwin(stdscr); n->s->draw(n->Pos, n->Size);
      redrawwin(stdscr))
   DO(true, SCROLLUP, n->s->scrollback(n->Size.Rows / 2))
   DO(true, SCROLLDOWN, n->s->scrollforward(n->Size.Rows / 2))
   DO(true, RECENTER, n->s->scrollbottom())
-  DO(true, input.KEY(commandkey), n->SENDN(cmdstr, 1));
+  DO(true, input.KEY(commandkey), n->Process->Write(cmdstr, 1));
 
   char c[MB_LEN_MAX + 1] = {0};
   if (wctomb(c, input.Char) > 0) {
     n->s->scrollbottom();
-    n->SEND(c);
+    n->Process->WriteString(c);
   }
   cmd = false;
   return true;

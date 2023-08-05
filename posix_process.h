@@ -20,5 +20,7 @@ public:
 
   int FD() const;
   void Write(const char *b, size_t n);
+  void WriteString(const char *b);
+
   void Resize(const SIZE &size);
 };
