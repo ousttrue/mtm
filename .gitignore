@@ -1,2 +1,5 @@
 # config.h
 /prefix/
+/subprojects/*
+!/subprojects/packagefiles
+!/subprojects/libvterm.wrap

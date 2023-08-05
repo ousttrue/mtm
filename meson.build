@@ -7,6 +7,7 @@ project(
 )
 
 ncurses_dep = dependency('ncursesw')
+libvterm_dep = dependency('libvterm')
 
 executable(
     'mtm',
@@ -27,5 +28,5 @@ executable(
         '-D_XOPEN_SOURCE=600',
         '-D_XOPEN_SOURCE_EXTENDED',
     ],
-    dependencies: [ncurses_dep],
+    dependencies: [ncurses_dep, libvterm_dep],
 )

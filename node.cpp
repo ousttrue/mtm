@@ -4,6 +4,7 @@
 #include "mtm.h"
 #include "posix_process.h"
 #include "vtparser.h"
+#include <vterm.h>
 
 SIZE SIZE::Max(const SIZE &rhs) const {
   return {
@@ -15,7 +16,8 @@ SIZE SIZE::Max(const SIZE &rhs) const {
 NODE::NODE(const POS &pos, const SIZE &size)
     : Pos(pos), Size(size),
       pri(new SCRN({std::max(size.Rows, (uint16_t)SCROLLBACK), size.Cols})),
-      alt(new SCRN(size)), vp(new VTPARSER) {
+      alt(new SCRN(size)), vp(new VTPARSER),
+      m_vterm(vterm_new(size.Rows, size.Cols)) {
   this->tabs.resize(Size.Cols, 0);
 
   if (this->pri->win && this->alt->win) {
@@ -25,8 +27,7 @@ NODE::NODE(const POS &pos, const SIZE &size)
   }
 }
 
-NODE::~NODE() /* Free a node. */
-{}
+NODE::~NODE() { vterm_free(m_vterm); }
 
 void NODE::reshape(const POS &pos, const SIZE &size) {
   if (this->Pos == pos && this->Size == size) {

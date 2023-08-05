@@ -24,6 +24,7 @@ struct NODE {
   std::shared_ptr<SCRN> s;
   wchar_t *g0, *g1, *g2, *g3, *gc, *gs, *sgc, *sgs;
   std::shared_ptr<VTPARSER> vp;
+  struct VTerm *m_vterm;
 
   NODE(const POS &pos, const SIZE &size);
   NODE(const NODE &) = delete;

@@ -24,7 +24,7 @@ short Term::AllocPair(int fg, int bg) {
     return -1;
   }
 
-  for (int i = 0; i < m_pairs.size(); ++i) {
+  for (size_t i = 0; i < m_pairs.size(); ++i) {
     if (m_pairs[i].fg == fg && m_pairs[i].bg == bg) {
       return i + 1;
     }
