@@ -19,6 +19,7 @@ executable(
         'node.cpp',
         'posix_selector.cpp',
         'curses_term.cpp',
+        'curses_screen.cpp',
     ],
     install: true,
     c_args: [

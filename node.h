@@ -2,26 +2,9 @@
 #include <memory>
 #include <stdint.h>
 #include <vector>
+#include "curses_screen.h"
 
-struct SCRN;
 struct VTPARSER;
-
-struct POS {
-  int Y;
-  int X;
-
-  bool operator==(const POS &rhs) const { return Y == rhs.Y && X == rhs.X; }
-};
-
-struct SIZE {
-  uint16_t Rows;
-  uint16_t Cols;
-
-  bool operator==(const SIZE &rhs) const {
-    return Rows == rhs.Rows && Cols == rhs.Cols;
-  }
-  SIZE Max(const SIZE &rhs) const;
-};
 
 struct NODE {
   POS Pos;
@@ -53,13 +36,6 @@ struct NODE {
   void SEND(const char *s);
   void sendarrow(const char *k);
   // curses
-  void draw() const;
   void reshape(const POS &pos, const SIZE &size);
   void reshapeview(int d);
-  /* Move the terminal cursor to the active view. */
-  void fixcursor(void);
-  // scrn
-  void scrollbottom();
-  void scrollback();
-  void scrollforward();
 };

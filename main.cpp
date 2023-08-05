@@ -1,9 +1,9 @@
 #include "config.h"
+#include "curses_screen.h"
 #include "curses_term.h"
 #include "mtm.h"
 #include "node.h"
 #include "posix_selector.h"
-#include "scrn.h"
 #include <algorithm>
 #include <curses.h>
 #include <errno.h>
@@ -41,7 +41,7 @@ static bool handlechar(int r, int k) /* Handle a single input character. */
 #define KEY(i) (r == OK && (i) == k)
 #define CODE(i) (r == KEY_CODE_YES && (i) == k)
 #define INSCR (n->s->tos != n->s->off)
-#define SB n->scrollbottom()
+#define SB n->s->scrollbottom()
 #define DO(s, t, a)                                                            \
   if (s == cmd && (t)) {                                                       \
     a;                                                                         \
@@ -57,9 +57,9 @@ static bool handlechar(int r, int k) /* Handle a single input character. */
   DO(false, KEY(0), n->SENDN("\000", 1); SB)
   DO(false, KEY(L'\n'), n->SEND("\n"); SB)
   DO(false, KEY(L'\r'), n->SEND(n->lnm ? "\r\n" : "\r"); SB)
-  DO(false, SCROLLUP && INSCR, n->scrollback())
-  DO(false, SCROLLDOWN && INSCR, n->scrollforward())
-  DO(false, RECENTER && INSCR, n->scrollbottom())
+  DO(false, SCROLLUP && INSCR, n->s->scrollback(n->Size.Rows / 2))
+  DO(false, SCROLLDOWN && INSCR, n->s->scrollforward(n->Size.Rows / 2))
+  DO(false, RECENTER && INSCR, n->s->scrollbottom())
   DO(false, CODE(KEY_ENTER), n->SEND(n->lnm ? "\r\n" : "\r"); SB)
   DO(false, CODE(KEY_UP), n->sendarrow("A"); SB);
   DO(false, CODE(KEY_DOWN), n->sendarrow("B"); SB);
@@ -86,14 +86,15 @@ static bool handlechar(int r, int k) /* Handle a single input character. */
   DO(false, CODE(KEY_F(11)), n->SEND("\033[23~"); SB)
   DO(false, CODE(KEY_F(12)), n->SEND("\033[24~"); SB)
   DO(true, DELETE_NODE, g_root = {})
-  DO(true, REDRAW, touchwin(stdscr); g_root->draw(); redrawwin(stdscr))
-  DO(true, SCROLLUP, n->scrollback())
-  DO(true, SCROLLDOWN, n->scrollforward())
-  DO(true, RECENTER, n->scrollbottom())
+  DO(true, REDRAW, touchwin(stdscr); n->s->draw(n->Pos, n->Size);
+     redrawwin(stdscr))
+  DO(true, SCROLLUP, n->s->scrollback(n->Size.Rows / 2))
+  DO(true, SCROLLDOWN, n->s->scrollforward(n->Size.Rows / 2))
+  DO(true, RECENTER, n->s->scrollbottom())
   DO(true, KEY(commandkey), n->SENDN(cmdstr, 1));
   char c[MB_LEN_MAX + 1] = {0};
   if (wctomb(c, k) > 0) {
-    n->scrollbottom();
+    n->s->scrollbottom();
     n->SEND(c);
   }
   return cmd = false, true;
@@ -101,13 +102,16 @@ static bool handlechar(int r, int k) /* Handle a single input character. */
 static void run(void) /* Run MTM. */
 {
   while (g_root) {
-    wint_t w = 0;
 
     Selector::Instance().Select();
 
-    int r = wget_wch(g_root->s->win, &w);
-    while (handlechar(r, w))
-      r = wget_wch(g_root->s->win, &w);
+    while (g_root) {
+      wint_t w = 0;
+      int r = wget_wch(g_root->s->win, &w);
+      if (!handlechar(r, w)) {
+        break;
+      }
+    }
     if (!g_root) {
       return;
     }
@@ -121,11 +125,9 @@ static void run(void) /* Run MTM. */
       break;
     }
 
-    g_root->draw();
-    doupdate();
-    g_root->fixcursor();
-    g_root->draw();
-    doupdate();
+    g_root->s->draw(g_root->Pos, g_root->Size);
+    g_root->s->fixcursor(g_root->Size);
+    g_root->s->draw(g_root->Pos, g_root->Size);
   }
 }
 
@@ -234,7 +236,7 @@ int main(int argc, char **argv) {
     std::cout << "could not open root window" << std::endl;
     return EXIT_FAILURE;
   }
-  g_root->draw();
+  g_root->s->draw(g_root->Pos, g_root->Size);
   run();
 
   return EXIT_SUCCESS;

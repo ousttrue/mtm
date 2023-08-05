@@ -2,9 +2,9 @@ extern "C" {
 #include "vtparser.h"
 }
 #include "config.h"
+#include "curses_screen.h"
 #include "node.h"
 #include "posix_selector.h"
-#include "scrn.h"
 #include <algorithm>
 #include <curses.h>
 #include <errno.h>
@@ -36,8 +36,6 @@ NODE::~NODE() /* Free a node. */
   }
 }
 
-void NODE::scrollbottom() { s->off = s->tos; }
-
 void NODE::safewrite(const char *b, size_t n) /* Write, checking for errors. */
 {
   size_t w = 0;
@@ -61,22 +59,7 @@ void NODE::reshape(const POS &pos, const SIZE &size) {
   this->Size = size.Max({1, 1});
   this->tabs.resize(Size.Cols);
   this->reshapeview(d);
-  this->draw();
-}
-
-void NODE::draw() const /* Draw a node. */
-{
-  pnoutrefresh(this->s->win, this->s->off, 0, this->Pos.Y, this->Pos.X,
-               this->Pos.Y + this->Size.Rows - 1,
-               this->Pos.X + this->Size.Rows - 1);
-}
-
-void NODE::scrollback() {
-  this->s->off = std::max(0, this->s->off - this->Size.Rows / 2);
-}
-
-void NODE::scrollforward() {
-  this->s->off = std::min(this->s->tos, this->s->off + this->Size.Rows / 2);
+  this->s->draw(Pos, Size);
 }
 
 void NODE::SEND(const char *s) { SENDN(s, strlen(s)); }
@@ -115,11 +98,4 @@ void NODE::reshapeview(int d) {
   ioctl(this->pt, TIOCSWINSZ, &ws);
 }
 
-void NODE::fixcursor(void) /* Move the terminal cursor to the active view. */
-{
-  int y, x;
-  curs_set(this->s->off != this->s->tos ? 0 : this->s->vis);
-  getyx(this->s->win, y, x);
-  y = std::min(std::max(y, this->s->tos), this->s->tos + this->Size.Rows - 1);
-  wmove(this->s->win, y, x);
-}
+

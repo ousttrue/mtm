@@ -20,7 +20,7 @@ extern "C" {
 #include "config.h"
 #include "mtm.h"
 #include "node.h"
-#include "scrn.h"
+#include "curses_screen.h"
 #include <curses.h>
 #include <errno.h>
 #include <fcntl.h>
