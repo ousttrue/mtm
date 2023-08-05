@@ -17,6 +17,7 @@
  * list, meaning that terminfo-aware programs may get a small
  * speed boost.
  */
+#pragma once
 #define DEFAULT_TERMINAL "screen-bce"
 #define DEFAULT_256_COLOR_TERMINAL "screen-256color-bce"
 

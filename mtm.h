@@ -1,4 +1,5 @@
 #pragma once
+#include "config.h"
 #include "vtparser.h"
 #include <curses.h>
 #include <sys/select.h>
@@ -20,15 +21,13 @@ struct SCRN {
 };
 
 /*** DATA TYPES */
-typedef enum { HORIZONTAL, VERTICAL, VIEW } Node;
 
 typedef struct NODE NODE;
 struct NODE {
-  Node t;
   int y, x, h, w, pt, ntabs;
   bool *tabs, pnm, decom, am, lnm;
   wchar_t repc;
-  NODE *p, *c1, *c2;
+  // NODE *p, *c1, *c2;
   SCRN pri, alt, *s;
   wchar_t *g0, *g1, *g2, *g3, *gc, *gs, *sgc, *sgs;
   VTPARSER vp;
@@ -36,8 +35,6 @@ struct NODE {
 
 NODE *newview(NODE *p, int y, int x, int h, int w); /* Open a new view. */
 extern NODE *root;
-extern NODE *focused;
-void focus(NODE *n);      /* Focus a node. */
 void deletenode(NODE *n); /* Delete a node. */
 
 bool handlechar(int r, int k); /* Handle a single input character. */

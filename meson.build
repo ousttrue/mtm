@@ -1,4 +1,10 @@
-project('mtm', 'c', 'cpp', version: '1.2.1', default_options: ['c_std=c99'])
+project(
+    'mtm',
+    'c',
+    'cpp',
+    version: '1.2.1',
+    default_options: ['c_std=c99'],
+)
 
 ncurses_dep = dependency('ncursesw')
 

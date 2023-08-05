@@ -40,8 +40,6 @@
 
 /*** GLOBALS AND PROTOTYPES */
 NODE *root;
-NODE *focused;
-static NODE *lastfocused = NULL;
 int commandkey = CTL(COMMAND_KEY);
 int nfds = 1; /* stdin */
 fd_set fds;
@@ -49,9 +47,8 @@ fd_set fds;
 static void setupevents(NODE *n);
 static void reshape(NODE *n, int y, int x, int h, int w);
 void draw(NODE *n);
-static void reshapechildren(NODE *n);
 const char *term = NULL;
-static void freenode(NODE *n, bool recursive);
+static void freenode(NODE *n);
 
 /*** UTILITY FUNCTIONS */
 void quit(int rc, const char *m) /* Shut down MTM. */
@@ -59,7 +56,7 @@ void quit(int rc, const char *m) /* Shut down MTM. */
   if (m)
     fprintf(stderr, "%s\n", m);
   if (root)
-    freenode(root, true);
+    freenode(root);
   endwin();
   exit(rc);
 }
@@ -889,17 +886,14 @@ static bool *newtabs(int w, int ow,
   return tabs;
 }
 
-static NODE *newnode(Node t, NODE *p, int y, int x, int h,
-                     int w) /* Create a new node. */
+static NODE *newnode(int y, int x, int h, int w) /* Create a new node. */
 {
   NODE *n = calloc(1, sizeof(NODE));
   bool *tabs = newtabs(w, 0, NULL);
   if (!n || h < 2 || w < 2 || !tabs)
     return free(n), free(tabs), NULL;
 
-  n->t = t;
   n->pt = -1;
-  n->p = p;
   n->y = y;
   n->x = x;
   n->h = h;
@@ -910,19 +904,13 @@ static NODE *newnode(Node t, NODE *p, int y, int x, int h,
   return n;
 }
 
-static void freenode(NODE *n, bool recurse) /* Free a node. */
+static void freenode(NODE *n) /* Free a node. */
 {
   if (n) {
-    if (lastfocused == n)
-      lastfocused = NULL;
     if (n->pri.win)
       delwin(n->pri.win);
     if (n->alt.win)
       delwin(n->alt.win);
-    if (recurse)
-      freenode(n->c1, true);
-    if (recurse)
-      freenode(n->c2, true);
     if (n->pt >= 0) {
       close(n->pt);
       FD_CLR(n->pt, &fds);
@@ -944,7 +932,7 @@ static const char *getterm(void) {
 NODE *newview(NODE *p, int y, int x, int h, int w) /* Open a new view. */
 {
   struct winsize ws = {.ws_row = h, .ws_col = w};
-  NODE *n = newnode(VIEW, p, y, x, h, w);
+  NODE *n = newnode(y, x, h, w);
   if (!n)
     return NULL;
 
@@ -952,7 +940,7 @@ NODE *newview(NODE *p, int y, int x, int h, int w) /* Open a new view. */
   pri->win = newpad(MAX(h, SCROLLBACK), w);
   alt->win = newpad(h, w);
   if (!pri->win || !alt->win)
-    return freenode(n, false), NULL;
+    return freenode(n), NULL;
   pri->tos = pri->off = MAX(0, SCROLLBACK - h);
   n->s = pri;
 
@@ -970,7 +958,7 @@ NODE *newview(NODE *p, int y, int x, int h, int w) /* Open a new view. */
   if (pid < 0) {
     if (!p)
       perror("forkpty");
-    return freenode(n, false), NULL;
+    return freenode(n), NULL;
   } else if (pid == 0) {
     char buf[100] = {0};
     snprintf(buf, sizeof(buf) - 1, "%lu", (unsigned long)getppid());
@@ -988,83 +976,16 @@ NODE *newview(NODE *p, int y, int x, int h, int w) /* Open a new view. */
   return n;
 }
 
-static NODE *newcontainer(Node t, NODE *p, int y, int x, int h, int w, NODE *c1,
-                          NODE *c2) /* Create a new container */
-{
-  NODE *n = newnode(t, p, y, x, h, w);
-  if (!n)
-    return NULL;
-
-  n->c1 = c1;
-  n->c2 = c2;
-  c1->p = c2->p = n;
-
-  reshapechildren(n);
-  return n;
-}
-
-void focus(NODE *n) /* Focus a node. */
-{
-  if (!n)
-    return;
-  else if (n->t == VIEW) {
-    lastfocused = focused;
-    focused = n;
-  } else
-    focus(n->c1 ? n->c1 : n->c2);
-}
-
 #define ABOVE(n) n->y - 2, n->x + n->w / 2
 #define BELOW(n) n->y + n->h + 2, n->x + n->w / 2
 #define LEFT(n) n->y + n->h / 2, n->x - 2
 #define RIGHT(n) n->y + n->h / 2, n->x + n->w + 2
 
-static NODE *findnode(NODE *n, int y, int x) /* Find the node enclosing y,x. */
-{
-#define IN(n, y, x)                                                            \
-  (y >= n->y && y <= n->y + n->h && x >= n->x && x <= n->x + n->w)
-  if (IN(n, y, x)) {
-    if (n->c1 && IN(n->c1, y, x))
-      return findnode(n->c1, y, x);
-    if (n->c2 && IN(n->c2, y, x))
-      return findnode(n->c2, y, x);
-    return n;
-  }
-  return NULL;
-}
-
-static void replacechild(NODE *n, NODE *c1,
-                         NODE *c2) /* Replace c1 of n with c2. */
-{
-  c2->p = n;
-  if (!n) {
-    root = c2;
-    reshape(c2, 0, 0, LINES, COLS);
-  } else if (n->c1 == c1)
-    n->c1 = c2;
-  else if (n->c2 == c1)
-    n->c2 = c2;
-
-  n = n ? n : root;
-  reshape(n, n->y, n->x, n->h, n->w);
-  draw(n);
-}
-
-static void removechild(NODE *p,
-                        const NODE *c) /* Replace p with other child. */
-{
-  replacechild(p->p, p, c == p->c1 ? p->c2 : p->c1);
-  freenode(p, false);
-}
-
 void deletenode(NODE *n) /* Delete a node. */
 {
-  if (!n || !n->p)
+  if (!n)
     quit(EXIT_SUCCESS, NULL);
-  if (n == focused)
-    focus(n->p->c1 == n ? n->p->c2 : n->p->c1);
-  removechild(n->p, n);
-  freenode(n, true);
+  freenode(n);
 }
 
 static void reshapeview(NODE *n, int d, int ow) /* Reshape a view. */
@@ -1095,22 +1016,9 @@ static void reshapeview(NODE *n, int d, int ow) /* Reshape a view. */
   ioctl(n->pt, TIOCSWINSZ, &ws);
 }
 
-static void reshapechildren(NODE *n) /* Reshape all children of a view. */
-{
-  if (n->t == HORIZONTAL) {
-    int i = n->w % 2 ? 0 : 1;
-    reshape(n->c1, n->y, n->x, n->h, n->w / 2);
-    reshape(n->c2, n->y, n->x + n->w / 2 + 1, n->h, n->w / 2 - i);
-  } else if (n->t == VERTICAL) {
-    int i = n->h % 2 ? 0 : 1;
-    reshape(n->c1, n->y, n->x, n->h / 2, n->w);
-    reshape(n->c2, n->y + n->h / 2 + 1, n->x, n->h / 2 - i, n->w);
-  }
-}
-
 static void reshape(NODE *n, int y, int x, int h, int w) /* Reshape a node. */
 {
-  if (n->y == y && n->x == x && n->h == h && n->w == w && n->t == VIEW)
+  if (n->y == y && n->x == x && n->h == h && n->w == w)
     return;
 
   int d = n->h - h;
@@ -1120,51 +1028,14 @@ static void reshape(NODE *n, int y, int x, int h, int w) /* Reshape a node. */
   n->h = MAX(h, 1);
   n->w = MAX(w, 1);
 
-  if (n->t == VIEW)
-    reshapeview(n, d, ow);
-  else
-    reshapechildren(n);
+  reshapeview(n, d, ow);
   draw(n);
-}
-
-static void drawchildren(const NODE *n) /* Draw all children of n. */
-{
-  draw(n->c1);
-  if (n->t == HORIZONTAL)
-    mvvline(n->y, n->x + n->w / 2, ACS_VLINE, n->h);
-  else
-    mvhline(n->y + n->h / 2, n->x, ACS_HLINE, n->w);
-  wnoutrefresh(stdscr);
-  draw(n->c2);
 }
 
 void draw(NODE *n) /* Draw a node. */
 {
-  if (n->t == VIEW)
-    pnoutrefresh(n->s->win, n->s->off, 0, n->y, n->x, n->y + n->h - 1,
-                 n->x + n->w - 1);
-  else
-    drawchildren(n);
-}
-
-static void split(NODE *n, Node t) /* Split a node. */
-{
-  int nh = t == VERTICAL ? (n->h - 1) / 2 : n->h;
-  int nw = t == HORIZONTAL ? (n->w) / 2 : n->w;
-  NODE *p = n->p;
-  NODE *v = newview(NULL, 0, 0, MAX(0, nh), MAX(0, nw));
-  if (!v)
-    return;
-
-  NODE *c = newcontainer(t, n->p, n->y, n->x, n->h, n->w, n, v);
-  if (!c) {
-    freenode(v, false);
-    return;
-  }
-
-  replacechild(p, n, c);
-  focus(v);
-  draw(p ? p : root);
+  pnoutrefresh(n->s->win, n->s->off, 0, n->y, n->x, n->y + n->h - 1,
+               n->x + n->w - 1);
 }
 
 static void scrollback(NODE *n) { n->s->off = MAX(0, n->s->off - n->h / 2); }
@@ -1185,7 +1056,7 @@ bool handlechar(int r, int k) /* Handle a single input character. */
 {
   const char cmdstr[] = {commandkey, 0};
   static bool cmd = false;
-  NODE *n = focused;
+  NODE *n = root;
 #define KERR(i) (r == ERR && (i) == k)
 #define KEY(i) (r == OK && (i) == k)
 #define CODE(i) (r == KEY_CODE_YES && (i) == k)
@@ -1232,13 +1103,6 @@ bool handlechar(int r, int k) /* Handle a single input character. */
   DO(false, CODE(KEY_F(10)), SEND(n, "\033[21~"); SB)
   DO(false, CODE(KEY_F(11)), SEND(n, "\033[23~"); SB)
   DO(false, CODE(KEY_F(12)), SEND(n, "\033[24~"); SB)
-  DO(true, MOVE_UP, focus(findnode(root, ABOVE(n))))
-  DO(true, MOVE_DOWN, focus(findnode(root, BELOW(n))))
-  DO(true, MOVE_LEFT, focus(findnode(root, LEFT(n))))
-  DO(true, MOVE_RIGHT, focus(findnode(root, RIGHT(n))))
-  DO(true, MOVE_OTHER, focus(lastfocused))
-  DO(true, HSPLIT, split(n, HORIZONTAL))
-  DO(true, VSPLIT, split(n, VERTICAL))
   DO(true, DELETE_NODE, deletenode(n))
   DO(true, REDRAW, touchwin(stdscr); draw(root); redrawwin(stdscr))
   DO(true, SCROLLUP, scrollback(n))
@@ -1252,4 +1116,3 @@ bool handlechar(int r, int k) /* Handle a single input character. */
   }
   return cmd = false, true;
 }
-

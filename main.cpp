@@ -16,13 +16,7 @@ static char iobuf[BUFSIZ];
 static bool getinput(NODE *n,
                      fd_set *f) /* Recursively check all ptty's for input. */
 {
-  if (n && n->c1 && !getinput(n->c1, f))
-    return false;
-
-  if (n && n->c2 && !getinput(n->c2, f))
-    return false;
-
-  if (n && n->t == VIEW && n->pt > 0 && FD_ISSET(n->pt, f)) {
+  if (n && n->pt > 0 && FD_ISSET(n->pt, f)) {
     ssize_t r = read(n->pt, iobuf, sizeof(iobuf));
     if (r > 0)
       vtwrite(&n->vp, iobuf, r);
@@ -35,14 +29,11 @@ static bool getinput(NODE *n,
 
 static void fixcursor(void) /* Move the terminal cursor to the active view. */
 {
-  if (focused) {
-    int y, x;
-    curs_set(focused->s->off != focused->s->tos ? 0 : focused->s->vis);
-    getyx(focused->s->win, y, x);
-    y = std::min(std::max(y, focused->s->tos),
-                 focused->s->tos + focused->h - 1);
-    wmove(focused->s->win, y, x);
-  }
+  int y, x;
+  curs_set(root->s->off != root->s->tos ? 0 : root->s->vis);
+  getyx(root->s->win, y, x);
+  y = std::min(std::max(y, root->s->tos), root->s->tos + root->h - 1);
+  wmove(root->s->win, y, x);
 }
 
 static void run(void) /* Run MTM. */
@@ -53,15 +44,15 @@ static void run(void) /* Run MTM. */
     if (select(nfds + 1, &sfds, NULL, NULL, NULL) < 0)
       FD_ZERO(&sfds);
 
-    int r = wget_wch(focused->s->win, &w);
+    int r = wget_wch(root->s->win, &w);
     while (handlechar(r, w))
-      r = wget_wch(focused->s->win, &w);
+      r = wget_wch(root->s->win, &w);
     getinput(root, &sfds);
 
     draw(root);
     doupdate();
     fixcursor();
-    draw(focused);
+    draw(root);
     doupdate();
   }
 }
@@ -101,7 +92,6 @@ int main(int argc, char **argv) {
   root = newview(NULL, 0, 0, LINES, COLS);
   if (!root)
     quit(EXIT_FAILURE, "could not open root window");
-  focus(root);
   draw(root);
   run();
 
