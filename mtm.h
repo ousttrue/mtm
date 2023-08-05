@@ -1,8 +1,11 @@
 #pragma once
-#include "config.h"
+extern "C" {
 #include "vtparser.h"
+}
+#include "config.h"
 #include <curses.h>
 #include <sys/select.h>
+#include <vector>
 
 extern fd_set fds;
 extern int commandkey;
@@ -11,7 +14,6 @@ extern const char *term;
 
 void quit(int rc, const char *m); /* Shut down MTM. */
 
-typedef struct SCRN SCRN;
 struct SCRN {
   int sy, sx, vis, tos, off;
   short fg, bg, sfg, sbg, sp;
@@ -22,15 +24,18 @@ struct SCRN {
 
 /*** DATA TYPES */
 
-typedef struct NODE NODE;
 struct NODE {
-  int y, x, h, w, pt, ntabs;
-  bool *tabs, pnm, decom, am, lnm;
+  int y, x, h, w, pt;
+  bool pnm, decom, am, lnm;
+  std::vector<bool> tabs;
   wchar_t repc;
   // NODE *p, *c1, *c2;
   SCRN pri, alt, *s;
   wchar_t *g0, *g1, *g2, *g3, *gc, *gs, *sgc, *sgs;
   VTPARSER vp;
+
+  NODE(int y, int x, int h, int w);
+  ~NODE();
 };
 
 NODE *newview(NODE *p, int y, int x, int h, int w); /* Open a new view. */

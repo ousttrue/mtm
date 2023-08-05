@@ -14,7 +14,9 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 #include "mtm.h"
-#include "vtparser.h"
+extern "C" {
+#include "pair.h"
+}
 #include <curses.h>
 #include <errno.h>
 #include <fcntl.h>
@@ -48,7 +50,6 @@ static void setupevents(NODE *n);
 static void reshape(NODE *n, int y, int x, int h, int w);
 void draw(NODE *n);
 const char *term = NULL;
-static void freenode(NODE *n);
 
 /*** UTILITY FUNCTIONS */
 void quit(int rc, const char *m) /* Shut down MTM. */
@@ -56,7 +57,7 @@ void quit(int rc, const char *m) /* Shut down MTM. */
   if (m)
     fprintf(stderr, "%s\n", m);
   if (root)
-    freenode(root);
+    delete (root);
   endwin();
   exit(rc);
 }
@@ -194,7 +195,7 @@ SEND(n, "\006");
 ENDHANDLER
 
 HANDLER(hts) /* HTS - Horizontal Tab Set */
-if (x < n->ntabs && x > 0)
+if (x < n->tabs.size() && x > 0)
   n->tabs[x] = true;
 ENDHANDLER
 
@@ -230,7 +231,7 @@ wmove(win, MIN(tos + bot - 1, MAX(tos + top, py + P1(0))), x);
 ENDHANDLER
 
 HANDLER(cbt) /* CBT - Cursor Backwards Tab */
-for (int i = x - 1; i < n->ntabs && i >= 0; i--)
+for (int i = x - 1; i < n->tabs.size() && i >= 0; i--)
   if (n->tabs[i]) {
     wmove(win, py, i);
     return;
@@ -239,7 +240,7 @@ wmove(win, py, 0);
 ENDHANDLER
 
 HANDLER(ht) /* HT - Horizontal Tab */
-for (int i = x + 1; i < n->w && i < n->ntabs; i++)
+for (int i = x + 1; i < n->w && i < n->tabs.size(); i++)
   if (n->tabs[i]) {
     wmove(win, py, i);
     return;
@@ -313,10 +314,10 @@ ENDHANDLER
 HANDLER(tbc) /* TBC - Tabulation Clear */
 switch (P0(0)) {
 case 0:
-  n->tabs[x < n->ntabs ? x : 0] = false;
+  n->tabs[x < n->tabs.size() ? x : 0] = false;
   break;
 case 3:
-  memset(n->tabs, 0, sizeof(bool) * (n->ntabs));
+  std::fill(n->tabs.begin(), n->tabs.end(), 0);
   break;
 }
 ENDHANDLER
@@ -435,7 +436,7 @@ n->pri.vis = n->alt.vis = 1;
 n->s = &n->pri;
 wsetscrreg(n->pri.win, 0, MAX(SCROLLBACK, n->h) - 1);
 wsetscrreg(n->alt.win, 0, n->h - 1);
-for (int i = 0; i < n->ntabs; i++)
+for (int i = 0; i < n->tabs.size(); i++)
   n->tabs[i] = (i % 8 == 0);
 ENDHANDLER
 
@@ -875,48 +876,25 @@ static void setupevents(NODE *n) {
  * These functions do the user-visible work of MTM: creating nodes in the
  * tree, updating the display, and so on.
  */
-static bool *newtabs(int w, int ow,
-                     bool *oldtabs) /* Initialize default tabstops. */
+NODE::NODE(int y, int x, int h, int w) /* Create a new node. */
 {
-  bool *tabs = calloc(w, sizeof(bool));
-  if (!tabs)
-    return NULL;
-  for (int i = 0; i < w; i++) /* keep old overlapping tabs */
-    tabs[i] = i < ow ? oldtabs[i] : (i % 8 == 0);
-  return tabs;
+  this->pt = -1;
+  this->y = y;
+  this->x = x;
+  this->h = h;
+  this->w = w;
+  this->tabs.resize(w);
 }
 
-static NODE *newnode(int y, int x, int h, int w) /* Create a new node. */
+NODE::~NODE() /* Free a node. */
 {
-  NODE *n = calloc(1, sizeof(NODE));
-  bool *tabs = newtabs(w, 0, NULL);
-  if (!n || h < 2 || w < 2 || !tabs)
-    return free(n), free(tabs), NULL;
-
-  n->pt = -1;
-  n->y = y;
-  n->x = x;
-  n->h = h;
-  n->w = w;
-  n->tabs = tabs;
-  n->ntabs = w;
-
-  return n;
-}
-
-static void freenode(NODE *n) /* Free a node. */
-{
-  if (n) {
-    if (n->pri.win)
-      delwin(n->pri.win);
-    if (n->alt.win)
-      delwin(n->alt.win);
-    if (n->pt >= 0) {
-      close(n->pt);
-      FD_CLR(n->pt, &fds);
-    }
-    free(n->tabs);
-    free(n);
+  if (this->pri.win)
+    delwin(this->pri.win);
+  if (this->alt.win)
+    delwin(this->alt.win);
+  if (this->pt >= 0) {
+    close(this->pt);
+    FD_CLR(this->pt, &fds);
   }
 }
 
@@ -931,16 +909,18 @@ static const char *getterm(void) {
 
 NODE *newview(NODE *p, int y, int x, int h, int w) /* Open a new view. */
 {
-  struct winsize ws = {.ws_row = h, .ws_col = w};
-  NODE *n = newnode(y, x, h, w);
-  if (!n)
-    return NULL;
-
+  struct winsize ws = {
+      .ws_row = (unsigned short)h,
+      .ws_col = (unsigned short)w,
+  };
+  auto n = new NODE(y, x, h, w);
   SCRN *pri = &n->pri, *alt = &n->alt;
   pri->win = newpad(MAX(h, SCROLLBACK), w);
   alt->win = newpad(h, w);
-  if (!pri->win || !alt->win)
-    return freenode(n), NULL;
+  if (!pri->win || !alt->win) {
+    delete n;
+    return NULL;
+  }
   pri->tos = pri->off = MAX(0, SCROLLBACK - h);
   n->s = pri;
 
@@ -958,7 +938,8 @@ NODE *newview(NODE *p, int y, int x, int h, int w) /* Open a new view. */
   if (pid < 0) {
     if (!p)
       perror("forkpty");
-    return freenode(n), NULL;
+    delete n;
+    return nullptr;
   } else if (pid == 0) {
     char buf[100] = {0};
     snprintf(buf, sizeof(buf) - 1, "%lu", (unsigned long)getppid());
@@ -985,21 +966,18 @@ void deletenode(NODE *n) /* Delete a node. */
 {
   if (!n)
     quit(EXIT_SUCCESS, NULL);
-  freenode(n);
+  delete (n);
 }
 
 static void reshapeview(NODE *n, int d, int ow) /* Reshape a view. */
 {
+  n->tabs.resize(ow);
+  struct winsize ws = {
+      .ws_row = (unsigned short)n->h,
+      .ws_col = (unsigned short)n->w,
+  };
+
   int oy, ox;
-  bool *tabs = newtabs(n->w, ow, n->tabs);
-  struct winsize ws = {.ws_row = n->h, .ws_col = n->w};
-
-  if (tabs) {
-    free(n->tabs);
-    n->tabs = tabs;
-    n->ntabs = n->w;
-  }
-
   getyx(n->s->win, oy, ox);
   wresize(n->pri.win, MAX(n->h, SCROLLBACK), MAX(n->w, 2));
   wresize(n->alt.win, MAX(n->h, 2), MAX(n->w, 2));
@@ -1054,7 +1032,7 @@ static void sendarrow(const NODE *n, const char *k) {
 
 bool handlechar(int r, int k) /* Handle a single input character. */
 {
-  const char cmdstr[] = {commandkey, 0};
+  const char cmdstr[] = {(char)commandkey, 0};
   static bool cmd = false;
   NODE *n = root;
 #define KERR(i) (r == ERR && (i) == k)

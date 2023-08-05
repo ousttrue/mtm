@@ -6,8 +6,8 @@
 #include <stdlib.h>
 #define USAGE "usage: mtm [-T NAME] [-t NAME] [-c KEY]\n"
 
-extern "C" {
 #include "mtm.h"
+extern "C" {
 #include "pair.h"
 }
 
@@ -89,7 +89,7 @@ int main(int argc, char **argv) {
   use_default_colors();
   start_pairs();
 
-  root = newview(NULL, 0, 0, LINES, COLS);
+  root = newview(NULL, 2, 2, LINES-4, COLS-4);
   if (!root)
     quit(EXIT_FAILURE, "could not open root window");
   draw(root);
