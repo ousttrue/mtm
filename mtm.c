@@ -38,35 +38,13 @@
 #define MIN(x, y) ((x) < (y) ? (x) : (y))
 #define MAX(x, y) ((x) > (y) ? (x) : (y))
 
-/*** DATA TYPES */
-typedef enum { HORIZONTAL, VERTICAL, VIEW } Node;
-
-typedef struct SCRN SCRN;
-struct SCRN {
-  int sy, sx, vis, tos, off;
-  short fg, bg, sfg, sbg, sp;
-  bool insert, oxenl, xenl, saved;
-  attr_t sattr;
-  WINDOW *win;
-};
-
-struct NODE {
-  Node t;
-  int y, x, h, w, pt, ntabs;
-  bool *tabs, pnm, decom, am, lnm;
-  wchar_t repc;
-  NODE *p, *c1, *c2;
-  SCRN pri, alt, *s;
-  wchar_t *g0, *g1, *g2, *g3, *gc, *gs, *sgc, *sgs;
-  VTPARSER vp;
-};
-
 /*** GLOBALS AND PROTOTYPES */
 NODE *root;
-static NODE *focused, *lastfocused = NULL;
-int commandkey = CTL(COMMAND_KEY), nfds = 1; /* stdin */
+NODE *focused;
+static NODE *lastfocused = NULL;
+int commandkey = CTL(COMMAND_KEY);
+int nfds = 1; /* stdin */
 fd_set fds;
-static char iobuf[BUFSIZ];
 
 static void setupevents(NODE *n);
 static void reshape(NODE *n, int y, int x, int h, int w);
@@ -954,17 +932,6 @@ static void freenode(NODE *n, bool recurse) /* Free a node. */
   }
 }
 
-static void fixcursor(void) /* Move the terminal cursor to the active view. */
-{
-  if (focused) {
-    int y, x;
-    curs_set(focused->s->off != focused->s->tos ? 0 : focused->s->vis);
-    getyx(focused->s->win, y, x);
-    y = MIN(MAX(y, focused->s->tos), focused->s->tos + focused->h - 1);
-    wmove(focused->s->win, y, x);
-  }
-}
-
 static const char *getterm(void) {
   const char *envterm = getenv("TERM");
   if (term)
@@ -1090,7 +1057,7 @@ static void removechild(NODE *p,
   freenode(p, false);
 }
 
-static void deletenode(NODE *n) /* Delete a node. */
+void deletenode(NODE *n) /* Delete a node. */
 {
   if (!n || !n->p)
     quit(EXIT_SUCCESS, NULL);
@@ -1200,26 +1167,6 @@ static void split(NODE *n, Node t) /* Split a node. */
   draw(p ? p : root);
 }
 
-static bool getinput(NODE *n,
-                     fd_set *f) /* Recursively check all ptty's for input. */
-{
-  if (n && n->c1 && !getinput(n->c1, f))
-    return false;
-
-  if (n && n->c2 && !getinput(n->c2, f))
-    return false;
-
-  if (n && n->t == VIEW && n->pt > 0 && FD_ISSET(n->pt, f)) {
-    ssize_t r = read(n->pt, iobuf, sizeof(iobuf));
-    if (r > 0)
-      vtwrite(&n->vp, iobuf, r);
-    if (r <= 0 && errno != EINTR && errno != EWOULDBLOCK)
-      return deletenode(n), false;
-  }
-
-  return true;
-}
-
 static void scrollback(NODE *n) { n->s->off = MAX(0, n->s->off - n->h / 2); }
 
 static void scrollforward(NODE *n) {
@@ -1234,7 +1181,7 @@ static void sendarrow(const NODE *n, const char *k) {
   SEND(n, buf);
 }
 
-static bool handlechar(int r, int k) /* Handle a single input character. */
+bool handlechar(int r, int k) /* Handle a single input character. */
 {
   const char cmdstr[] = {commandkey, 0};
   static bool cmd = false;
@@ -1306,23 +1253,3 @@ static bool handlechar(int r, int k) /* Handle a single input character. */
   return cmd = false, true;
 }
 
-void run(void) /* Run MTM. */
-{
-  while (root) {
-    wint_t w = 0;
-    fd_set sfds = fds;
-    if (select(nfds + 1, &sfds, NULL, NULL, NULL) < 0)
-      FD_ZERO(&sfds);
-
-    int r = wget_wch(focused->s->win, &w);
-    while (handlechar(r, w))
-      r = wget_wch(focused->s->win, &w);
-    getinput(root, &sfds);
-
-    draw(root);
-    doupdate();
-    fixcursor();
-    draw(focused);
-    doupdate();
-  }
-}

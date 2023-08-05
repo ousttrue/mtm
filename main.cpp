@@ -1,4 +1,5 @@
-#include <curses.h>
+#include <algorithm>
+#include <errno.h>
 #include <locale.h>
 #include <signal.h>
 #include <stdio.h>
@@ -8,6 +9,61 @@
 extern "C" {
 #include "mtm.h"
 #include "pair.h"
+}
+
+static char iobuf[BUFSIZ];
+
+static bool getinput(NODE *n,
+                     fd_set *f) /* Recursively check all ptty's for input. */
+{
+  if (n && n->c1 && !getinput(n->c1, f))
+    return false;
+
+  if (n && n->c2 && !getinput(n->c2, f))
+    return false;
+
+  if (n && n->t == VIEW && n->pt > 0 && FD_ISSET(n->pt, f)) {
+    ssize_t r = read(n->pt, iobuf, sizeof(iobuf));
+    if (r > 0)
+      vtwrite(&n->vp, iobuf, r);
+    if (r <= 0 && errno != EINTR && errno != EWOULDBLOCK)
+      return deletenode(n), false;
+  }
+
+  return true;
+}
+
+static void fixcursor(void) /* Move the terminal cursor to the active view. */
+{
+  if (focused) {
+    int y, x;
+    curs_set(focused->s->off != focused->s->tos ? 0 : focused->s->vis);
+    getyx(focused->s->win, y, x);
+    y = std::min(std::max(y, focused->s->tos),
+                 focused->s->tos + focused->h - 1);
+    wmove(focused->s->win, y, x);
+  }
+}
+
+static void run(void) /* Run MTM. */
+{
+  while (root) {
+    wint_t w = 0;
+    fd_set sfds = fds;
+    if (select(nfds + 1, &sfds, NULL, NULL, NULL) < 0)
+      FD_ZERO(&sfds);
+
+    int r = wget_wch(focused->s->win, &w);
+    while (handlechar(r, w))
+      r = wget_wch(focused->s->win, &w);
+    getinput(root, &sfds);
+
+    draw(root);
+    doupdate();
+    fixcursor();
+    draw(focused);
+    doupdate();
+  }
 }
 
 int main(int argc, char **argv) {
