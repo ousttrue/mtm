@@ -46,38 +46,12 @@ extern "C" {
 #define MAX(x, y) ((x) > (y) ? (x) : (y))
 
 /*** GLOBALS AND PROTOTYPES */
-NODE *root;
 int commandkey = CTL(COMMAND_KEY);
 int nfds = 1; /* stdin */
 fd_set fds;
 
 static void setupevents(NODE *n);
 const char *term = NULL;
-
-/*** UTILITY FUNCTIONS */
-void quit(int rc, const char *m) /* Shut down MTM. */
-{
-  if (m)
-    fprintf(stderr, "%s\n", m);
-  if (root)
-    delete (root);
-  endwin();
-  exit(rc);
-}
-
-static void safewrite(int fd, const char *b,
-                      size_t n) /* Write, checking for errors. */
-{
-  size_t w = 0;
-  while (w < n) {
-    ssize_t s = write(fd, b + w, n - w);
-    if (s < 0 && errno != EINTR)
-      return;
-    else if (s < 0)
-      s = 0;
-    w += (size_t)s;
-  }
-}
 
 static const char *getshell(void) /* Get the user's preferred shell. */
 {
@@ -116,8 +90,6 @@ static const char *getshell(void) /* Get the user's preferred shell. */
 #define P0(x) PD(x, 0)
 #define P1(x) (!P0(x) ? 1 : P0(x))
 #define CALL(x) (x)(v, n, 0, 0, 0, NULL, NULL)
-#define SENDN(n, s, c) safewrite(n->pt, s, c)
-#define SEND(n, s) SENDN(n, s, strlen(s))
 #define COMMONVARS                                                             \
   NODE *n = (NODE *)p;                                                         \
   auto s = n->s;                                                               \
@@ -194,7 +166,7 @@ wmove(win, py, MIN(x + P1(0), mx - 1));
 ENDHANDLER
 
 HANDLER(ack) /* ACK - Acknowledge Enquiry */
-SEND(n, "\006");
+n->SEND("\006");
 ENDHANDLER
 
 HANDLER(hts) /* HTS - Horizontal Tab Set */
@@ -212,9 +184,9 @@ ENDHANDLER
 
 HANDLER(decid) /* DECID - Send Terminal Identification */
 if (w == L'c')
-  SEND(n, iw == L'>' ? "\033[>1;10;0c" : "\033[?1;2c");
+  n->SEND(iw == L'>' ? "\033[>1;10;0c" : "\033[?1;2c");
 else if (w == L'Z')
-  SEND(n, "\033[?6c");
+  n->SEND("\033[?6c");
 ENDHANDLER
 
 HANDLER(hpa) /* HPA - Cursor Horizontal Absolute */
@@ -389,7 +361,7 @@ if (P0(0) == 6)
            x + 1);
 else
   snprintf(buf, sizeof(buf) - 1, "\033[0n");
-SEND(n, buf);
+n->SEND(buf);
 ENDHANDLER
 
 HANDLER(idl) /* IL or DL - Insert/Delete Line */
@@ -409,7 +381,7 @@ if (wsetscrreg(win, tos + P1(0) - 1, tos + PD(1, my) - 1) == OK)
 ENDHANDLER
 
 HANDLER(decreqtparm) /* DECREQTPARM - Request Device Parameters */
-SEND(n, P0(0) ? "\033[3;1;2;120;1;0x" : "\033[2;1;2;120;128;1;0x");
+n->SEND(P0(0) ? "\033[3;1;2;120;1;0x" : "\033[2;1;2;120;128;1;0x");
 ENDHANDLER
 
 HANDLER(sgr0) /* Reset SGR to default */
@@ -958,129 +930,27 @@ NODE *newview(const POS &pos, const SIZE &size) {
 #define RIGHT(n) n->y + n->Size.Rows / 2, n->x + n->Size.Cols + 2
 
 /* Reshape a view. */
-static void reshapeview(NODE *n, int d) {
+void NODE::reshapeview(int d) {
 
   int oy, ox;
-  getyx(n->s->win, oy, ox);
-  wresize(n->pri->win, MAX(n->Size.Rows, SCROLLBACK), MAX(n->Size.Cols, 2));
-  wresize(n->alt->win, MAX(n->Size.Rows, 2), MAX(n->Size.Cols, 2));
-  n->pri->tos = n->pri->off = MAX(0, SCROLLBACK - n->Size.Rows);
-  n->alt->tos = n->alt->off = 0;
-  wsetscrreg(n->pri->win, 0, MAX(SCROLLBACK, n->Size.Rows) - 1);
-  wsetscrreg(n->alt->win, 0, n->Size.Rows - 1);
+  getyx(this->s->win, oy, ox);
+  wresize(this->pri->win, MAX(this->Size.Rows, SCROLLBACK),
+          MAX(this->Size.Cols, 2));
+  wresize(this->alt->win, MAX(this->Size.Rows, 2), MAX(this->Size.Cols, 2));
+  this->pri->tos = this->pri->off = MAX(0, SCROLLBACK - this->Size.Rows);
+  this->alt->tos = this->alt->off = 0;
+  wsetscrreg(this->pri->win, 0, MAX(SCROLLBACK, this->Size.Rows) - 1);
+  wsetscrreg(this->alt->win, 0, this->Size.Rows - 1);
   if (d > 0) { /* make sure the new top line syncs up after reshape */
-    wmove(n->s->win, oy + d, ox);
-    wscrl(n->s->win, -d);
+    wmove(this->s->win, oy + d, ox);
+    wscrl(this->s->win, -d);
   }
   doupdate();
   refresh();
 
   struct winsize ws = {
-      .ws_row = n->Size.Rows,
-      .ws_col = n->Size.Cols,
+      .ws_row = this->Size.Rows,
+      .ws_col = this->Size.Cols,
   };
-  ioctl(n->pt, TIOCSWINSZ, &ws);
-}
-
-void NODE::reshape(const POS &pos, const SIZE &size) {
-  if (this->Pos == pos && this->Size == size) {
-    return;
-  }
-
-  int d = this->Size.Rows - size.Rows;
-  this->Pos = pos;
-  this->Size = size.Max({1, 1});
-  this->tabs.resize(Size.Cols);
-  reshapeview(this, d);
-  this->draw();
-}
-
-void NODE::draw() const /* Draw a node. */
-{
-  pnoutrefresh(this->s->win, this->s->off, 0, this->Pos.Y, this->Pos.X,
-               this->Pos.Y + this->Size.Rows - 1,
-               this->Pos.X + this->Size.Rows - 1);
-}
-
-static void scrollback(NODE *n) {
-  n->s->off = MAX(0, n->s->off - n->Size.Rows / 2);
-}
-
-static void scrollforward(NODE *n) {
-  n->s->off = MIN(n->s->tos, n->s->off + n->Size.Rows / 2);
-}
-
-static void scrollbottom(NODE *n) { n->s->off = n->s->tos; }
-
-static void sendarrow(const NODE *n, const char *k) {
-  char buf[100] = {0};
-  snprintf(buf, sizeof(buf) - 1, "\033%s%s", n->pnm ? "O" : "[", k);
-  SEND(n, buf);
-}
-
-bool handlechar(int r, int k) /* Handle a single input character. */
-{
-  const char cmdstr[] = {(char)commandkey, 0};
-  static bool cmd = false;
-  NODE *n = root;
-#define KERR(i) (r == ERR && (i) == k)
-#define KEY(i) (r == OK && (i) == k)
-#define CODE(i) (r == KEY_CODE_YES && (i) == k)
-#define INSCR (n->s->tos != n->s->off)
-#define SB scrollbottom(n)
-#define DO(s, t, a)                                                            \
-  if (s == cmd && (t)) {                                                       \
-    a;                                                                         \
-    cmd = false;                                                               \
-    return true;                                                               \
-  }
-
-  DO(cmd, KERR(k), return false)
-  DO(cmd, CODE(KEY_RESIZE),
-     root->reshape({0, 0}, {(uint16_t)LINES, (uint16_t)COLS});
-     SB)
-  DO(false, KEY(commandkey), return cmd = true)
-  DO(false, KEY(0), SENDN(n, "\000", 1); SB)
-  DO(false, KEY(L'\n'), SEND(n, "\n"); SB)
-  DO(false, KEY(L'\r'), SEND(n, n->lnm ? "\r\n" : "\r"); SB)
-  DO(false, SCROLLUP && INSCR, scrollback(n))
-  DO(false, SCROLLDOWN && INSCR, scrollforward(n))
-  DO(false, RECENTER && INSCR, scrollbottom(n))
-  DO(false, CODE(KEY_ENTER), SEND(n, n->lnm ? "\r\n" : "\r"); SB)
-  DO(false, CODE(KEY_UP), sendarrow(n, "A"); SB);
-  DO(false, CODE(KEY_DOWN), sendarrow(n, "B"); SB);
-  DO(false, CODE(KEY_RIGHT), sendarrow(n, "C"); SB);
-  DO(false, CODE(KEY_LEFT), sendarrow(n, "D"); SB);
-  DO(false, CODE(KEY_HOME), SEND(n, "\033[1~"); SB)
-  DO(false, CODE(KEY_END), SEND(n, "\033[4~"); SB)
-  DO(false, CODE(KEY_PPAGE), SEND(n, "\033[5~"); SB)
-  DO(false, CODE(KEY_NPAGE), SEND(n, "\033[6~"); SB)
-  DO(false, CODE(KEY_BACKSPACE), SEND(n, "\177"); SB)
-  DO(false, CODE(KEY_DC), SEND(n, "\033[3~"); SB)
-  DO(false, CODE(KEY_IC), SEND(n, "\033[2~"); SB)
-  DO(false, CODE(KEY_BTAB), SEND(n, "\033[Z"); SB)
-  DO(false, CODE(KEY_F(1)), SEND(n, "\033OP"); SB)
-  DO(false, CODE(KEY_F(2)), SEND(n, "\033OQ"); SB)
-  DO(false, CODE(KEY_F(3)), SEND(n, "\033OR"); SB)
-  DO(false, CODE(KEY_F(4)), SEND(n, "\033OS"); SB)
-  DO(false, CODE(KEY_F(5)), SEND(n, "\033[15~"); SB)
-  DO(false, CODE(KEY_F(6)), SEND(n, "\033[17~"); SB)
-  DO(false, CODE(KEY_F(7)), SEND(n, "\033[18~"); SB)
-  DO(false, CODE(KEY_F(8)), SEND(n, "\033[19~"); SB)
-  DO(false, CODE(KEY_F(9)), SEND(n, "\033[20~"); SB)
-  DO(false, CODE(KEY_F(10)), SEND(n, "\033[21~"); SB)
-  DO(false, CODE(KEY_F(11)), SEND(n, "\033[23~"); SB)
-  DO(false, CODE(KEY_F(12)), SEND(n, "\033[24~"); SB)
-  DO(true, DELETE_NODE, delete n)
-  DO(true, REDRAW, touchwin(stdscr); root->draw(); redrawwin(stdscr))
-  DO(true, SCROLLUP, scrollback(n))
-  DO(true, SCROLLDOWN, scrollforward(n))
-  DO(true, RECENTER, scrollbottom(n))
-  DO(true, KEY(commandkey), SENDN(n, cmdstr, 1));
-  char c[MB_LEN_MAX + 1] = {0};
-  if (wctomb(c, k) > 0) {
-    scrollbottom(n);
-    SEND(n, c);
-  }
-  return cmd = false, true;
+  ioctl(this->pt, TIOCSWINSZ, &ws);
 }

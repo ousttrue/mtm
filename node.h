@@ -1,4 +1,7 @@
 #pragma once
+#include <memory>
+#include <stdint.h>
+#include <vector>
 
 struct SCRN;
 struct VTPARSER;
@@ -17,12 +20,7 @@ struct SIZE {
   bool operator==(const SIZE &rhs) const {
     return Rows == rhs.Rows && Cols == rhs.Cols;
   }
-  SIZE Max(const SIZE &rhs) const {
-    return {
-        std::max(Rows, rhs.Rows),
-        std::max(Cols, rhs.Cols),
-    };
-  }
+  SIZE Max(const SIZE &rhs) const;
 };
 
 struct NODE {
@@ -43,6 +41,16 @@ struct NODE {
 
   NODE(const POS &pos, const SIZE &size);
   ~NODE();
+  // pty
+  void safewrite(const char *b, size_t n);
+  void SENDN(const char *s, size_t c) { safewrite(s, c); }
+  void SEND(const char *s);
+  // curses
   void draw() const;
   void reshape(const POS &pos, const SIZE &size);
+  void reshapeview(int d);
+  void scrollbottom();
+  void scrollback();
+  void scrollforward();
+  void sendarrow(const char *k);
 };

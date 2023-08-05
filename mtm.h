@@ -9,15 +9,11 @@ extern int commandkey;
 #define CTL(x) ((x)&0x1f)
 extern const char *term;
 
-void quit(int rc, const char *m); /* Shut down MTM. */
-
 // Open a new view
 struct NODE;
 struct POS;
 struct SIZE;
 NODE *newview(const POS &pos, const SIZE &size);
-extern NODE *root;
-// Handle a single input character.
-bool handlechar(int r, int k);
+
 // stdin
 extern int nfds;

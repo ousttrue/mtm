@@ -16,6 +16,7 @@ executable(
         'pair.c',
         'vtparser.c',
         'config.c',
+        'node.cpp',
     ],
     install: true,
     c_args: [
