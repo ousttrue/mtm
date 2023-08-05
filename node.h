@@ -4,8 +4,9 @@
 #include <stdint.h>
 #include <vector>
 
+#define USE_VTERM 1
+
 class PosixProcess;
-struct VTPARSER;
 
 struct NODE {
   POS Pos;
@@ -23,8 +24,13 @@ struct NODE {
   std::shared_ptr<SCRN> alt;
   std::shared_ptr<SCRN> s;
   wchar_t *g0, *g1, *g2, *g3, *gc, *gs, *sgc, *sgs;
-  std::shared_ptr<VTPARSER> vp;
+
+#if USE_VTERM
   struct VTerm *m_vterm;
+  struct VTermScreen *m_vtscreen = nullptr;
+#else
+  std::shared_ptr<struct VTPARSER> vp;
+#endif
 
   NODE(const POS &pos, const SIZE &size);
   NODE(const NODE &) = delete;

@@ -1,4 +1,3 @@
 #pragma once
 
-struct NODE;
-void setupevents(NODE *n);
+void setupevents(struct VTPARSER *vp, struct NODE *n);

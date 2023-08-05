@@ -16,15 +16,27 @@ SIZE SIZE::Max(const SIZE &rhs) const {
 NODE::NODE(const POS &pos, const SIZE &size)
     : Pos(pos), Size(size),
       pri(new SCRN({std::max(size.Rows, (uint16_t)SCROLLBACK), size.Cols})),
-      alt(new SCRN(size)), vp(new VTPARSER),
-      m_vterm(vterm_new(size.Rows, size.Cols)) {
+      alt(new SCRN(size)),
+#if USE_VTERM
+      m_vterm(vterm_new(size.Rows, size.Cols))
+#else
+      vp(new VTPARSER),
+#endif
+{
   this->tabs.resize(Size.Cols, 0);
 
   if (this->pri->win && this->alt->win) {
     this->pri->tos = this->pri->off = std::max(0, SCROLLBACK - size.Rows);
     this->s = this->pri;
-    setupevents(this);
   }
+
+#if USE_VTERM
+  m_vtscreen = vterm_obtain_screen(m_vterm);
+  vterm_screen_reset(m_vtscreen, true);
+  vterm_set_utf8(m_vterm, true);
+#else
+  setupevents(this);
+#endif
 }
 
 NODE::~NODE() { vterm_free(m_vterm); }

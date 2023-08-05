@@ -59,4 +59,5 @@ struct SCRN {
   void MoveCursor(const POS &pos);
   void Scroll(int d);
   void Update();
+  void WriteCell(const POS &pos, wchar_t ch, int fg, int bg);
 };

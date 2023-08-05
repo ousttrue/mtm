@@ -9,6 +9,7 @@
 #include <iostream>
 #include <signal.h>
 #include <string.h>
+#include <vterm.h>
 
 #define USAGE "usage: mtm [-T NAME] [-t NAME] [-c KEY]\n"
 #define CTL(x) ((x)&0x1f)
@@ -136,13 +137,38 @@ static void run(const std::shared_ptr<NODE> &node) {
 
     if (auto span = Selector::Instance().Read(node->Process->FD())) {
       if (span->size()) {
+#if USE_VTERM
+        vterm_input_write(node->m_vterm, span->data(), span->size());
+#else
         vtwrite(node->vp.get(), span->data(), span->size());
+#endif
       }
     } else {
       // error exit
       break;
     }
 
+#if USE_VTERM
+    vterm_screen_flush_damage(node->m_vtscreen);
+    int rows, cols;
+    vterm_get_size(node->m_vterm, &rows, &cols);
+    for (int y = 0; y < rows; ++y) {
+      for (int x = 0; x < cols; ++x) {
+        VTermScreenCell cell;
+        vterm_screen_get_cell(node->m_vtscreen, {y, x}, &cell);
+
+        wchar_t ch = cell.chars[0];
+        if (ch>0 && ch < 128) {
+          if (ch != ' ') {
+            auto a = 0;
+          }
+          node->s->WriteCell({y + node->s->tos, x}, ch, cell.fg.indexed.idx,
+                             cell.bg.indexed.idx);
+        }
+      }
+    }
+#else
+#endif
     node->s->draw(node->Pos, node->Size);
     node->s->fixcursor(node->Size);
     node->s->draw(node->Pos, node->Size);

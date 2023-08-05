@@ -74,3 +74,9 @@ void SCRN::Update() {
   doupdate();
   refresh();
 }
+
+void SCRN::WriteCell(const POS &pos, wchar_t ch, int fg, int bg) {
+
+  wmove(win, pos.Y, pos.X);
+  waddnwstr(win, &ch, 1);
+}
