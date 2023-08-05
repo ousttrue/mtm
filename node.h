@@ -1,7 +1,8 @@
 #pragma once
-#include <memory>
 
-/*** DATA TYPES */
+struct SCRN;
+struct VTPARSER;
+
 struct POS {
   int Y;
   int X;
@@ -38,7 +39,7 @@ struct NODE {
   std::shared_ptr<SCRN> alt;
   std::shared_ptr<SCRN> s;
   wchar_t *g0, *g1, *g2, *g3, *gc, *gs, *sgc, *sgs;
-  VTPARSER vp;
+  std::shared_ptr<VTPARSER> vp;
 
   NODE(const POS &pos, const SIZE &size);
   ~NODE();

@@ -1,5 +1,6 @@
 #include "mtm.h"
 #include "scrn.h"
+#include "node.h"
 #include <algorithm>
 #include <errno.h>
 #include <locale.h>
@@ -8,6 +9,7 @@
 #include <stdlib.h>
 extern "C" {
 #include "pair.h"
+#include "vtparser.h"
 }
 
 #define USAGE "usage: mtm [-T NAME] [-t NAME] [-c KEY]\n"
@@ -20,7 +22,7 @@ static bool getinput(NODE *n,
   if (n && n->pt > 0 && FD_ISSET(n->pt, f)) {
     ssize_t r = read(n->pt, iobuf, sizeof(iobuf));
     if (r > 0)
-      vtwrite(&n->vp, iobuf, r);
+      vtwrite(n->vp.get(), iobuf, r);
     if (r <= 0 && errno != EINTR && errno != EWOULDBLOCK) {
       delete n;
       return false;
