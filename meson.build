@@ -13,7 +13,6 @@ executable(
     [
         'main.cpp',
         'mtm.cpp',
-        'pair.c',
         'vtparser.c',
         'config.c',
         'node.cpp',

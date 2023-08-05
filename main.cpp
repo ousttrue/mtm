@@ -9,7 +9,6 @@
 #include <signal.h>
 #include <string.h>
 extern "C" {
-#include "pair.h"
 #include "vtparser.h"
 }
 
@@ -181,8 +180,6 @@ int main(int argc, char **argv) {
     return EXIT_FAILURE;
   }
   Term::Insance().RawMode();
-
-  start_pairs();
 
   auto node = std::make_shared<NODE>(
       POS{

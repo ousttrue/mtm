@@ -1,6 +1,13 @@
 #pragma once
+#include <vector>
+struct PAIR {
+  short fg = -1;
+  short bg = -1;
+};
 
 class Term {
+
+  std::vector<PAIR> m_pairs;
 
   Term();
 
@@ -16,4 +23,6 @@ public:
 
   bool Initialize();
   void RawMode();
+
+  short AllocPair(int fg, int bg);
 };

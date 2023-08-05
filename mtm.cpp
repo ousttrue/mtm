@@ -14,14 +14,15 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 extern "C" {
-#include "pair.h"
 #include "vtparser.h"
 }
 #include "config.h"
 #include "curses_screen.h"
+#include "curses_term.h"
 #include "mtm.h"
 #include "node.h"
 #include "posix_process.h"
+#include <assert.h>
 #include <curses.h>
 #include <errno.h>
 #include <fcntl.h>
@@ -262,7 +263,8 @@ n->gc = n->sgc;
 n->gs = n->sgs; /* save character sets        */
 
 /* restore colors */
-int cp = mtm_alloc_pair(s->fg, s->bg);
+int cp = Term::Insance().AllocPair(s->fg, s->bg);
+assert(cp != -1);
 wcolor_set(win, cp, NULL);
 cchar_t c;
 setcchar(&c, L" ", A_NORMAL, cp, NULL);
@@ -287,7 +289,7 @@ ENDHANDLER
 
 HANDLER(el) /* EL - Erase in Line */
 cchar_t b;
-setcchar(&b, L" ", A_NORMAL, mtm_alloc_pair(s->fg, s->bg), NULL);
+setcchar(&b, L" ", A_NORMAL, Term::Insance().AllocPair(s->fg, s->bg), NULL);
 switch (P0(0)) {
 case 0:
   wclrtoeol(win);
@@ -331,7 +333,7 @@ ENDHANDLER
 
 HANDLER(ech) /* ECH - Erase Character */
 cchar_t c;
-setcchar(&c, L" ", A_NORMAL, mtm_alloc_pair(s->fg, s->bg), NULL);
+setcchar(&c, L" ", A_NORMAL, Term::Insance().AllocPair(s->fg, s->bg), NULL);
 for (int i = 0; i < P1(0); i++)
   mvwadd_wchnstr(win, py, x + i, &c, 1);
 wmove(win, py, px);
@@ -364,7 +366,8 @@ if (wsetscrreg(win, tos + P1(0) - 1, tos + PD(1, my) - 1) == OK)
 ENDHANDLER
 
 HANDLER(decreqtparm) /* DECREQTPARM - Request Device Parameters */
-n->Process->WriteString(P0(0) ? "\033[3;1;2;120;1;0x" : "\033[2;1;2;120;128;1;0x");
+n->Process->WriteString(P0(0) ? "\033[3;1;2;120;1;0x"
+                              : "\033[2;1;2;120;128;1;0x");
 ENDHANDLER
 
 HANDLER(sgr0) /* Reset SGR to default */
@@ -641,7 +644,7 @@ for (int i = 0; i < argc; i++)
 #endif
   }
 if (doc) {
-  int p = mtm_alloc_pair(s->fg = fg, s->bg = bg);
+  int p = Term::Insance().AllocPair(s->fg = fg, s->bg = bg);
   wcolor_set(win, p, NULL);
   cchar_t c;
   setcchar(&c, L" ", A_NORMAL, p, NULL);
