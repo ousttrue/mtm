@@ -42,6 +42,9 @@ struct SCRN {
   uint32_t sattr;
   struct _win_st *win;
 
+  SCRN(const SIZE &size);
+  ~SCRN();
+
   void scrollforward(int n);
   void scrollback(int n);
   void scrollbottom();
@@ -49,4 +52,11 @@ struct SCRN {
   void fixcursor(const SIZE &size);
   Input getchar();
   bool INSCR() const { return tos != off; }
+
+  POS GetPos() const;
+  void Resize(const SIZE &size);
+  void SetScrollRegion(int top, int bottom);
+  void MoveCursor(const POS &pos);
+  void Scroll(int d);
+  void Update();
 };

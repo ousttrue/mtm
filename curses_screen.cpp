@@ -8,6 +8,16 @@ bool Input::CODE(uint32_t i) const {
   return Error == KEY_CODE_YES && i == Char;
 }
 
+SCRN::SCRN(const SIZE &size) {
+
+  win = newpad(size.Rows, size.Cols);
+  nodelay(win, TRUE);
+  scrollok(win, TRUE);
+  keypad(win, TRUE);
+}
+
+SCRN::~SCRN() { delwin(win); }
+
 void SCRN::scrollforward(int n) {
   off = std::min(tos, off + n /*this->Size.Rows / 2*/);
 }
@@ -39,4 +49,28 @@ Input SCRN::getchar() {
   Input input{};
   input.Error = wget_wch(win, &input.Char);
   return input;
+}
+
+POS SCRN::GetPos() const {
+  int oy, ox;
+  getyx(win, oy, ox);
+  return {oy, ox};
+}
+
+void SCRN::Resize(const SIZE &size) {
+  wresize(win, std::max(size.Rows, (uint16_t)2),
+          std::max(size.Cols, (uint16_t)2));
+}
+
+void SCRN::SetScrollRegion(int top, int bottom) {
+  wsetscrreg(win, top, bottom);
+}
+
+void SCRN::MoveCursor(const POS &pos) { wmove(win, pos.Y, pos.X); }
+
+void SCRN::Scroll(int d) { wscrl(win, d); }
+
+void SCRN::Update() {
+  doupdate();
+  refresh();
 }
