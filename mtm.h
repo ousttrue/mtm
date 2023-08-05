@@ -2,7 +2,6 @@
 extern "C" {
 #include "vtparser.h"
 }
-#include "config.h"
 #include <curses.h>
 #include <sys/select.h>
 #include <vector>
@@ -36,13 +35,13 @@ struct NODE {
 
   NODE(int y, int x, int h, int w);
   ~NODE();
+  void draw() const;
+  void reshape(int y, int x, int h, int w);
 };
 
-NODE *newview(NODE *p, int y, int x, int h, int w); /* Open a new view. */
+NODE *newview(int y, int x, int h, int w); /* Open a new view. */
 extern NODE *root;
-void deletenode(NODE *n); /* Delete a node. */
 
 bool handlechar(int r, int k); /* Handle a single input character. */
 
 extern int nfds; /* stdin */
-void draw(NODE *n);

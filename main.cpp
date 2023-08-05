@@ -20,8 +20,10 @@ static bool getinput(NODE *n,
     ssize_t r = read(n->pt, iobuf, sizeof(iobuf));
     if (r > 0)
       vtwrite(&n->vp, iobuf, r);
-    if (r <= 0 && errno != EINTR && errno != EWOULDBLOCK)
-      return deletenode(n), false;
+    if (r <= 0 && errno != EINTR && errno != EWOULDBLOCK) {
+      delete n;
+      return false;
+    }
   }
 
   return true;
@@ -49,10 +51,10 @@ static void run(void) /* Run MTM. */
       r = wget_wch(root->s->win, &w);
     getinput(root, &sfds);
 
-    draw(root);
+    root->draw();
     doupdate();
     fixcursor();
-    draw(root);
+    root->draw();
     doupdate();
   }
 }
@@ -89,10 +91,10 @@ int main(int argc, char **argv) {
   use_default_colors();
   start_pairs();
 
-  root = newview(NULL, 2, 2, LINES-4, COLS-4);
+  root = newview(2, 2, LINES - 4, COLS - 4);
   if (!root)
     quit(EXIT_FAILURE, "could not open root window");
-  draw(root);
+  root->draw();
   run();
 
   quit(EXIT_SUCCESS, NULL);

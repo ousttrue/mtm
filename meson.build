@@ -10,7 +10,13 @@ ncurses_dep = dependency('ncursesw')
 
 executable(
     'mtm',
-    ['main.cpp', 'mtm.cpp', 'pair.c', 'vtparser.c'],
+    [
+        'main.cpp',
+        'mtm.cpp',
+        'pair.c',
+        'vtparser.c',
+        'config.c',
+    ],
     install: true,
     c_args: [
         '-D_POSIX_C_SOURCE=200809L',

@@ -13,15 +13,17 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-#include "mtm.h"
 extern "C" {
 #include "pair.h"
 }
+#include "config.h"
+#include "mtm.h"
 #include <curses.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <limits.h>
 #include <locale.h>
+#include <pty.h>
 #include <pwd.h>
 #include <signal.h>
 #include <stdbool.h>
@@ -35,7 +37,7 @@ extern "C" {
 #include <wctype.h>
 
 /*** CONFIGURATION */
-#include "config.h"
+// #include "config.h"
 
 #define MIN(x, y) ((x) < (y) ? (x) : (y))
 #define MAX(x, y) ((x) > (y) ? (x) : (y))
@@ -47,8 +49,6 @@ int nfds = 1; /* stdin */
 fd_set fds;
 
 static void setupevents(NODE *n);
-static void reshape(NODE *n, int y, int x, int h, int w);
-void draw(NODE *n);
 const char *term = NULL;
 
 /*** UTILITY FUNCTIONS */
@@ -907,7 +907,7 @@ static const char *getterm(void) {
   return DEFAULT_TERMINAL;
 }
 
-NODE *newview(NODE *p, int y, int x, int h, int w) /* Open a new view. */
+NODE *newview(int y, int x, int h, int w) /* Open a new view. */
 {
   struct winsize ws = {
       .ws_row = (unsigned short)h,
@@ -936,8 +936,7 @@ NODE *newview(NODE *p, int y, int x, int h, int w) /* Open a new view. */
 
   pid_t pid = forkpty(&n->pt, NULL, NULL, &ws);
   if (pid < 0) {
-    if (!p)
-      perror("forkpty");
+    perror("forkpty");
     delete n;
     return nullptr;
   } else if (pid == 0) {
@@ -961,13 +960,6 @@ NODE *newview(NODE *p, int y, int x, int h, int w) /* Open a new view. */
 #define BELOW(n) n->y + n->h + 2, n->x + n->w / 2
 #define LEFT(n) n->y + n->h / 2, n->x - 2
 #define RIGHT(n) n->y + n->h / 2, n->x + n->w + 2
-
-void deletenode(NODE *n) /* Delete a node. */
-{
-  if (!n)
-    quit(EXIT_SUCCESS, NULL);
-  delete (n);
-}
 
 static void reshapeview(NODE *n, int d, int ow) /* Reshape a view. */
 {
@@ -994,26 +986,26 @@ static void reshapeview(NODE *n, int d, int ow) /* Reshape a view. */
   ioctl(n->pt, TIOCSWINSZ, &ws);
 }
 
-static void reshape(NODE *n, int y, int x, int h, int w) /* Reshape a node. */
+void NODE::reshape(int y, int x, int h, int w) /* Reshape a node. */
 {
-  if (n->y == y && n->x == x && n->h == h && n->w == w)
+  if (this->y == y && this->x == x && this->h == h && this->w == w)
     return;
 
-  int d = n->h - h;
-  int ow = n->w;
-  n->y = y;
-  n->x = x;
-  n->h = MAX(h, 1);
-  n->w = MAX(w, 1);
+  int d = this->h - h;
+  int ow = this->w;
+  this->y = y;
+  this->x = x;
+  this->h = MAX(h, 1);
+  this->w = MAX(w, 1);
 
-  reshapeview(n, d, ow);
-  draw(n);
+  reshapeview(this, d, ow);
+  this->draw();
 }
 
-void draw(NODE *n) /* Draw a node. */
+void NODE::draw() const /* Draw a node. */
 {
-  pnoutrefresh(n->s->win, n->s->off, 0, n->y, n->x, n->y + n->h - 1,
-               n->x + n->w - 1);
+  pnoutrefresh(this->s->win, this->s->off, 0, this->y, this->x,
+               this->y + this->h - 1, this->x + this->w - 1);
 }
 
 static void scrollback(NODE *n) { n->s->off = MAX(0, n->s->off - n->h / 2); }
@@ -1048,7 +1040,7 @@ bool handlechar(int r, int k) /* Handle a single input character. */
   }
 
   DO(cmd, KERR(k), return false)
-  DO(cmd, CODE(KEY_RESIZE), reshape(root, 0, 0, LINES, COLS); SB)
+  DO(cmd, CODE(KEY_RESIZE), root->reshape(0, 0, LINES, COLS); SB)
   DO(false, KEY(commandkey), return cmd = true)
   DO(false, KEY(0), SENDN(n, "\000", 1); SB)
   DO(false, KEY(L'\n'), SEND(n, "\n"); SB)
@@ -1081,8 +1073,8 @@ bool handlechar(int r, int k) /* Handle a single input character. */
   DO(false, CODE(KEY_F(10)), SEND(n, "\033[21~"); SB)
   DO(false, CODE(KEY_F(11)), SEND(n, "\033[23~"); SB)
   DO(false, CODE(KEY_F(12)), SEND(n, "\033[24~"); SB)
-  DO(true, DELETE_NODE, deletenode(n))
-  DO(true, REDRAW, touchwin(stdscr); draw(root); redrawwin(stdscr))
+  DO(true, DELETE_NODE, delete n)
+  DO(true, REDRAW, touchwin(stdscr); root->draw(); redrawwin(stdscr))
   DO(true, SCROLLUP, scrollback(n))
   DO(true, SCROLLDOWN, scrollforward(n))
   DO(true, RECENTER, scrollbottom(n))
