@@ -18,6 +18,7 @@ executable(
         'config.c',
         'node.cpp',
         'posix_selector.cpp',
+        'posix_process.cpp',
         'curses_term.cpp',
         'curses_screen.cpp',
     ],

@@ -18,6 +18,15 @@ struct SIZE {
   SIZE Max(const SIZE &rhs) const;
 };
 
+struct Input {
+  int Error;
+  uint32_t Char;
+
+  bool KERR() const;
+  bool KEY(uint32_t i) const;
+  bool CODE(uint32_t i) const;
+};
+
 struct SCRN {
   int sy, sx;
   int vis;
@@ -38,4 +47,6 @@ struct SCRN {
   void scrollbottom();
   void draw(const POS &pos, const SIZE &size) const;
   void fixcursor(const SIZE &size);
+  Input getchar();
+  bool INSCR() const { return tos != off; }
 };

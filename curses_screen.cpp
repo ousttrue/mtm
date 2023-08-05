@@ -2,6 +2,12 @@
 #include <algorithm>
 #include <curses.h>
 
+bool Input::KERR() const { return Error == ERR /*&& (i) == Char*/; }
+bool Input::KEY(uint32_t i) const { return Error == OK && i == Char; }
+bool Input::CODE(uint32_t i) const {
+  return Error == KEY_CODE_YES && i == Char;
+}
+
 void SCRN::scrollforward(int n) {
   off = std::min(tos, off + n /*this->Size.Rows / 2*/);
 }
@@ -27,4 +33,10 @@ void SCRN::fixcursor(
   getyx(this->win, y, x);
   y = std::min(std::max(y, this->tos), this->tos + size.Rows - 1);
   wmove(this->win, y, x);
+}
+
+Input SCRN::getchar() {
+  Input input{};
+  input.Error = wget_wch(win, &input.Char);
+  return input;
 }

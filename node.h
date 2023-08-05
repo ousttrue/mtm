@@ -1,9 +1,10 @@
 #pragma once
+#include "curses_screen.h"
 #include <memory>
 #include <stdint.h>
 #include <vector>
-#include "curses_screen.h"
 
+class PosixProcess;
 struct VTPARSER;
 
 struct NODE {
@@ -11,7 +12,8 @@ struct NODE {
   SIZE Size;
 
   // pty
-  int pt = -1;
+  // int pt = -1;
+  std::shared_ptr<PosixProcess> Process;
 
   bool pnm;
   bool decom;
@@ -31,8 +33,7 @@ struct NODE {
   ~NODE();
 
   // pty
-  void safewrite(const char *b, size_t n);
-  void SENDN(const char *s, size_t c) { safewrite(s, c); }
+  void SENDN(const char *s, size_t c);
   void SEND(const char *s);
   void sendarrow(const char *k);
   // curses

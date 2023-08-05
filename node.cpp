@@ -4,6 +4,7 @@ extern "C" {
 #include "config.h"
 #include "curses_screen.h"
 #include "node.h"
+#include "posix_process.h"
 #include "posix_selector.h"
 #include <algorithm>
 #include <curses.h>
@@ -30,22 +31,8 @@ NODE::~NODE() /* Free a node. */
     delwin(this->pri->win);
   if (this->alt->win)
     delwin(this->alt->win);
-  if (this->pt >= 0) {
-    close(this->pt);
-    Selector::Instance().Unregister(this->pt);
-  }
-}
-
-void NODE::safewrite(const char *b, size_t n) /* Write, checking for errors. */
-{
-  size_t w = 0;
-  while (w < n) {
-    ssize_t s = write(this->pt, b + w, n - w);
-    if (s < 0 && errno != EINTR)
-      return;
-    else if (s < 0)
-      s = 0;
-    w += (size_t)s;
+  if (this->Process) {
+    Selector::Instance().Unregister(this->Process->FD());
   }
 }
 
@@ -61,6 +48,8 @@ void NODE::reshape(const POS &pos, const SIZE &size) {
   this->reshapeview(d);
   this->s->draw(Pos, Size);
 }
+
+void NODE::SENDN(const char *s, size_t c) { Process->Write(s, c); }
 
 void NODE::SEND(const char *s) { SENDN(s, strlen(s)); }
 
@@ -91,11 +80,5 @@ void NODE::reshapeview(int d) {
   doupdate();
   refresh();
 
-  struct winsize ws = {
-      .ws_row = this->Size.Rows,
-      .ws_col = this->Size.Cols,
-  };
-  ioctl(this->pt, TIOCSWINSZ, &ws);
+  this->Process->Resize(this->Size);
 }
-
-

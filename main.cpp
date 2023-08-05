@@ -3,22 +3,12 @@
 #include "curses_term.h"
 #include "mtm.h"
 #include "node.h"
+#include "posix_process.h"
 #include "posix_selector.h"
-#include <algorithm>
 #include <curses.h>
-#include <errno.h>
-#include <fcntl.h>
 #include <iostream>
-#include <limits.h>
-#include <locale.h>
-#include <pty.h>
-#include <pwd.h>
 #include <signal.h>
-#include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
-#include <sys/ioctl.h>
-#include <unistd.h>
 extern "C" {
 #include "pair.h"
 #include "vtparser.h"
@@ -27,21 +17,30 @@ extern "C" {
 #define USAGE "usage: mtm [-T NAME] [-t NAME] [-c KEY]\n"
 #define CTL(x) ((x)&0x1f)
 
-std::shared_ptr<NODE> g_root;
 /*** GLOBALS AND PROTOTYPES */
 int commandkey = CTL(COMMAND_KEY);
-const char *term = NULL;
 
-static bool handlechar(int r, int k) /* Handle a single input character. */
-{
+/* The scrollback keys. */
+#define SCROLLUP input.CODE(KEY_PPAGE)
+#define SCROLLDOWN input.CODE(KEY_NPAGE)
+#define RECENTER input.CODE(KEY_END)
+
+/* The split terminal keys. */
+#define HSPLIT input.KEY(L'h')
+#define VSPLIT input.KEY(L'v')
+
+/* The delete terminal key. */
+#define DELETE_NODE input.KEY(L'w')
+
+/* The force redraw key. */
+#define REDRAW input.KEY(L'l')
+
+/* Handle a single input character. */
+static bool handlechar(const std::shared_ptr<NODE> &n,
+                       const Input &input /*int r, int k*/) {
   const char cmdstr[] = {(char)commandkey, 0};
   static bool cmd = false;
-  auto n = g_root;
-#define KERR(i) (r == ERR && (i) == k)
-#define KEY(i) (r == OK && (i) == k)
-#define CODE(i) (r == KEY_CODE_YES && (i) == k)
-#define INSCR (n->s->tos != n->s->off)
-#define SB n->s->scrollbottom()
+
 #define DO(s, t, a)                                                            \
   if (s == cmd && (t)) {                                                       \
     a;                                                                         \
@@ -49,74 +48,75 @@ static bool handlechar(int r, int k) /* Handle a single input character. */
     return true;                                                               \
   }
 
-  DO(cmd, KERR(k), return false)
-  DO(cmd, CODE(KEY_RESIZE),
-     g_root->reshape({0, 0}, {(uint16_t)LINES, (uint16_t)COLS});
-     SB)
-  DO(false, KEY(commandkey), return cmd = true)
-  DO(false, KEY(0), n->SENDN("\000", 1); SB)
-  DO(false, KEY(L'\n'), n->SEND("\n"); SB)
-  DO(false, KEY(L'\r'), n->SEND(n->lnm ? "\r\n" : "\r"); SB)
-  DO(false, SCROLLUP && INSCR, n->s->scrollback(n->Size.Rows / 2))
-  DO(false, SCROLLDOWN && INSCR, n->s->scrollforward(n->Size.Rows / 2))
-  DO(false, RECENTER && INSCR, n->s->scrollbottom())
-  DO(false, CODE(KEY_ENTER), n->SEND(n->lnm ? "\r\n" : "\r"); SB)
-  DO(false, CODE(KEY_UP), n->sendarrow("A"); SB);
-  DO(false, CODE(KEY_DOWN), n->sendarrow("B"); SB);
-  DO(false, CODE(KEY_RIGHT), n->sendarrow("C"); SB);
-  DO(false, CODE(KEY_LEFT), n->sendarrow("D"); SB);
-  DO(false, CODE(KEY_HOME), n->SEND("\033[1~"); SB)
-  DO(false, CODE(KEY_END), n->SEND("\033[4~"); SB)
-  DO(false, CODE(KEY_PPAGE), n->SEND("\033[5~"); SB)
-  DO(false, CODE(KEY_NPAGE), n->SEND("\033[6~"); SB)
-  DO(false, CODE(KEY_BACKSPACE), n->SEND("\177"); SB)
-  DO(false, CODE(KEY_DC), n->SEND("\033[3~"); SB)
-  DO(false, CODE(KEY_IC), n->SEND("\033[2~"); SB)
-  DO(false, CODE(KEY_BTAB), n->SEND("\033[Z"); SB)
-  DO(false, CODE(KEY_F(1)), n->SEND("\033OP"); SB)
-  DO(false, CODE(KEY_F(2)), n->SEND("\033OQ"); SB)
-  DO(false, CODE(KEY_F(3)), n->SEND("\033OR"); SB)
-  DO(false, CODE(KEY_F(4)), n->SEND("\033OS"); SB)
-  DO(false, CODE(KEY_F(5)), n->SEND("\033[15~"); SB)
-  DO(false, CODE(KEY_F(6)), n->SEND("\033[17~"); SB)
-  DO(false, CODE(KEY_F(7)), n->SEND("\033[18~"); SB)
-  DO(false, CODE(KEY_F(8)), n->SEND("\033[19~"); SB)
-  DO(false, CODE(KEY_F(9)), n->SEND("\033[20~"); SB)
-  DO(false, CODE(KEY_F(10)), n->SEND("\033[21~"); SB)
-  DO(false, CODE(KEY_F(11)), n->SEND("\033[23~"); SB)
-  DO(false, CODE(KEY_F(12)), n->SEND("\033[24~"); SB)
-  DO(true, DELETE_NODE, g_root = {})
+  DO(cmd, input.KERR(), return false)
+  DO(cmd, input.CODE(KEY_RESIZE),
+     n->reshape({0, 0}, {(uint16_t)LINES, (uint16_t)COLS});
+     n->s->scrollbottom())
+  DO(false, input.KEY(commandkey), return cmd = true)
+  DO(false, input.KEY(0), n->SENDN("\000", 1); n->s->scrollbottom())
+  DO(false, input.KEY(L'\n'), n->SEND("\n"); n->s->scrollbottom())
+  DO(false, input.KEY(L'\r'), n->SEND(n->lnm ? "\r\n" : "\r");
+     n->s->scrollbottom())
+  DO(false, SCROLLUP && n->s->INSCR(), n->s->scrollback(n->Size.Rows / 2))
+  DO(false, SCROLLDOWN && n->s->INSCR(), n->s->scrollforward(n->Size.Rows / 2))
+  DO(false, RECENTER && n->s->INSCR(), n->s->scrollbottom())
+  DO(false, input.CODE(KEY_ENTER), n->SEND(n->lnm ? "\r\n" : "\r");
+     n->s->scrollbottom())
+  DO(false, input.CODE(KEY_UP), n->sendarrow("A"); n->s->scrollbottom());
+  DO(false, input.CODE(KEY_DOWN), n->sendarrow("B"); n->s->scrollbottom());
+  DO(false, input.CODE(KEY_RIGHT), n->sendarrow("C"); n->s->scrollbottom());
+  DO(false, input.CODE(KEY_LEFT), n->sendarrow("D"); n->s->scrollbottom());
+  DO(false, input.CODE(KEY_HOME), n->SEND("\033[1~"); n->s->scrollbottom())
+  DO(false, input.CODE(KEY_END), n->SEND("\033[4~"); n->s->scrollbottom())
+  DO(false, input.CODE(KEY_PPAGE), n->SEND("\033[5~"); n->s->scrollbottom())
+  DO(false, input.CODE(KEY_NPAGE), n->SEND("\033[6~"); n->s->scrollbottom())
+  DO(false, input.CODE(KEY_BACKSPACE), n->SEND("\177"); n->s->scrollbottom())
+  DO(false, input.CODE(KEY_DC), n->SEND("\033[3~"); n->s->scrollbottom())
+  DO(false, input.CODE(KEY_IC), n->SEND("\033[2~"); n->s->scrollbottom())
+  DO(false, input.CODE(KEY_BTAB), n->SEND("\033[Z"); n->s->scrollbottom())
+  DO(false, input.CODE(KEY_F(1)), n->SEND("\033OP"); n->s->scrollbottom())
+  DO(false, input.CODE(KEY_F(2)), n->SEND("\033OQ"); n->s->scrollbottom())
+  DO(false, input.CODE(KEY_F(3)), n->SEND("\033OR"); n->s->scrollbottom())
+  DO(false, input.CODE(KEY_F(4)), n->SEND("\033OS"); n->s->scrollbottom())
+  DO(false, input.CODE(KEY_F(5)), n->SEND("\033[15~"); n->s->scrollbottom())
+  DO(false, input.CODE(KEY_F(6)), n->SEND("\033[17~"); n->s->scrollbottom())
+  DO(false, input.CODE(KEY_F(7)), n->SEND("\033[18~"); n->s->scrollbottom())
+  DO(false, input.CODE(KEY_F(8)), n->SEND("\033[19~"); n->s->scrollbottom())
+  DO(false, input.CODE(KEY_F(9)), n->SEND("\033[20~"); n->s->scrollbottom())
+  DO(false, input.CODE(KEY_F(10)), n->SEND("\033[21~"); n->s->scrollbottom())
+  DO(false, input.CODE(KEY_F(11)), n->SEND("\033[23~"); n->s->scrollbottom())
+  DO(false, input.CODE(KEY_F(12)), n->SEND("\033[24~"); n->s->scrollbottom())
+  // DO(true, DELETE_NODE, g_root = {})
   DO(true, REDRAW, touchwin(stdscr); n->s->draw(n->Pos, n->Size);
      redrawwin(stdscr))
   DO(true, SCROLLUP, n->s->scrollback(n->Size.Rows / 2))
   DO(true, SCROLLDOWN, n->s->scrollforward(n->Size.Rows / 2))
   DO(true, RECENTER, n->s->scrollbottom())
-  DO(true, KEY(commandkey), n->SENDN(cmdstr, 1));
+  DO(true, input.KEY(commandkey), n->SENDN(cmdstr, 1));
+
   char c[MB_LEN_MAX + 1] = {0};
-  if (wctomb(c, k) > 0) {
+  if (wctomb(c, input.Char) > 0) {
     n->s->scrollbottom();
     n->SEND(c);
   }
-  return cmd = false, true;
+  cmd = false;
+  return true;
 }
-static void run(void) /* Run MTM. */
+
+static void run(const std::shared_ptr<NODE> &g_root) /* Run MTM. */
 {
-  while (g_root) {
+  while (true) {
 
     Selector::Instance().Select();
 
-    while (g_root) {
-      wint_t w = 0;
-      int r = wget_wch(g_root->s->win, &w);
-      if (!handlechar(r, w)) {
+    while (true) {
+      auto input = g_root->s->getchar();
+      if (!handlechar(g_root, input)) {
         break;
       }
     }
-    if (!g_root) {
-      return;
-    }
 
-    if (auto span = Selector::Instance().Read(g_root->pt)) {
+    if (auto span = Selector::Instance().Read(g_root->Process->FD())) {
       if (span->size()) {
         vtwrite(g_root->vp.get(), span->data(), span->size());
       }
@@ -131,30 +131,8 @@ static void run(void) /* Run MTM. */
   }
 }
 
-static const char *getterm(void) {
-  const char *envterm = getenv("TERM");
-  if (term)
-    return term;
-  if (envterm && COLORS >= 256 && !strstr(DEFAULT_TERMINAL, "-256color"))
-    return DEFAULT_256_COLOR_TERMINAL;
-  return DEFAULT_TERMINAL;
-}
-
-static const char *getshell(void) /* Get the user's preferred shell. */
-{
-  if (getenv("SHELL"))
-    return getenv("SHELL");
-  struct passwd *pwd = getpwuid(getuid());
-  if (pwd)
-    return pwd->pw_shell;
-  return "/bin/sh";
-}
-
-static std::shared_ptr<NODE> newview(const POS &pos, const SIZE &size) {
-  struct winsize ws = {
-      .ws_row = size.Rows,
-      .ws_col = size.Cols,
-  };
+static std::shared_ptr<NODE> newview(const POS &pos, const SIZE &size,
+                                     const char *term = nullptr) {
   auto n = std::make_shared<NODE>(pos, size);
   n->pri->win = newpad(std::max(size.Rows, (uint16_t)SCROLLBACK), size.Cols);
   n->alt->win = newpad(size.Rows, size.Cols);
@@ -173,23 +151,14 @@ static std::shared_ptr<NODE> newview(const POS &pos, const SIZE &size) {
 
   setupevents(n.get());
 
-  pid_t pid = forkpty(&n->pt, NULL, NULL, &ws);
-  if (pid < 0) {
-    perror("forkpty");
-    return nullptr;
-  } else if (pid == 0) {
-    char buf[100] = {0};
-    snprintf(buf, sizeof(buf) - 1, "%lu", (unsigned long)getppid());
-    setsid();
-    setenv("MTM", buf, 1);
-    setenv("TERM", getterm(), 1);
-    signal(SIGCHLD, SIG_DFL);
-    execl(getshell(), getshell(), NULL);
-    return NULL;
+  if (auto process = PosixProcess::Fork(size, term)) {
+    if (n->Process) {
+      Selector::Instance().Register(n->Process->FD());
+    }
+    return n;
+  } else {
+    return {};
   }
-
-  Selector::Instance().Register(n->pt);
-  return n;
 }
 
 int main(int argc, char **argv) {
@@ -198,6 +167,7 @@ int main(int argc, char **argv) {
   signal(SIGCHLD, SIG_IGN);
 
   int c = 0;
+  const char *term = nullptr;
   while ((c = getopt(argc, argv, "c:T:t:")) != -1) {
     switch (c) {
     case 'c':
@@ -223,7 +193,7 @@ int main(int argc, char **argv) {
 
   start_pairs();
 
-  g_root = newview(
+  auto g_root = newview(
       POS{
           .Y = 2,
           .X = 2,
@@ -231,13 +201,14 @@ int main(int argc, char **argv) {
       SIZE{
           .Rows = (uint16_t)(LINES - 4),
           .Cols = (uint16_t)(COLS - 4),
-      });
+      },
+      term);
   if (!g_root) {
     std::cout << "could not open root window" << std::endl;
     return EXIT_FAILURE;
   }
   g_root->s->draw(g_root->Pos, g_root->Size);
-  run();
+  run(g_root);
 
   return EXIT_SUCCESS;
 }
