@@ -1,9 +1,10 @@
-#include "node.h"
-#include "config.h"
-#include "scrn.h"
 extern "C" {
 #include "vtparser.h"
 }
+#include "config.h"
+#include "node.h"
+#include "posix_selector.h"
+#include "scrn.h"
 #include <algorithm>
 #include <curses.h>
 #include <errno.h>
@@ -31,7 +32,7 @@ NODE::~NODE() /* Free a node. */
     delwin(this->alt->win);
   if (this->pt >= 0) {
     close(this->pt);
-    // FD_CLR(this->pt, &fds);
+    Selector::Instance().Unregister(this->pt);
   }
 }
 

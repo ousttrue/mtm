@@ -1,6 +1,7 @@
 #include "config.h"
 #include "mtm.h"
 #include "node.h"
+#include "posix_selector.h"
 #include "scrn.h"
 #include <algorithm>
 #include <curses.h>
@@ -27,8 +28,6 @@ extern "C" {
 NODE *root = nullptr;
 /*** GLOBALS AND PROTOTYPES */
 int commandkey = CTL(COMMAND_KEY);
-int nfds = 1; /* stdin */
-fd_set fds;
 const char *term = NULL;
 
 /*** UTILITY FUNCTIONS */
@@ -40,24 +39,6 @@ static void quit(int rc, const char *m) /* Shut down MTM. */
     delete (root);
   endwin();
   exit(rc);
-}
-
-static char iobuf[BUFSIZ];
-
-static bool getinput(NODE *n,
-                     fd_set *f) /* Recursively check all ptty's for input. */
-{
-  if (n && n->pt > 0 && FD_ISSET(n->pt, f)) {
-    ssize_t r = read(n->pt, iobuf, sizeof(iobuf));
-    if (r > 0)
-      vtwrite(n->vp.get(), iobuf, r);
-    if (r <= 0 && errno != EINTR && errno != EWOULDBLOCK) {
-      delete n;
-      return false;
-    }
-  }
-
-  return true;
 }
 
 static void fixcursor(void) /* Move the terminal cursor to the active view. */
@@ -139,14 +120,21 @@ static void run(void) /* Run MTM. */
 {
   while (root) {
     wint_t w = 0;
-    fd_set sfds = fds;
-    if (select(nfds + 1, &sfds, NULL, NULL, NULL) < 0)
-      FD_ZERO(&sfds);
+
+    Selector::Instance().Select();
 
     int r = wget_wch(root->s->win, &w);
     while (handlechar(r, w))
       r = wget_wch(root->s->win, &w);
-    getinput(root, &sfds);
+
+    if (auto span = Selector::Instance().Read(root->pt)) {
+      if (span->size()) {
+        vtwrite(root->vp.get(), span->data(), span->size());
+      }
+    } else {
+      // error
+      break;
+    }
 
     root->draw();
     doupdate();
@@ -215,14 +203,12 @@ static NODE *newview(const POS &pos, const SIZE &size) {
     return NULL;
   }
 
-  FD_SET(n->pt, &fds);
-  fcntl(n->pt, F_SETFL, O_NONBLOCK);
-  nfds = n->pt > nfds ? n->pt : nfds;
+  Selector::Instance().Register(n->pt);
+
   return n;
 }
 
 int main(int argc, char **argv) {
-  FD_SET(STDIN_FILENO, &fds);
   setlocale(LC_ALL, "");
   signal(SIGCHLD, SIG_IGN); /* automatically reap children */
 

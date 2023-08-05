@@ -45,12 +45,13 @@ struct NODE {
   void safewrite(const char *b, size_t n);
   void SENDN(const char *s, size_t c) { safewrite(s, c); }
   void SEND(const char *s);
+  void sendarrow(const char *k);
   // curses
   void draw() const;
   void reshape(const POS &pos, const SIZE &size);
   void reshapeview(int d);
+  // scrn
   void scrollbottom();
   void scrollback();
   void scrollforward();
-  void sendarrow(const char *k);
 };

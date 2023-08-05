@@ -3,7 +3,7 @@ project(
     'c',
     'cpp',
     version: '1.2.1',
-    default_options: ['c_std=c99'],
+    default_options: ['c_std=c99', 'cpp_std=c++20'],
 )
 
 ncurses_dep = dependency('ncursesw')
@@ -17,6 +17,7 @@ executable(
         'vtparser.c',
         'config.c',
         'node.cpp',
+        'posix_selector.cpp',
     ],
     install: true,
     c_args: [
