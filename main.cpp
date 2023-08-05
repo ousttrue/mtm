@@ -1,15 +1,16 @@
+#include "mtm.h"
+#include "scrn.h"
 #include <algorithm>
 #include <errno.h>
 #include <locale.h>
 #include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
-#define USAGE "usage: mtm [-T NAME] [-t NAME] [-c KEY]\n"
-
-#include "mtm.h"
 extern "C" {
 #include "pair.h"
 }
+
+#define USAGE "usage: mtm [-T NAME] [-t NAME] [-c KEY]\n"
 
 static char iobuf[BUFSIZ];
 

@@ -18,6 +18,7 @@ extern "C" {
 }
 #include "config.h"
 #include "mtm.h"
+#include "scrn.h"
 #include <curses.h>
 #include <errno.h>
 #include <fcntl.h>
@@ -117,7 +118,7 @@ static const char *getshell(void) /* Get the user's preferred shell. */
 #define SEND(n, s) SENDN(n, s, strlen(s))
 #define COMMONVARS                                                             \
   NODE *n = (NODE *)p;                                                         \
-  SCRN *s = n->s;                                                              \
+  auto s = n->s;                                                               \
   WINDOW *win = s->win;                                                        \
   int py, px, y, x, my, mx, top = 0, bot = 0, tos = s->tos;                    \
   (void)v;                                                                     \
@@ -432,10 +433,10 @@ CALL(cls);
 CALL(sgr0);
 n->am = true;
 n->pnm = false;
-n->pri.vis = n->alt.vis = 1;
-n->s = &n->pri;
-wsetscrreg(n->pri.win, 0, MAX(SCROLLBACK, n->Size.Rows) - 1);
-wsetscrreg(n->alt.win, 0, n->Size.Rows - 1);
+n->pri->vis = n->alt->vis = 1;
+n->s = n->pri;
+wsetscrreg(n->pri->win, 0, MAX(SCROLLBACK, n->Size.Rows) - 1);
+wsetscrreg(n->alt->win, 0, n->Size.Rows - 1);
 for (int i = 0; i < n->tabs.size(); i++)
   n->tabs[i] = (i % 8 == 0);
 ENDHANDLER
@@ -476,11 +477,11 @@ for (int i = 0; i < argc; i++)
     CALL((set ? sc : rc)); /* fall-through */
   case 47:
   case 1047:
-    if (set && n->s != &n->alt) {
-      n->s = &n->alt;
+    if (set && n->s != n->alt) {
+      n->s = n->alt;
       CALL(cls);
-    } else if (!set && n->s != &n->pri)
-      n->s = &n->pri;
+    } else if (!set && n->s != n->pri)
+      n->s = n->pri;
     break;
   }
 ENDHANDLER
@@ -876,16 +877,17 @@ static void setupevents(NODE *n) {
  * These functions do the user-visible work of MTM: creating nodes in the
  * tree, updating the display, and so on.
  */
-NODE::NODE(const POS &pos, const SIZE &size) : Pos(pos), Size(size) {
+NODE::NODE(const POS &pos, const SIZE &size)
+    : Pos(pos), Size(size), pri(new SCRN), alt(new SCRN) {
   this->tabs.resize(Size.Cols, 0);
 }
 
 NODE::~NODE() /* Free a node. */
 {
-  if (this->pri.win)
-    delwin(this->pri.win);
-  if (this->alt.win)
-    delwin(this->alt.win);
+  if (this->pri->win)
+    delwin(this->pri->win);
+  if (this->alt->win)
+    delwin(this->alt->win);
   if (this->pt >= 0) {
     close(this->pt);
     FD_CLR(this->pt, &fds);
@@ -907,22 +909,21 @@ NODE *newview(const POS &pos, const SIZE &size) {
       .ws_col = size.Cols,
   };
   auto n = new NODE(pos, size);
-  SCRN *pri = &n->pri, *alt = &n->alt;
-  pri->win = newpad(MAX(size.Rows, SCROLLBACK), size.Cols);
-  alt->win = newpad(size.Rows, size.Cols);
-  if (!pri->win || !alt->win) {
+  n->pri->win = newpad(MAX(size.Rows, SCROLLBACK), size.Cols);
+  n->alt->win = newpad(size.Rows, size.Cols);
+  if (!n->pri->win || !n->alt->win) {
     delete n;
     return NULL;
   }
-  pri->tos = pri->off = MAX(0, SCROLLBACK - size.Rows);
-  n->s = pri;
+  n->pri->tos = n->pri->off = MAX(0, SCROLLBACK - size.Rows);
+  n->s = n->pri;
 
-  nodelay(pri->win, TRUE);
-  nodelay(alt->win, TRUE);
-  scrollok(pri->win, TRUE);
-  scrollok(alt->win, TRUE);
-  keypad(pri->win, TRUE);
-  keypad(alt->win, TRUE);
+  nodelay(n->pri->win, TRUE);
+  nodelay(n->alt->win, TRUE);
+  scrollok(n->pri->win, TRUE);
+  scrollok(n->alt->win, TRUE);
+  keypad(n->pri->win, TRUE);
+  keypad(n->alt->win, TRUE);
 
   setupevents(n);
   ris(&n->vp, n, L'c', 0, 0, NULL, NULL);
@@ -959,12 +960,12 @@ static void reshapeview(NODE *n, int d) {
 
   int oy, ox;
   getyx(n->s->win, oy, ox);
-  wresize(n->pri.win, MAX(n->Size.Rows, SCROLLBACK), MAX(n->Size.Cols, 2));
-  wresize(n->alt.win, MAX(n->Size.Rows, 2), MAX(n->Size.Cols, 2));
-  n->pri.tos = n->pri.off = MAX(0, SCROLLBACK - n->Size.Rows);
-  n->alt.tos = n->alt.off = 0;
-  wsetscrreg(n->pri.win, 0, MAX(SCROLLBACK, n->Size.Rows) - 1);
-  wsetscrreg(n->alt.win, 0, n->Size.Rows - 1);
+  wresize(n->pri->win, MAX(n->Size.Rows, SCROLLBACK), MAX(n->Size.Cols, 2));
+  wresize(n->alt->win, MAX(n->Size.Rows, 2), MAX(n->Size.Cols, 2));
+  n->pri->tos = n->pri->off = MAX(0, SCROLLBACK - n->Size.Rows);
+  n->alt->tos = n->alt->off = 0;
+  wsetscrreg(n->pri->win, 0, MAX(SCROLLBACK, n->Size.Rows) - 1);
+  wsetscrreg(n->alt->win, 0, n->Size.Rows - 1);
   if (d > 0) { /* make sure the new top line syncs up after reshape */
     wmove(n->s->win, oy + d, ox);
     wscrl(n->s->win, -d);
