@@ -240,7 +240,7 @@ wmove(win, py, 0);
 ENDHANDLER
 
 HANDLER(ht) /* HT - Horizontal Tab */
-for (int i = x + 1; i < n->w && i < n->tabs.size(); i++)
+for (int i = x + 1; i < n->Size.Cols && i < n->tabs.size(); i++)
   if (n->tabs[i]) {
     wmove(win, py, i);
     return;
@@ -434,8 +434,8 @@ n->am = true;
 n->pnm = false;
 n->pri.vis = n->alt.vis = 1;
 n->s = &n->pri;
-wsetscrreg(n->pri.win, 0, MAX(SCROLLBACK, n->h) - 1);
-wsetscrreg(n->alt.win, 0, n->h - 1);
+wsetscrreg(n->pri.win, 0, MAX(SCROLLBACK, n->Size.Rows) - 1);
+wsetscrreg(n->alt.win, 0, n->Size.Rows - 1);
 for (int i = 0; i < n->tabs.size(); i++)
   n->tabs[i] = (i % 8 == 0);
 ENDHANDLER
@@ -876,14 +876,8 @@ static void setupevents(NODE *n) {
  * These functions do the user-visible work of MTM: creating nodes in the
  * tree, updating the display, and so on.
  */
-NODE::NODE(int y, int x, int h, int w) /* Create a new node. */
-{
-  this->pt = -1;
-  this->y = y;
-  this->x = x;
-  this->h = h;
-  this->w = w;
-  this->tabs.resize(w);
+NODE::NODE(const POS &pos, const SIZE &size) : Pos(pos), Size(size) {
+  this->tabs.resize(Size.Cols, 0);
 }
 
 NODE::~NODE() /* Free a node. */
@@ -907,21 +901,20 @@ static const char *getterm(void) {
   return DEFAULT_TERMINAL;
 }
 
-NODE *newview(int y, int x, int h, int w) /* Open a new view. */
-{
+NODE *newview(const POS &pos, const SIZE &size) {
   struct winsize ws = {
-      .ws_row = (unsigned short)h,
-      .ws_col = (unsigned short)w,
+      .ws_row = size.Rows,
+      .ws_col = size.Cols,
   };
-  auto n = new NODE(y, x, h, w);
+  auto n = new NODE(pos, size);
   SCRN *pri = &n->pri, *alt = &n->alt;
-  pri->win = newpad(MAX(h, SCROLLBACK), w);
-  alt->win = newpad(h, w);
+  pri->win = newpad(MAX(size.Rows, SCROLLBACK), size.Cols);
+  alt->win = newpad(size.Rows, size.Cols);
   if (!pri->win || !alt->win) {
     delete n;
     return NULL;
   }
-  pri->tos = pri->off = MAX(0, SCROLLBACK - h);
+  pri->tos = pri->off = MAX(0, SCROLLBACK - size.Rows);
   n->s = pri;
 
   nodelay(pri->win, TRUE);
@@ -956,62 +949,62 @@ NODE *newview(int y, int x, int h, int w) /* Open a new view. */
   return n;
 }
 
-#define ABOVE(n) n->y - 2, n->x + n->w / 2
-#define BELOW(n) n->y + n->h + 2, n->x + n->w / 2
-#define LEFT(n) n->y + n->h / 2, n->x - 2
-#define RIGHT(n) n->y + n->h / 2, n->x + n->w + 2
+#define ABOVE(n) n->y - 2, n->x + n->Size.Cols / 2
+#define BELOW(n) n->y + n->Size.Rows + 2, n->x + n->Size.Cols / 2
+#define LEFT(n) n->y + n->Size.Rows / 2, n->x - 2
+#define RIGHT(n) n->y + n->Size.Rows / 2, n->x + n->Size.Cols + 2
 
-static void reshapeview(NODE *n, int d, int ow) /* Reshape a view. */
-{
-  n->tabs.resize(ow);
-  struct winsize ws = {
-      .ws_row = (unsigned short)n->h,
-      .ws_col = (unsigned short)n->w,
-  };
+/* Reshape a view. */
+static void reshapeview(NODE *n, int d) {
 
   int oy, ox;
   getyx(n->s->win, oy, ox);
-  wresize(n->pri.win, MAX(n->h, SCROLLBACK), MAX(n->w, 2));
-  wresize(n->alt.win, MAX(n->h, 2), MAX(n->w, 2));
-  n->pri.tos = n->pri.off = MAX(0, SCROLLBACK - n->h);
+  wresize(n->pri.win, MAX(n->Size.Rows, SCROLLBACK), MAX(n->Size.Cols, 2));
+  wresize(n->alt.win, MAX(n->Size.Rows, 2), MAX(n->Size.Cols, 2));
+  n->pri.tos = n->pri.off = MAX(0, SCROLLBACK - n->Size.Rows);
   n->alt.tos = n->alt.off = 0;
-  wsetscrreg(n->pri.win, 0, MAX(SCROLLBACK, n->h) - 1);
-  wsetscrreg(n->alt.win, 0, n->h - 1);
+  wsetscrreg(n->pri.win, 0, MAX(SCROLLBACK, n->Size.Rows) - 1);
+  wsetscrreg(n->alt.win, 0, n->Size.Rows - 1);
   if (d > 0) { /* make sure the new top line syncs up after reshape */
     wmove(n->s->win, oy + d, ox);
     wscrl(n->s->win, -d);
   }
   doupdate();
   refresh();
+
+  struct winsize ws = {
+      .ws_row = n->Size.Rows,
+      .ws_col = n->Size.Cols,
+  };
   ioctl(n->pt, TIOCSWINSZ, &ws);
 }
 
-void NODE::reshape(int y, int x, int h, int w) /* Reshape a node. */
-{
-  if (this->y == y && this->x == x && this->h == h && this->w == w)
+void NODE::reshape(const POS &pos, const SIZE &size) {
+  if (this->Pos == pos && this->Size == size) {
     return;
+  }
 
-  int d = this->h - h;
-  int ow = this->w;
-  this->y = y;
-  this->x = x;
-  this->h = MAX(h, 1);
-  this->w = MAX(w, 1);
-
-  reshapeview(this, d, ow);
+  int d = this->Size.Rows - size.Rows;
+  this->Pos = pos;
+  this->Size = size.Max({1, 1});
+  this->tabs.resize(Size.Cols);
+  reshapeview(this, d);
   this->draw();
 }
 
 void NODE::draw() const /* Draw a node. */
 {
-  pnoutrefresh(this->s->win, this->s->off, 0, this->y, this->x,
-               this->y + this->h - 1, this->x + this->w - 1);
+  pnoutrefresh(this->s->win, this->s->off, 0, this->Pos.Y, this->Pos.X,
+               this->Pos.Y + this->Size.Rows - 1,
+               this->Pos.X + this->Size.Rows - 1);
 }
 
-static void scrollback(NODE *n) { n->s->off = MAX(0, n->s->off - n->h / 2); }
+static void scrollback(NODE *n) {
+  n->s->off = MAX(0, n->s->off - n->Size.Rows / 2);
+}
 
 static void scrollforward(NODE *n) {
-  n->s->off = MIN(n->s->tos, n->s->off + n->h / 2);
+  n->s->off = MIN(n->s->tos, n->s->off + n->Size.Rows / 2);
 }
 
 static void scrollbottom(NODE *n) { n->s->off = n->s->tos; }
@@ -1040,7 +1033,9 @@ bool handlechar(int r, int k) /* Handle a single input character. */
   }
 
   DO(cmd, KERR(k), return false)
-  DO(cmd, CODE(KEY_RESIZE), root->reshape(0, 0, LINES, COLS); SB)
+  DO(cmd, CODE(KEY_RESIZE),
+     root->reshape({0, 0}, {(uint16_t)LINES, (uint16_t)COLS});
+     SB)
   DO(false, KEY(commandkey), return cmd = true)
   DO(false, KEY(0), SENDN(n, "\000", 1); SB)
   DO(false, KEY(L'\n'), SEND(n, "\n"); SB)

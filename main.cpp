@@ -34,7 +34,7 @@ static void fixcursor(void) /* Move the terminal cursor to the active view. */
   int y, x;
   curs_set(root->s->off != root->s->tos ? 0 : root->s->vis);
   getyx(root->s->win, y, x);
-  y = std::min(std::max(y, root->s->tos), root->s->tos + root->h - 1);
+  y = std::min(std::max(y, root->s->tos), root->s->tos + root->Size.Rows - 1);
   wmove(root->s->win, y, x);
 }
 
@@ -91,7 +91,15 @@ int main(int argc, char **argv) {
   use_default_colors();
   start_pairs();
 
-  root = newview(2, 2, LINES - 4, COLS - 4);
+  root = newview(
+      POS{
+          .Y = 2,
+          .X = 2,
+      },
+      SIZE{
+          .Rows = (uint16_t)(LINES - 4),
+          .Cols = (uint16_t)(COLS - 4),
+      });
   if (!root)
     quit(EXIT_FAILURE, "could not open root window");
   root->draw();
