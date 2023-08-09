@@ -1,8 +1,8 @@
 #include "node.h"
 #include "config.h"
-#include "curses_screen.h"
+#include "screen.h"
 #include "mtm.h"
-#include "posix_process.h"
+#include "process.h"
 #include "vtparser.h"
 #include <vterm.h>
 

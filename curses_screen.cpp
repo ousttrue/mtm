@@ -1,4 +1,4 @@
-#include "curses_screen.h"
+#include "screen.h"
 #include <algorithm>
 #include <curses.h>
 

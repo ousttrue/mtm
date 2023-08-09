@@ -1,18 +1,18 @@
 #pragma once
-#include "curses_screen.h"
+#include "screen.h"
 #include <memory>
 #include <stdint.h>
 #include <vector>
 
 #define USE_VTERM 1
 
-class PosixProcess;
+class Process;
 
 struct NODE {
   POS Pos;
   SIZE Size;
 
-  std::shared_ptr<PosixProcess> Process;
+  std::shared_ptr<Process> Process;
 
   bool pnm;
   bool decom;

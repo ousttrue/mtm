@@ -6,27 +6,43 @@ project(
     default_options: ['c_std=c99', 'cpp_std=c++20'],
 )
 
-ncurses_dep = dependency('ncursesw')
 libvterm_dep = dependency('libvterm')
-
-executable(
-    'mtm',
-    [
-        'main.cpp',
-        'mtm.cpp',
+dependencies = [libvterm_dep]
+mtm_args = []
+mtm_srcs = [
+    'main.cpp',
+    'config.c',
+    'node.cpp',
+]
+if host_machine.system() == 'windows'
+    mtm_srcs += [
+        'win32_term.cpp',
+        'win32_process.cpp',
+        'win32_screen.cpp',
+        'win32_stream.cpp',
+    ]
+else
+    ncurses_dep = dependency('ncursesw')
+    dependencies += ncurses_dep
+    mtm_srcs += [
         'vtparser.c',
-        'config.c',
-        'node.cpp',
+        'mtm.cpp',
         'posix_selector.cpp',
         'posix_process.cpp',
         'curses_term.cpp',
         'curses_screen.cpp',
-    ],
-    install: true,
-    c_args: [
+    ]
+    mtm_args += [
         '-D_POSIX_C_SOURCE=200809L',
         '-D_XOPEN_SOURCE=600',
         '-D_XOPEN_SOURCE_EXTENDED',
-    ],
-    dependencies: [ncurses_dep, libvterm_dep],
+    ]
+endif
+
+executable(
+    'mtm',
+    mtm_srcs,
+    install: true,
+    c_args: mtm_args,
+    dependencies: dependencies,
 )

@@ -1,4 +1,4 @@
-#include "curses_term.h"
+#include "term.h"
 #include <curses.h>
 
 Term::Term() {}

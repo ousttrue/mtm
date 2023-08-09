@@ -1,5 +1,5 @@
-#include "posix_process.h"
-#include "posix_selector.h"
+#include "input_stream.h"
+#include "process.h"
 #include <curses.h>
 #include <pty.h>
 #include <pwd.h>
@@ -9,10 +9,10 @@
 #define DEFAULT_TERMINAL "screen-bce"
 #define DEFAULT_256_COLOR_TERMINAL "screen-256color-bce"
 
-struct PosixProcessImpl {
+struct ProcessImpl {
   int m_pty = -1;
 
-  ~PosixProcessImpl() {
+  ~ProcessImpl() {
     Selector::Instance().Unregister(m_pty);
     close(m_pty);
   }
@@ -30,12 +30,12 @@ struct PosixProcessImpl {
   }
 };
 
-PosixProcess::PosixProcess() : m_impl(new PosixProcessImpl) {}
+Process::Process() : m_impl(new ProcessImpl) {}
 
-PosixProcess::~PosixProcess() {}
+Process::~Process() {}
 
-std::shared_ptr<PosixProcess>
-PosixProcess::Fork(const SIZE &size, const char *term, const char *shell) {
+std::shared_ptr<Process> Process::Fork(const SIZE &size, const char *term,
+                                       const char *shell) {
   if (!term) {
     term = GetTerm();
   }
@@ -43,7 +43,7 @@ PosixProcess::Fork(const SIZE &size, const char *term, const char *shell) {
     shell = GetShell();
   }
 
-  auto ptr = std::shared_ptr<PosixProcess>(new PosixProcess);
+  auto ptr = std::shared_ptr<Process>(new Process);
 
   struct winsize ws = {
       .ws_row = size.Rows,
@@ -68,12 +68,12 @@ PosixProcess::Fork(const SIZE &size, const char *term, const char *shell) {
   return ptr;
 }
 
-int PosixProcess::FD() const { return m_impl->m_pty; }
+int Process::FD() const { return m_impl->m_pty; }
 
-void PosixProcess::Write(const char *b, size_t n) { m_impl->Write(b, n); }
-void PosixProcess::WriteString(const char *s) { m_impl->Write(s, strlen(s)); }
+void Process::Write(const char *b, size_t n) { m_impl->Write(b, n); }
+void Process::WriteString(const char *s) { m_impl->Write(s, strlen(s)); }
 
-void PosixProcess::Resize(const SIZE &size) {
+void Process::Resize(const SIZE &size) {
   struct winsize ws = {
       .ws_row = size.Rows,
       .ws_col = size.Cols,
@@ -81,7 +81,7 @@ void PosixProcess::Resize(const SIZE &size) {
   ioctl(m_impl->m_pty, TIOCSWINSZ, &ws);
 }
 
-const char *PosixProcess::GetTerm() {
+const char *Process::GetTerm() {
   const char *envterm = getenv("TERM");
   if (envterm) {
     return envterm;
@@ -91,7 +91,7 @@ const char *PosixProcess::GetTerm() {
   return DEFAULT_TERMINAL;
 }
 
-const char *PosixProcess::GetShell() /* Get the user's preferred shell. */
+const char *Process::GetShell() /* Get the user's preferred shell. */
 {
   if (getenv("SHELL"))
     return getenv("SHELL");

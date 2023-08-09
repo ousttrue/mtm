@@ -15,9 +15,9 @@
  */
 #include "mtm.h"
 #include "config.h"
-#include "curses_term.h"
+#include "term.h"
 #include "node.h"
-#include "posix_process.h"
+#include "process.h"
 #include "vtparser.h"
 #include <assert.h>
 #include <curses.h>

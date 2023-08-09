@@ -1,5 +1,7 @@
 #pragma once
+#include "screen.h"
 #include <vector>
+
 struct PAIR {
   short fg = -1;
   short bg = -1;
@@ -23,6 +25,7 @@ public:
 
   bool Initialize();
   void RawMode();
+  SIZE Size() const;
 
   short AllocPair(int fg, int bg);
 };
