@@ -2,6 +2,8 @@
 #include <algorithm>
 #include <curses.h>
 
+namespace term_screen {
+
 bool Input::KERR() const { return Error == ERR /*&& (i) == Char*/; }
 bool Input::KEY(uint32_t i) const { return Error == OK && i == Char; }
 bool Input::CODE(uint32_t i) const {
@@ -80,3 +82,5 @@ void SCRN::WriteCell(const POS &pos, wchar_t ch, int fg, int bg) {
   wmove(win, pos.Y, pos.X);
   waddnwstr(win, &ch, 1);
 }
+
+} // namespace term_screen

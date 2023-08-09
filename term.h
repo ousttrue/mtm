@@ -2,6 +2,8 @@
 #include "screen.h"
 #include <vector>
 
+namespace term_screen {
+
 struct PAIR {
   short fg = -1;
   short bg = -1;
@@ -29,3 +31,5 @@ public:
 
   short AllocPair(int fg, int bg);
 };
+
+} // namespace term_screen

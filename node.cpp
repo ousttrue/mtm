@@ -6,6 +6,8 @@
 #include "vtparser.h"
 #include <vterm.h>
 
+namespace term_screen {
+
 SIZE SIZE::Max(const SIZE &rhs) const {
   return {
       std::max(Rows, rhs.Rows),
@@ -80,4 +82,6 @@ void NODE::reshapeview(int d) {
   this->s->Update();
 
   this->Process->Resize(this->Size);
+}
+
 }

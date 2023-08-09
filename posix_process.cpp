@@ -9,6 +9,8 @@
 #define DEFAULT_TERMINAL "screen-bce"
 #define DEFAULT_256_COLOR_TERMINAL "screen-256color-bce"
 
+namespace term_screen {
+
 struct ProcessImpl {
   int m_pty = -1;
 
@@ -99,4 +101,6 @@ const char *Process::GetShell() /* Get the user's preferred shell. */
   if (pwd)
     return pwd->pw_shell;
   return "/bin/sh";
+}
+
 }

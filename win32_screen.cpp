@@ -1,5 +1,7 @@
 #include "screen.h"
 
+namespace term_screen {
+
 SCRN::SCRN(const SIZE &size) {}
 SCRN::~SCRN() {}
 
@@ -17,3 +19,5 @@ void SCRN::MoveCursor(const POS &pos) {}
 void SCRN::Scroll(int d) {}
 void SCRN::Update() {}
 void SCRN::WriteCell(const POS &pos, wchar_t ch, int fg, int bg) {}
+
+} // namespace term_screen

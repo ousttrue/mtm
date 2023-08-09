@@ -1,6 +1,8 @@
 #include "term.h"
 #include <curses.h>
 
+namespace term_screen {
+
 Term::Term() {}
 
 Term::~Term() { endwin(); }
@@ -38,4 +40,6 @@ short Term::AllocPair(int fg, int bg) {
   }
 
   return m_pairs.size();
+}
+
 }

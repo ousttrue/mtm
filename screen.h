@@ -1,6 +1,8 @@
 #pragma once
 #include <stdint.h>
 
+namespace term_screen {
+
 struct POS {
   int Y;
   int X;
@@ -61,3 +63,5 @@ struct SCRN {
   void Update();
   void WriteCell(const POS &pos, wchar_t ch, int fg, int bg);
 };
+
+} // namespace term_screen

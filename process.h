@@ -3,6 +3,8 @@
 #include <memory>
 #include <string>
 
+namespace term_screen {
+
 class Process {
   struct ProcessImpl *m_impl;
 
@@ -24,3 +26,5 @@ public:
 
   void Resize(const SIZE &size);
 };
+
+}

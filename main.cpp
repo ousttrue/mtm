@@ -36,8 +36,8 @@ int commandkey = CTL(COMMAND_KEY);
 #define REDRAW input.KEY(L'l')
 
 /* Handle a single input character. */
-static bool handlechar(const std::shared_ptr<NODE> &n,
-                       const Input &input /*int r, int k*/) {
+static bool handlechar(const std::shared_ptr<term_screen::NODE> &n,
+                       const term_screen::Input &input /*int r, int k*/) {
   const char cmdstr[] = {(char)commandkey, 0};
   static bool cmd = false;
 
@@ -128,7 +128,7 @@ static bool handlechar(const std::shared_ptr<NODE> &n,
   return true;
 }
 
-static void run(const std::shared_ptr<NODE> &node) {
+static void run(const std::shared_ptr<term_screen::NODE> &node) {
   node->s->draw(node->Pos, node->Size);
   while (true) {
 
@@ -208,19 +208,19 @@ int main(int argc, char **argv) {
   }
 #endif
 
-  if (!Term::Insance().Initialize()) {
+  if (!term_screen::Term::Insance().Initialize()) {
     std::cout << "could not initialize terminal" << std::endl;
     return EXIT_FAILURE;
   }
-  Term::Insance().RawMode();
-  auto size = Term::Insance().Size();
+  term_screen::Term::Insance().RawMode();
+  auto size = term_screen::Term::Insance().Size();
 
-  auto node = std::make_shared<NODE>(
-      POS{
+  auto node = std::make_shared<term_screen::NODE>(
+      term_screen::POS{
           .Y = 2,
           .X = 2,
       },
-      SIZE{
+      term_screen::SIZE{
           .Rows = static_cast<uint16_t>(size.Rows - 4),
           .Cols = static_cast<uint16_t>(size.Cols - 4),
       });
@@ -229,7 +229,7 @@ int main(int argc, char **argv) {
     return EXIT_FAILURE;
   }
 
-  node->Process = Process::Fork(node->Size, term);
+  node->Process = term_screen::Process::Fork(node->Size, term);
   if (!node->Process) {
     return 0;
   }

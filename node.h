@@ -6,6 +6,11 @@
 
 #define USE_VTERM 1
 
+struct VTerm;
+struct VTermScreen;
+
+namespace term_screen {
+
 class Process;
 
 struct NODE {
@@ -26,8 +31,8 @@ struct NODE {
   wchar_t *g0, *g1, *g2, *g3, *gc, *gs, *sgc, *sgs;
 
 #if USE_VTERM
-  struct VTerm *m_vterm;
-  struct VTermScreen *m_vtscreen = nullptr;
+  VTerm *m_vterm;
+  VTermScreen *m_vtscreen = nullptr;
 #else
   std::shared_ptr<struct VTPARSER> vp;
 #endif
@@ -43,3 +48,5 @@ struct NODE {
   void reshape(const POS &pos, const SIZE &size);
   void reshapeview(int d);
 };
+
+} // namespace term_screen
