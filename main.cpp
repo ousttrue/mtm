@@ -1,7 +1,7 @@
+#include "child_process.h"
 #include "config.h"
 #include "input_stream.h"
 #include "node.h"
-#include "process.h"
 #include "screen.h"
 #include "term.h"
 #if defined(_WIN32)
@@ -130,6 +130,9 @@ static bool handlechar(const std::shared_ptr<term_screen::NODE> &n,
 
 static void run(const std::shared_ptr<term_screen::NODE> &node) {
   node->s->draw(node->Pos, node->Size);
+
+  std::vector<char> readBuf;
+
   while (true) {
 
     InputStream::Instance().Poll();
@@ -141,14 +144,13 @@ static void run(const std::shared_ptr<term_screen::NODE> &node) {
       }
     }
 
-    if (auto span = InputStream::Instance().Read(node->Process->Handle())) {
-      if (span->size()) {
+    readBuf.clear();
+    if (InputStream::Instance().Read(node->Process->Handle(), readBuf)) {
 #if USE_VTERM
-        vterm_input_write(node->m_vterm, span->data(), span->size());
+      vterm_input_write(node->m_vterm, readBuf.data(), readBuf.size());
 #else
-        vtwrite(node->vp.get(), span->data(), span->size());
+      vtwrite(node->vp.get(), readBuf.data(), readBuf.size());
 #endif
-      }
     } else {
       // error exit
       break;

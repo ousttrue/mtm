@@ -11,6 +11,8 @@ struct PAIR {
 
 class Term {
 
+  struct TermImpl *m_impl = nullptr;
+
   std::vector<PAIR> m_pairs;
 
   Term();

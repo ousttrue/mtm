@@ -1,15 +1,18 @@
 #pragma once
-#include <optional>
 #include <span>
 #include <stdint.h>
+#include <vector>
 
 class InputStream {
+
+  struct InputStreamImpl *m_impl = nullptr;
+
   InputStream();
 
 public:
   InputStream(const InputStream &) = delete;
   InputStream &operator=(const InputStream &) = delete;
-  ~InputStream() {}
+  ~InputStream();
 
   static InputStream &Instance() {
     static InputStream s_instance;
@@ -19,5 +22,6 @@ public:
   void Register(void *handle);
   void Unregister(void *handle);
   void Poll();
-  std::optional<std::span<char>> Read(void *handle);
+  void Enqueue(void *handle, std::span<const char> data);
+  size_t Read(void *handle, std::vector<char> &buf);
 };

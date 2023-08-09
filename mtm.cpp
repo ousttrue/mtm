@@ -17,7 +17,7 @@
 #include "config.h"
 #include "term.h"
 #include "node.h"
-#include "process.h"
+#include "child_process.h"
 #include "vtparser.h"
 #include <assert.h>
 #include <curses.h>

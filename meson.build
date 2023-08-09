@@ -3,7 +3,7 @@ project(
     'c',
     'cpp',
     version: '1.2.1',
-    default_options: ['c_std=c99', 'cpp_std=c++20'],
+    default_options: ['c_std=c99'],
 )
 
 libvterm_dep = dependency('libvterm')

@@ -1,6 +1,8 @@
+#include "child_process.h"
+#include "input_stream.h"
 #include <Windows.h>
-
-#include "process.h"
+#include <thread>
+#include <vector>
 
 namespace term_screen {
 
@@ -9,12 +11,18 @@ struct ProcessImpl {
   ::HANDLE InputWriteSide = nullptr;
   ::HANDLE m_hPC = nullptr;
   ::STARTUPINFOEXA m_si = {};
+  std::thread m_readThread;
 
   ProcessImpl(HANDLE outputReadSide, HANDLE inputWriteSide)
       : OutputReadSide(outputReadSide), InputWriteSide(inputWriteSide) {}
   ~ProcessImpl() {
+    ClosePseudoConsole(m_hPC);
+    m_hPC = nullptr;
     CloseHandle(OutputReadSide);
+    OutputReadSide = nullptr;
     CloseHandle(InputWriteSide);
+    InputWriteSide = nullptr;
+    m_readThread.join();
   }
 
   bool ConPty(const COORD &size, HANDLE inputReadSide, HANDLE outputWriteSide) {
@@ -83,7 +91,19 @@ struct ProcessImpl {
       return {};
     }
 
+    m_readThread = std::thread([self = this]() { self->Drain(); });
+
     return true;
+  }
+
+  void Drain() {
+    while (auto handle = OutputReadSide) {
+      char buf[8192];
+      DWORD size;
+      if (ReadFile(handle, buf, sizeof(buf), &size, nullptr) && size > 0) {
+        InputStream::Instance().Enqueue(handle, {buf, size});
+      }
+    }
   }
 
   void Resize(const COORD &size) { ResizePseudoConsole(m_hPC, size); }

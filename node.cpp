@@ -2,7 +2,7 @@
 #include "config.h"
 #include "screen.h"
 #include "mtm.h"
-#include "process.h"
+#include "child_process.h"
 #include "vtparser.h"
 #include <vterm.h>
 

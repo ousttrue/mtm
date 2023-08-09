@@ -1,5 +1,5 @@
 #include "input_stream.h"
-#include "process.h"
+#include "child_process.h"
 #include <curses.h>
 #include <pty.h>
 #include <pwd.h>
