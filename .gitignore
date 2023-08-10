@@ -3,3 +3,4 @@
 /subprojects/*
 !/subprojects/packagefiles
 !/subprojects/libvterm.wrap
+!/subprojects/ftxui.wrap

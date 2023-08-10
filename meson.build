@@ -46,3 +46,16 @@ executable(
     c_args: mtm_args,
     dependencies: dependencies,
 )
+
+ftxui_dep = dependency('ftxui-component')
+
+executable(
+    'fmtm',
+    [
+        'fmtm.cpp',
+        'win32_process.cpp',
+        'win32_stream.cpp',
+    ],
+    install: true,
+    dependencies: [libvterm_dep, ftxui_dep],
+)
